@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, ArrowUp, ArrowDown } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { MorphIcon, ChevronLeft, ChevronRight, MorphSortIcon } from '../ui/MorphIcons';
 import {
   ColumnDef,
@@ -18,6 +18,7 @@ import {
   getRightPinnedDividerClass,
   getThemeClasses,
 } from './constants';
+import { isSelectionColumn } from './gridUtils';
 
 export interface GridHeaderProps<T = any> {
   totalGridWidth: number;
@@ -91,6 +92,81 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   const [dragOverColKey, setDragOverColKey] = React.useState<string | null>(null);
   const [draggingColKey, setDraggingColKey] = React.useState<string | null>(null);
 
+  /**
+   * Helper chuẩn hóa DRY cho nội dung ô header (tiêu đề, icon sort, nút checklist filter, thanh resize)
+   * dùng chung cho cả 4 vùng: Pinned Left, Middle Standalone, Middle Band Child, Pinned Right
+   */
+  const renderHeaderCellContent = (col: ColumnDef<any>, isTier2 = false) => {
+    const isSorted = sortConfig?.key === col.key;
+    const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
+    const curFilter = columnFilters[col.key];
+    const isChecklistActive = Boolean(
+      curFilter &&
+        (curFilter.mode === FILTER_MODES.CHECKLIST ||
+          (Array.isArray(curFilter.selectedValues) && curFilter.selectedValues.length > 0) ||
+          curFilter.includeBlanks)
+    );
+
+    return (
+      <>
+        <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
+              isSorted ? 'text-agv-accent' : ''
+            }`}
+          >
+            {isSystemCol && !col.title ? '' : col.title}
+          </span>
+          {isSorted && (
+            <span className="shrink-0 inline-flex items-center text-agv-accent">
+              <MorphSortIcon
+                direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC}
+                size={isTier2 ? 10 : 11}
+                spring="snappy"
+              />
+            </span>
+          )}
+        </div>
+
+        {/* Nút lọc hình phễu ở góc phải header (mở checklist filter popup) - ẩn với cột rỗng và cột hệ thống */}
+        {onOpenChecklistFilter && !isSystemCol && col.filterable !== false && !emptyColKeys?.has(col.key) && (
+          <div
+            className={`absolute z-10 flex shrink-0 items-center ${
+              isTier2 ? 'right-0.5 top-1/2 -translate-y-1/2' : 'right-1 top-1.5'
+            }`}
+          >
+            <button
+              type="button"
+              data-checklist-trigger={col.key}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenChecklistFilter(col.key, e);
+              }}
+              className={`agv-header-filter-btn flex items-center justify-center rounded transition-colors cursor-pointer border-none bg-transparent ${
+                isTier2 ? 'w-3.5 h-3.5' : 'w-4 h-4'
+              } ${
+                isChecklistActive
+                  ? 'text-agv-accent opacity-100'
+                  : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-agv-accent'
+              }`}
+            >
+              <Filter size={isTier2 ? 10 : 11} strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
+
+        {/* Thanh kéo độ rộng cột (col resize handle) */}
+        {col.resizable !== false && !isSystemCol && (
+          <div
+            onMouseDown={(e) => onMouseDownResize(col.key, e)}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
+          />
+        )}
+      </>
+    );
+  };
+
   return (
     <div
       style={{
@@ -106,8 +182,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       {leftColumns.map((col) => {
         const width = colWidths[col.key] || col.defaultWidth;
         const isLeftDivider = col.key === lastEffectiveLeftColKey;
-        const isSorted = sortConfig?.key === col.key;
-        const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || Boolean(col.isSelection);
+        const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
         const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
         const isDragOver = dragOverColKey === col.key;
 
@@ -115,12 +190,6 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
         const headerRightBorder = isLeftDivider
           ? getPinnedDividerClass(surfaceTheme)
           : theme.headerBorderRight;
-        const curFilter = columnFilters[col.key];
-        const isChecklistActive = Boolean(
-          curFilter &&
-            ((Array.isArray(curFilter.selectedValues) && curFilter.selectedValues.length > 0) ||
-              curFilter.includeBlanks)
-        );
 
         return (
           <div
@@ -179,49 +248,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
               isDragOver ? 'ring-2 ring-inset ring-agv-accent' : ''
             }`}
           >
-            <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
-                  isSorted ? 'text-agv-accent' : ''
-                }`}
-              >
-                {isSystemCol && !col.title ? '' : col.title}
-              </span>
-              {isSorted && (
-                <span className="shrink-0 inline-flex items-center text-agv-accent">
-                  <MorphSortIcon direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC} size={11} spring="snappy" />
-                </span>
-              )}
-            </div>
-
-            {/* Nút lọc hình phễu ở góc phải header (mở checklist filter popup) - ẩn với cột rỗng */}
-            {onOpenChecklistFilter && !isSystemCol && col.filterable !== false && !emptyColKeys?.has(col.key) && (
-              <div className="absolute right-1 top-1.5 z-10 flex shrink-0 items-center">
-                <button
-                  type="button"
-                  data-checklist-trigger={col.key}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenChecklistFilter(col.key, e);
-                  }}
-                  className={`agv-header-filter-btn flex items-center justify-center w-4 h-4 rounded transition-colors cursor-pointer border-none bg-transparent ${
-                    isChecklistActive
-                      ? 'text-agv-accent opacity-100'
-                      : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-agv-accent'
-                  }`}
-                >
-                  <Filter size={11} strokeWidth={2.5} />
-                </button>
-              </div>
-            )}
-
-            {col.resizable !== false && !isSystemCol && (
-              <div
-                onMouseDown={(e) => onMouseDownResize(col.key, e)}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
-              />
-            )}
+            {renderHeaderCellContent(col)}
           </div>
         );
       })}
@@ -260,15 +287,8 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
             ? getRightPinnedDividerClass(surfaceTheme)
             : '';
 
-          const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || Boolean(col.isSelection);
+          const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
           const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
-          const curFilter = columnFilters[col.key];
-          const isChecklistActive = Boolean(
-            curFilter &&
-              (curFilter.mode === FILTER_MODES.CHECKLIST ||
-                (curFilter.selectedValues && curFilter.selectedValues.length > 0) ||
-                curFilter.includeBlanks)
-          );
           const isDragOver = dragOverColKey === col.key;
 
           return (
@@ -320,49 +340,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
                 isDragOver ? 'ring-2 ring-inset ring-agv-accent' : ''
               }`}
             >
-              <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
-                    isSorted ? 'text-agv-accent' : ''
-                  }`}
-                >
-                  {col.title}
-                </span>
-                {isSorted && (
-                  <span className="shrink-0 inline-flex items-center text-agv-accent">
-                    <MorphSortIcon direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC} size={11} spring="snappy" />
-                  </span>
-                )}
-              </div>
-
-              {/* Nút lọc hình phễu ở góc phải header (mở checklist filter popup) - ẩn với cột rỗng */}
-              {onOpenChecklistFilter && col.filterable !== false && !emptyColKeys?.has(col.key) && (
-                <div className="absolute right-1 top-1.5 z-10 flex shrink-0 items-center">
-                  <button
-                    type="button"
-                    data-checklist-trigger={col.key}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenChecklistFilter(col.key, e);
-                    }}
-                    className={`agv-header-filter-btn flex items-center justify-center w-4 h-4 rounded transition-colors cursor-pointer border-none bg-transparent ${
-                      isChecklistActive
-                        ? 'text-agv-accent opacity-100'
-                        : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-agv-accent'
-                    }`}
-                  >
-                    <Filter size={11} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-
-              {col.resizable !== false && !isSystemCol && (
-                <div
-                  onMouseDown={(e) => onMouseDownResize(col.key, e)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
-                />
-              )}
+              {renderHeaderCellContent(col)}
             </div>
           );
         } else {
@@ -451,15 +429,8 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
               >
                 {childCols.map((col) => {
                   const width = colWidths[col.key] || col.defaultWidth;
-                  const isSorted = sortConfig?.key === col.key;
-                  const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || Boolean(col.isSelection);
+                  const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
                   const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
-                  const curFilter = columnFilters[col.key];
-                  const isChecklistActive = Boolean(
-                    curFilter &&
-                      ((Array.isArray(curFilter.selectedValues) && curFilter.selectedValues.length > 0) ||
-                        curFilter.includeBlanks)
-                  );
 
                   return (
                     <div
@@ -480,47 +451,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
                       }}
                       className={`group/th flex items-center justify-center text-center px-1 text-[10px] font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors`}
                     >
-                      <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
-                        <span
-                          className={`truncate text-center ${isSorted ? 'text-agv-accent' : ''}`}
-                        >
-                          {col.title}
-                        </span>
-                        {isSorted && (
-                          <span className="shrink-0 inline-flex items-center text-agv-accent">
-                            <MorphSortIcon direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC} size={10} spring="snappy" />
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Nút lọc hình phễu ở góc phải header tầng 2 (mở checklist filter popup) - ẩn với cột rỗng */}
-                      {onOpenChecklistFilter && col.filterable !== false && !emptyColKeys?.has(col.key) && (
-                        <div className="absolute right-0.5 top-1/2 -translate-y-1/2 z-10 flex shrink-0 items-center">
-                          <button
-                            type="button"
-                            data-checklist-trigger={col.key}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenChecklistFilter(col.key, e);
-                            }}
-                            className={`agv-header-filter-btn flex items-center justify-center w-3.5 h-3.5 rounded transition-colors cursor-pointer border-none bg-transparent ${
-                              isChecklistActive
-                                ? 'text-agv-accent opacity-100'
-                                : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-agv-accent'
-                            }`}
-                          >
-                            <Filter size={10} strokeWidth={2.5} />
-                          </button>
-                        </div>
-                      )}
-
-                      {col.resizable !== false && !isSystemCol && (
-                        <div
-                          onMouseDown={(e) => onMouseDownResize(col.key, e)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
-                        />
-                      )}
+                      {renderHeaderCellContent(col, true)}
                     </div>
                   );
                 })}
@@ -534,19 +465,11 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       {rightColumns.map((col) => {
         const width = colWidths[col.key] || col.defaultWidth;
         const isRightDivider = col.key === firstEffectiveRightColKey;
-        const isSorted = sortConfig?.key === col.key;
-        const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || Boolean(col.isSelection);
+        const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
         const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
 
         const headerBottomBorder = `${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg}`;
         const headerRightBorder = theme.headerBorderRight;
-        const curFilter = columnFilters[col.key];
-        const isChecklistActive = Boolean(
-          curFilter &&
-            ((Array.isArray(curFilter.selectedValues) && curFilter.selectedValues.length > 0) ||
-              curFilter.includeBlanks)
-        );
-
         const isDragOver = dragOverColKey === col.key;
 
         return (
@@ -603,49 +526,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
               isRightDivider ? getRightPinnedDividerClass(surfaceTheme) : ''
             } relative ${isDragOver ? 'ring-2 ring-inset ring-agv-accent' : ''}`}
           >
-            <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
-              <span
-                className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
-                  isSorted ? 'text-agv-accent' : ''
-                }`}
-              >
-                {col.title}
-              </span>
-              {isSorted && (
-                <span className="shrink-0 inline-flex items-center text-agv-accent">
-                  <MorphSortIcon direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC} size={11} spring="snappy" />
-                </span>
-              )}
-            </div>
-
-            {/* Nút lọc hình phễu ở góc phải header (mở checklist filter popup) - ẩn với cột rỗng */}
-            {onOpenChecklistFilter && col.filterable !== false && !emptyColKeys?.has(col.key) && (
-              <div className="absolute right-1 top-1.5 z-10 flex shrink-0 items-center">
-                <button
-                  type="button"
-                  data-checklist-trigger={col.key}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenChecklistFilter(col.key, e);
-                  }}
-                  className={`agv-header-filter-btn flex items-center justify-center w-4 h-4 rounded transition-colors cursor-pointer border-none bg-transparent ${
-                    isChecklistActive
-                      ? 'text-agv-accent opacity-100'
-                      : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-agv-accent'
-                  }`}
-                >
-                  <Filter size={11} strokeWidth={2.5} />
-                </button>
-              </div>
-            )}
-
-            {col.resizable !== false && !isSystemCol && (
-              <div
-                onMouseDown={(e) => onMouseDownResize(col.key, e)}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
-              />
-            )}
+            {renderHeaderCellContent(col)}
           </div>
         );
       })}

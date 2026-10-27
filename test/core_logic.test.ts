@@ -14,6 +14,9 @@ import {
   getAlignJustifyClass,
   formatGridNumber,
   parseGridNumber,
+  isSelectionColumn,
+  computeFilteredSelectionState,
+  toggleFilteredRowsSelection,
 } from '../src/components/grid/gridUtils';
 import {
   formatNumberWithCommas,
@@ -206,6 +209,93 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       assert.strictEqual(typeof getGridControlRadiusClass(), 'string');
       assert.strictEqual(getGridControlRadiusClass(), GRID_CONTROL_RADIUS_CLASS);
       assert.ok(getGridControlRadiusClass().startsWith('rounded'));
+    });
+  });
+
+  describe('8. Selection State & Fast-Path Optimization', () => {
+    it('isSelectionColumn predicate should identify selection and checkbox columns', () => {
+      assert.strictEqual(isSelectionColumn({ isSelection: true }), true);
+      assert.strictEqual(isSelectionColumn({ key: 'col_chk' }), true);
+      assert.strictEqual(isSelectionColumn({ key: 'col_chk', isSelection: false }), true);
+      assert.strictEqual(isSelectionColumn({ key: 'name', isSelection: false }), false);
+      assert.strictEqual(isSelectionColumn(null), false);
+      assert.strictEqual(isSelectionColumn(undefined), false);
+    });
+
+    it('computeFilteredSelectionState should compute fast-path selection state on unfiltered table', () => {
+      const totalRows = 50000;
+      const checkedSet = new Set<number>();
+
+      // 0 dòng được chọn
+      const emptyState = computeFilteredSelectionState(totalRows, checkedSet, null);
+      assert.strictEqual(emptyState.allChecked, false);
+      assert.strictEqual(emptyState.isIndeterminate, false);
+      assert.strictEqual(emptyState.selectedCount, 0);
+      assert.strictEqual(emptyState.totalCount, 50000);
+
+      // 3 dòng được chọn (duyệt đúng 3 phần tử thay vì 50.000 dòng)
+      checkedSet.add(10);
+      checkedSet.add(25);
+      checkedSet.add(999);
+      const partialState = computeFilteredSelectionState(totalRows, checkedSet, null);
+      assert.strictEqual(partialState.allChecked, false);
+      assert.strictEqual(partialState.isIndeterminate, true);
+      assert.strictEqual(partialState.selectedCount, 3);
+      assert.strictEqual(partialState.totalCount, 50000);
+
+      // Cả 50.000 dòng được chọn
+      const allSet = new Set<number>();
+      for (let i = 0; i < 50; i++) allSet.add(i);
+      const fullState = computeFilteredSelectionState(50, allSet, null);
+      assert.strictEqual(fullState.allChecked, true);
+      assert.strictEqual(fullState.isIndeterminate, false);
+      assert.strictEqual(fullState.selectedCount, 50);
+      assert.strictEqual(fullState.totalCount, 50);
+    });
+
+    it('computeFilteredSelectionState should compute selection accurately on filtered rows subset', () => {
+      const activeRows = [5, 15, 25, 35];
+      const checkedSet = new Set<number>([15, 35, 999]); // 999 không nằm trong activeRows
+
+      const state = computeFilteredSelectionState(1000, checkedSet, activeRows);
+      assert.strictEqual(state.totalCount, 4);
+      assert.strictEqual(state.selectedCount, 2);
+      assert.strictEqual(state.isIndeterminate, true);
+      assert.strictEqual(state.allChecked, false);
+
+      // Khi chọn đủ cả 4 dòng trong activeRows
+      checkedSet.add(5);
+      checkedSet.add(25);
+      const fullActiveState = computeFilteredSelectionState(1000, checkedSet, activeRows);
+      assert.strictEqual(fullActiveState.totalCount, 4);
+      assert.strictEqual(fullActiveState.selectedCount, 4);
+      assert.strictEqual(fullActiveState.allChecked, true);
+      assert.strictEqual(fullActiveState.isIndeterminate, false);
+    });
+
+    it('toggleFilteredRowsSelection should return new Set() in O(1) on unfiltered deselect', () => {
+      const currentChecked = new Set<number>([1, 2, 3, 4, 5]);
+      // Bỏ chọn toàn bộ trên bảng không lọc
+      const result = toggleFilteredRowsSelection(50000, currentChecked, null, false);
+      assert.strictEqual(result.size, 0);
+      assert.ok(result instanceof Set);
+    });
+
+    it('toggleFilteredRowsSelection should toggle selections correctly', () => {
+      // Bảng có lọc: chỉ bật/tắt các dòng trong activeRowIndices
+      const currentChecked = new Set<number>([100]);
+      const activeRows = [1, 2, 3];
+      const selected = toggleFilteredRowsSelection(1000, currentChecked, activeRows, true);
+      assert.strictEqual(selected.has(1), true);
+      assert.strictEqual(selected.has(2), true);
+      assert.strictEqual(selected.has(3), true);
+      assert.strictEqual(selected.has(100), true);
+
+      const deselected = toggleFilteredRowsSelection(1000, selected, activeRows, false);
+      assert.strictEqual(deselected.has(1), false);
+      assert.strictEqual(deselected.has(2), false);
+      assert.strictEqual(deselected.has(3), false);
+      assert.strictEqual(deselected.has(100), true); // Dòng 100 ngoài activeRows vẫn được bảo toàn
     });
   });
 });

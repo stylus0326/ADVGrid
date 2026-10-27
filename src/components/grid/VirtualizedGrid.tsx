@@ -39,6 +39,7 @@ import {
   createColumnFilter,
   createEqualsFilter,
   isNoInputFilterOp,
+  isSelectionColumn,
 } from './gridUtils';
 import {
   AdvChecklistFilterPopup,
@@ -266,7 +267,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const colWidths = useMemo<Record<string, number>>(() => {
       const res: Record<string, number> = { ...(rawColWidths || {}) };
       for (const col of columns) {
-        if (col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || col.isSelection) {
+        if (col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || isSelectionColumn(col)) {
           if (col.isRowNumber || col.title) {
             res[col.key] = res[col.key] || autoSttWidth || col.defaultWidth || 46;
           } else {
@@ -280,7 +281,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const setColWidth = useCallback(
       (key: string, width: number) => {
         const targetCol = colMap[key];
-        if (!targetCol || targetCol.resizable === false || targetCol.dataType === DATA_TYPES.SYSTEM || targetCol.isRowNumber || targetCol.isSelection) return;
+        if (!targetCol || targetCol.resizable === false || targetCol.dataType === DATA_TYPES.SYSTEM || targetCol.isRowNumber || isSelectionColumn(targetCol)) return;
         if (onColWidthsChange) {
           onColWidthsChange({ ...colWidths, [key]: width });
         } else {
@@ -296,7 +297,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         const filteredUpdates: Record<string, number> = {};
         for (const [k, v] of Object.entries(updates)) {
           const targetCol = colMap[k];
-          if (targetCol && targetCol.resizable !== false && targetCol.dataType !== DATA_TYPES.SYSTEM && !targetCol.isRowNumber && !targetCol.isSelection) {
+          if (targetCol && targetCol.resizable !== false && targetCol.dataType !== DATA_TYPES.SYSTEM && !targetCol.isRowNumber && !isSelectionColumn(targetCol)) {
             filteredUpdates[k] = v;
           }
         }
@@ -437,7 +438,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       const isAllowed = (k: string) => {
         const col = colMap[k];
         if (!gridSettings.showRowNumber && (col?.isRowNumber || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)))) return false;
-        if (!gridSettings.showSelectionCol && (col?.isSelection || (col?.dataType === DATA_TYPES.SYSTEM && !col?.title))) return false;
+        if (!gridSettings.showSelectionCol && isSelectionColumn(col)) return false;
         return true;
       };
 
@@ -956,7 +957,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         e.preventDefault();
         e.stopPropagation();
         const col = colMap[colKey];
-        if (!col || col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || col.isSelection || col.disableHeaderContextMenu) return;
+        if (!col || col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || isSelectionColumn(col) || col.disableHeaderContextMenu) return;
         checklistPopupRef.current?.close();
         window.dispatchEvent(
           new CustomEvent('agv-close-all-popups', {

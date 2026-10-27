@@ -12,6 +12,7 @@ async function run() {
   try {
     await build({
       logLevel: 'error',
+      publicDir: false,
       build: {
         ssr: true,
         write: true,

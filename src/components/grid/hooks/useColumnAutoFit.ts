@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { ColumnDef, BaseGroupDef, DATA_TYPES } from '../types';
-import { calcColAutoFitWidth } from '../gridUtils';
+import { calcColAutoFitWidth, isSelectionColumn } from '../gridUtils';
 
 interface UseColumnAutoFitParams<T> {
   colMap: Record<string, ColumnDef<T>>;
@@ -48,7 +48,7 @@ export function useColumnAutoFit<T>({
         col.resizable === false ||
         col.dataType === DATA_TYPES.SYSTEM ||
         col.isRowNumber ||
-        col.isSelection
+        isSelectionColumn(col)
       ) {
         return;
       }
@@ -72,7 +72,7 @@ export function useColumnAutoFit<T>({
         col.resizable === false ||
         col.dataType === DATA_TYPES.SYSTEM ||
         col.isRowNumber ||
-        col.isSelection
+        isSelectionColumn(col)
       ) {
         return;
       }
@@ -102,7 +102,7 @@ export function useColumnAutoFit<T>({
           col.resizable !== false &&
           col.dataType !== DATA_TYPES.SYSTEM &&
           !col.isRowNumber &&
-          !col.isSelection
+          !isSelectionColumn(col)
         ) {
           updates[key] = calcColAutoFitWidth(
             col,

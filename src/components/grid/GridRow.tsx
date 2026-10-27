@@ -21,7 +21,7 @@ import {
   getGridControlRadiusClass,
 } from './constants';
 import { AdvDatePicker, AdvDateRangePicker, formatGridDateValue } from '../ui/AdvDatePicker';
-import { formatGridNumber, getAlignTextClass, getAlignJustifyClass, parseGridNumber } from './gridUtils';
+import { formatGridNumber, getAlignTextClass, getAlignJustifyClass, parseGridNumber, isSelectionColumn } from './gridUtils';
 import { handleNumericKeyDown, expandAllShortcuts } from './smartNumberUtils';
 import { AdvComboBoxEdit, AdvSearchLookUpEdit, AdvLookUpColumn, AdvComboBoxEditOption } from '../ui';
 import { MorphChevronIcon } from '../ui/MorphIcons';
@@ -708,7 +708,7 @@ export const GridRow = memo(
             isEffectiveRight ||
             col.dataType === DATA_TYPES.SYSTEM ||
             Boolean(col.isRowNumber) ||
-            Boolean(col.isSelection);
+            isSelectionColumn(col);
 
           const stickyStyle: React.CSSProperties = {
             width: `${width}px`,

@@ -32,6 +32,7 @@ import {
   isBetweenFilterOp,
   isNegativeFilterOp,
   createEqualsFilter,
+  isSelectionColumn,
 } from './gridUtils';
 import { getThemeClass } from '../../themes';
 import { AdvMultiFilterPopup } from './AdvMultiFilterPopup';
@@ -771,7 +772,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
           }
 
           // 2. CỘT CHỌN: Checkbox 3 trạng thái (ALL ➔ CHECKED ➔ UNCHECKED), bỏ viền ngoài giữ checkbox thuần
-          if (col.isSelection || (col.dataType === DATA_TYPES.SYSTEM && !col.title)) {
+          if (isSelectionColumn(col)) {
             const chkState = filterVal?.val || CHECK_FILTER_STATES.ALL;
             const nextState =
               chkState === CHECK_FILTER_STATES.ALL

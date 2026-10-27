@@ -1,0 +1,1750 @@
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
+import {
+  VirtualizedGridProps,
+  VirtualizedGridRef,
+  ColumnDef,
+  BaseGroupDef,
+  PinPosition,
+  PIN_POSITIONS,
+  DATA_TYPES,
+  SORT_DIRECTIONS,
+  FILTER_MODES,
+  CenterDockStatus,
+  GridScrollMetrics,
+} from './types';
+import {
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_ROW_HEIGHT,
+  getThemeClasses,
+} from './constants';
+import { getThemeClass } from '../../themes';
+import { GridHeader } from './GridHeader';
+import { GridFilterRow } from './GridFilterRow';
+import { GridChunkBlock } from './GridChunkBlock';
+import { ColumnContextMenu, ContextMenuData, CONTEXT_MENU_TYPES } from './ColumnContextMenu';
+import {
+  calcColAutoFitWidth,
+  getSttColWidth,
+  matchFilterValue as defaultMatchFilterValue,
+  getColumnDateBoundsFromGetter,
+  getGridCellValue,
+  createColumnFilter,
+  createEqualsFilter,
+  isNoInputFilterOp,
+} from './gridUtils';
+import {
+  AdvChecklistFilterPopup,
+  AdvChecklistFilterPopupRef,
+} from './AdvChecklistFilterPopup';
+import { getDefaultFilterOpForColumn } from './FilterIcons';
+import { GridFloatingToolbar } from './GridFloatingToolbar';
+import { GridSettingsState, QueryGroup } from './floating/types';
+import { useColumnResize, useColumnAutoFit, useInCellEditor } from './hooks';
+
+const POPUP_SELECTORS = [
+  '.agv-calendar-popover',
+  '.agv-preset-dropdown-menu',
+  '.agv-portal-dropdown',
+  '.agv-comboboxedit-dropdown',
+  '.agv-searchlookupedit-dropdown',
+  '.agv-lookup-op-menu',
+  '.agv-context-menu',
+  '.agv-modal-portal',
+  '.agv-filter-dropdown-menu',
+  '.agv-settings-popup',
+  '.agv-column-chooser',
+  '.agv-query-builder-modal',
+  '[data-agv-popup="true"]',
+].join(', ');
+
+function isAnyPopupActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return Boolean(document.querySelector(POPUP_SELECTORS));
+}
+
+const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridProps>(
+  <T extends any>(
+    {
+      data,
+      rowCount: customRowCount,
+      getRow,
+      getRowId,
+      columns,
+      columnGroups,
+      columnPins: controlledPins,
+      defaultColumnPins,
+      onColumnPinsChange,
+      colWidths: controlledWidths,
+      defaultColWidths,
+      onColWidthsChange,
+      sortConfig,
+      onSortChange,
+      selectedRowIndex,
+      selectedRowKey,
+      onSelectRow,
+      checkedRowIndices,
+      onToggleCheck,
+      renderCell,
+      chunkSize = DEFAULT_CHUNK_SIZE,
+      rowHeight = DEFAULT_ROW_HEIGHT,
+      overscanChunks = 3,
+      antiGhostMode = true,
+      surfaceTheme = 'light',
+      rowSnapMode = true,
+      rowsPerWheelStep = 3,
+      autoScrolling = false,
+      autoScrollSpeed = 32,
+      onScrollMetrics,
+      onToggleGroup,
+      onQuickFilter,
+      formulaMode,
+      onFormulaModeChange,
+      editMode = 'view',
+      onEditModeChange: _onEditModeChange,
+      editingCell: controlledEditingCell,
+      onStartEditCell,
+      onEndEditCell,
+      onCellChange,
+      showFilterRow = true,
+      columnFilters = {},
+      onColumnFilterChange,
+      onClearAllColumnFilters,
+      onClearAllCriteria,
+      hasColumnEmptyCells,
+      getColumnDateBounds,
+      formatChecklistDisplay,
+      getCellValue,
+      getDistinctValues,
+      className = '',
+      style,
+      enableFloatingToolbar = true,
+      quickFilterText: controlledQuickFilterText,
+      onQuickFilterTextChange: controlledOnQuickFilterTextChange,
+      appliedQueryTree: controlledAppliedQueryTree,
+      onApplyQueryTree: controlledOnApplyQueryTree,
+      onExportExcel: controlledOnExportExcel,
+      isExporting: controlledIsExporting = false,
+      hiddenColKeys: controlledHiddenColKeys,
+      defaultHiddenColKeys,
+      onHiddenColKeysChange,
+      onReorderColumns,
+      onResetColumns: controlledOnResetColumns,
+      headerHeight: customHeaderHeight,
+      groupByColumnKey,
+      onToggleGroupByColumn,
+      columnSums,
+      emptyColKeys,
+      onCollapseAllGroups,
+      onExpandAllGroups,
+      onUngroup,
+      onCopyGroupTable,
+      onExportGroupExcel,
+      groupSortConfig,
+      onToggleGroupSort,
+      matchFilterValue,
+      dataVersion = 0,
+    }: VirtualizedGridProps<T>,
+    ref: React.Ref<VirtualizedGridRef>
+  ) => {
+    // Active column filter count (hỗ trợ cả Row Filter và Checklist độc lập)
+    const activeColumnFilterCount = useMemo(() => {
+      return Object.values(columnFilters).filter((f) => {
+        if (!f) return false;
+        const isChecklist = Boolean(
+          f.includeBlanks || (Array.isArray(f.selectedValues) && f.selectedValues.length > 0)
+        );
+        const isMulti =
+          f.mode === FILTER_MODES.MULTI &&
+          Boolean(
+            (Array.isArray(f.multiValues) && f.multiValues.length > 0) ||
+            (Array.isArray(f.multiRanges) && f.multiRanges.length > 0)
+          );
+        const isNoInput = isNoInputFilterOp(f.op);
+        const hasInput = typeof f.val === 'string' && f.val.trim().length > 0;
+
+        return isChecklist || isMulti || isNoInput || hasInput;
+      }).length;
+    }, [columnFilters]);
+    // Total row count
+    const totalRows = customRowCount !== undefined ? customRowCount : data ? data.length : 0;
+
+    // Row getter
+    const getRowItem = useCallback(
+      (index: number): T => {
+        if (getRow) return getRow(index);
+        if (data) return data[index];
+        throw new Error('VirtualizedGrid requires either data array or getRow function');
+      },
+      [data, getRow]
+    );
+
+    // Tự động nhận diện trích xuất giá trị ô nếu props getCellValue không được truyền
+    const effectiveGetCellValue = useCallback(
+      (rowIndex: number, colKey: string) => {
+        if (getCellValue) return getCellValue(rowIndex, colKey);
+        const row = getRowItem(rowIndex);
+        return getGridCellValue(row, colKey);
+      },
+      [getCellValue, getRowItem]
+    );
+
+    // Bộ lọc dữ liệu mặc định O(1) nếu không truyền từ bên ngoài
+    const effectiveMatchFilterValue = matchFilterValue || defaultMatchFilterValue;
+
+    // Tự động phát hiện cột có ô trống nếu không truyền hàm riêng
+    const defaultHasColumnEmptyCells = useCallback(
+      (colKey: string) => {
+        const sample = Math.min(totalRows, 300);
+        for (let i = 0; i < sample; i++) {
+          const val = effectiveGetCellValue(i, colKey);
+          if (val === null || val === undefined || String(val).trim() === '') return true;
+        }
+        return false;
+      },
+      [totalRows, effectiveGetCellValue]
+    );
+
+    // Tự động tìm giới hạn ngày nếu không truyền hàm riêng
+    const defaultGetColumnDateBounds = useCallback(
+      (colKey: string) => {
+        return getColumnDateBoundsFromGetter(effectiveGetCellValue, totalRows, colKey);
+      },
+      [effectiveGetCellValue, totalRows]
+    );
+
+    const effectiveHasColumnEmptyCells = hasColumnEmptyCells || defaultHasColumnEmptyCells;
+    const effectiveGetColumnDateBounds = getColumnDateBounds || defaultGetColumnDateBounds;
+
+    // Column widths state (controlled or uncontrolled)
+    const [internalWidths, setInternalWidths] = useState<Record<string, number>>(() => {
+      const initial: Record<string, number> = {};
+      columns.forEach((c) => {
+        initial[c.key] = defaultColWidths?.[c.key] ?? c.defaultWidth;
+      });
+      return initial;
+    });
+
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+    // In-Cell Editing Hook (quản lý trạng thái sửa ô, In-Cell scroll lock & global event lock)
+    const {
+      activeEditingCell,
+      handleStartEditCell,
+      handleEndEditCell,
+      lockedScrollPosRef,
+    } = useInCellEditor({
+      controlledEditingCell,
+      onStartEditCell,
+      onEndEditCell,
+      scrollContainerRef,
+    });
+
+    const rawColWidths = controlledWidths ?? internalWidths;
+
+    const autoSttWidth = useMemo(
+      () => getSttColWidth(totalRows),
+      [totalRows]
+    );
+
+    // Column Map
+    const colMap = useMemo(() => {
+      const map: Record<string, ColumnDef<T>> = {};
+      columns.forEach((col) => {
+        map[col.key] = col;
+      });
+      return map;
+    }, [columns]);
+
+    const colWidths = useMemo<Record<string, number>>(() => {
+      const res: Record<string, number> = { ...(rawColWidths || {}) };
+      for (const col of columns) {
+        if (col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || col.isSelection) {
+          if (col.isRowNumber || col.title) {
+            res[col.key] = res[col.key] || autoSttWidth || col.defaultWidth || 46;
+          } else {
+            res[col.key] = res[col.key] || col.defaultWidth || 32;
+          }
+        }
+      }
+      return res;
+    }, [rawColWidths, autoSttWidth, columns]);
+
+    const setColWidth = useCallback(
+      (key: string, width: number) => {
+        const targetCol = colMap[key];
+        if (!targetCol || targetCol.resizable === false || targetCol.dataType === DATA_TYPES.SYSTEM || targetCol.isRowNumber || targetCol.isSelection) return;
+        if (onColWidthsChange) {
+          onColWidthsChange({ ...colWidths, [key]: width });
+        } else {
+          setInternalWidths((prev) => ({ ...prev, [key]: width }));
+        }
+      },
+      [colWidths, onColWidthsChange, colMap]
+    );
+
+    const setMultipleColWidths = useCallback(
+      (updates: Record<string, number>) => {
+        if (!updates || Object.keys(updates).length === 0) return;
+        const filteredUpdates: Record<string, number> = {};
+        for (const [k, v] of Object.entries(updates)) {
+          const targetCol = colMap[k];
+          if (targetCol && targetCol.resizable !== false && targetCol.dataType !== DATA_TYPES.SYSTEM && !targetCol.isRowNumber && !targetCol.isSelection) {
+            filteredUpdates[k] = v;
+          }
+        }
+        if (Object.keys(filteredUpdates).length === 0) return;
+        if (onColWidthsChange) {
+          onColWidthsChange({ ...colWidths, ...filteredUpdates });
+        } else {
+          setInternalWidths((prev) => ({ ...prev, ...filteredUpdates }));
+        }
+      },
+      [colWidths, onColWidthsChange, colMap]
+    );
+
+    // Column pins state (controlled or uncontrolled)
+    const [internalPins, setInternalPins] = useState<Record<string, PinPosition>>(
+      () => defaultColumnPins ?? {}
+    );
+
+    const columnPins = controlledPins ?? internalPins;
+
+    const setColumnPin = useCallback(
+      (colKey: string, pin: PinPosition) => {
+        const currentPin = columnPins[colKey] || 'none';
+        const nextPin = currentPin === pin ? 'none' : pin;
+        const next = { ...columnPins, [colKey]: nextPin };
+        if (onColumnPinsChange) onColumnPinsChange(next);
+        else setInternalPins(next);
+      },
+      [columnPins, onColumnPinsChange]
+    );
+
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // Floating Toolbar internal states
+    const [internalQuickFilterText, setInternalQuickFilterText] = useState('');
+    const [isQuickFilterSmart, setIsQuickFilterSmart] = useState(true);
+    const [internalQueryTree, setInternalQueryTree] = useState<QueryGroup | null>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const currentQuickFilterText =
+      controlledQuickFilterText !== undefined
+        ? controlledQuickFilterText
+        : internalQuickFilterText;
+
+    const handleQuickFilterChange = useCallback(
+      (text: string) => {
+        if (controlledOnQuickFilterTextChange) {
+          controlledOnQuickFilterTextChange(text);
+        } else {
+          setInternalQuickFilterText(text);
+        }
+        if (onQuickFilter) {
+          onQuickFilter('all', text);
+        }
+      },
+      [controlledOnQuickFilterTextChange, onQuickFilter]
+    );
+
+    const currentQueryTree =
+      controlledAppliedQueryTree !== undefined
+        ? controlledAppliedQueryTree
+        : internalQueryTree;
+
+    const handleApplyQueryTree = useCallback(
+      (tree: QueryGroup | null) => {
+        if (controlledOnApplyQueryTree) {
+          controlledOnApplyQueryTree(tree);
+        } else {
+          setInternalQueryTree(tree);
+        }
+      },
+      [controlledOnApplyQueryTree]
+    );
+
+    const toggleFullscreen = useCallback(() => {
+      setIsFullscreen((prev) => !prev);
+    }, []);
+
+    // Shortcut Alt + Shift + F: Kích hoạt mở rộng / thu nhỏ toàn màn hình (Fullscreen toggle)
+    useEffect(() => {
+      if (enableFloatingToolbar) return; // Khi enableFloatingToolbar = true, toolbar đã xử lý
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.altKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+          e.preventDefault();
+          toggleFullscreen();
+        } else if (e.key === 'Escape' && isFullscreen) {
+          e.preventDefault();
+          setIsFullscreen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [enableFloatingToolbar, toggleFullscreen, isFullscreen]);
+
+    const [gridSettings, setGridSettings] = useState<GridSettingsState>(() => ({
+      quickSearchEnabled: true,
+      pinnedShadowEnabled: true,
+      showVerticalGridlines: true,
+      showRowNumber: true,
+      showSelectionCol: true,
+      densityMode: 'standard',
+      showSummaryRow: true,
+      showPagerBar: true,
+    }));
+
+    const actualRowHeight = gridSettings.densityMode === 'compact' ? 28 : rowHeight;
+
+    // Hidden columns state (controlled or uncontrolled)
+    const [internalHiddenColKeys, setInternalHiddenColKeys] = useState<Set<string>>(
+      () => defaultHiddenColKeys ?? new Set()
+    );
+    const hiddenColKeys = controlledHiddenColKeys ?? internalHiddenColKeys;
+    const setHiddenColKeys = useCallback(
+      (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+        const resolved = typeof next === 'function' ? next(hiddenColKeys) : next;
+        if (onHiddenColKeysChange) onHiddenColKeysChange(resolved);
+        else setInternalHiddenColKeys(resolved);
+      },
+      [hiddenColKeys, onHiddenColKeysChange]
+    );
+
+    const effectiveColumns = useMemo(
+      () => columns.filter((c) => !hiddenColKeys.has(c.key)),
+      [columns, hiddenColKeys]
+    );
+
+    // Column Data Types Map
+    const columnDataTypes = useMemo(() => {
+      const map: Record<string, string> = {};
+      columns.forEach((col) => {
+        map[col.key] = col.dataType || 'text';
+      });
+      return map;
+    }, [columns]);
+
+    // Active column keys in order (reflecting hidden columns & settings for STT / Checkbox)
+    const activeColKeys = useMemo(() => {
+      const isAllowed = (k: string) => {
+        const col = colMap[k];
+        if (!gridSettings.showRowNumber && (col?.isRowNumber || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)))) return false;
+        if (!gridSettings.showSelectionCol && (col?.isSelection || (col?.dataType === DATA_TYPES.SYSTEM && !col?.title))) return false;
+        return true;
+      };
+
+      if (columnGroups && columnGroups.length > 0) {
+        const keys: string[] = [];
+        columnGroups.forEach((grp) => {
+          grp.keys.forEach((k) => {
+            if (colMap[k] && !hiddenColKeys.has(k) && isAllowed(k)) keys.push(k);
+          });
+        });
+        return keys;
+      }
+      return effectiveColumns.filter((c) => isAllowed(c.key)).map((c) => c.key);
+    }, [columnGroups, colMap, effectiveColumns, hiddenColKeys, gridSettings.showRowNumber, gridSettings.showSelectionCol]);
+
+    const visibleColKeys = useMemo(
+      () => columns.filter((c) => !hiddenColKeys.has(c.key)).map((c) => c.key),
+      [columns, hiddenColKeys]
+    );
+
+    const handleVisibleColKeysChange = useCallback(
+      (keys: string[]) => {
+        const nextHidden = new Set<string>();
+        columns.forEach((c) => {
+          if (!keys.includes(c.key)) nextHidden.add(c.key);
+        });
+        setHiddenColKeys(nextHidden);
+      },
+      [columns]
+    );
+
+    const handleResetColumns = useCallback(() => {
+      if (controlledOnResetColumns) {
+        controlledOnResetColumns();
+        return;
+      }
+      setHiddenColKeys(new Set());
+      if (defaultColumnPins) {
+        if (onColumnPinsChange) onColumnPinsChange(defaultColumnPins);
+        else setInternalPins(defaultColumnPins);
+      }
+    }, [controlledOnResetColumns, defaultColumnPins, onColumnPinsChange]);
+
+    const handleExportExcel = useCallback(() => {
+      if (controlledOnExportExcel) {
+        controlledOnExportExcel();
+        return;
+      }
+      try {
+        const exportCols = columns.filter((c) => !hiddenColKeys.has(c.key));
+        const headers = exportCols.map((c) => `"${(c.title || c.key).replace(/"/g, '""')}"`).join(',');
+        const rows: string[] = [];
+        const maxExport = Math.min(totalRows, 300000);
+        for (let i = 0; i < maxExport; i++) {
+          const rowVals = exportCols.map((col) => {
+            let val = '';
+            if (getCellValue) {
+              val = String(getCellValue(i, col.key) ?? '');
+            } else {
+              const item: any = getRowItem(i);
+              val = String(item?.cells?.get ? item.cells.get(col.key)?.value ?? '' : item?.[col.key] ?? '');
+            }
+            return `"${val.replace(/"/g, '""')}"`;
+          });
+          rows.push(rowVals.join(','));
+        }
+        const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Du_Lieu_Grid_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Failed to export:', err);
+      }
+    }, [controlledOnExportExcel, columns, hiddenColKeys, totalRows, getCellValue, getRowItem]);
+
+    // Column partitioning: Left - Middle - Right
+    const { leftColumns, middleColumns, rightColumns, flatColumns } = useMemo(() => {
+      const leftCols: ColumnDef<T>[] = [];
+      const rightCols: ColumnDef<T>[] = [];
+      const midCols: ColumnDef<T>[] = [];
+
+      activeColKeys.forEach((key) => {
+        const pin = columnPins[key] || PIN_POSITIONS.NONE;
+        const col = colMap[key];
+        if (!col) return;
+
+        if (pin === PIN_POSITIONS.LEFT) leftCols.push(col);
+        else if (pin === PIN_POSITIONS.RIGHT) rightCols.push(col);
+        else midCols.push(col);
+      });
+
+      return {
+        leftColumns: leftCols,
+        middleColumns: midCols,
+        rightColumns: rightCols,
+        flatColumns: [...leftCols, ...midCols, ...rightCols],
+      };
+    }, [activeColKeys, columnPins, colMap]);
+
+    // Sticky offsets for Left and Right
+    const { leftOffsets, rightOffsets, totalLeftWidth, totalRightWidth } = useMemo(() => {
+      const lOffsets: Record<string, number> = {};
+      let curLeft = 0;
+      leftColumns.forEach((col) => {
+        lOffsets[col.key] = curLeft;
+        curLeft += colWidths[col.key] || col.defaultWidth;
+      });
+
+      const rOffsets: Record<string, number> = {};
+      let curRight = 0;
+      for (let i = rightColumns.length - 1; i >= 0; i--) {
+        const col = rightColumns[i];
+        rOffsets[col.key] = curRight;
+        curRight += colWidths[col.key] || col.defaultWidth;
+      }
+
+      return {
+        leftOffsets: lOffsets,
+        rightOffsets: rOffsets,
+        totalLeftWidth: curLeft,
+        totalRightWidth: curRight,
+      };
+    }, [leftColumns, rightColumns, colWidths]);
+
+    // Natural X position of each column
+    const columnNaturalPositions = useMemo(() => {
+      const pos: Record<string, { left: number; width: number }> = {};
+      let currentX = 0;
+      flatColumns.forEach((c) => {
+        const w = colWidths[c.key] || c.defaultWidth;
+        pos[c.key] = { left: currentX, width: w };
+        currentX += w;
+      });
+      return pos;
+    }, [flatColumns, colWidths]);
+
+    const totalGridWidth = useMemo(() => {
+      return flatColumns.reduce((acc, col) => acc + (colWidths[col.key] || col.defaultWidth), 0);
+    }, [flatColumns, colWidths]);
+
+    // Center-pinned column keys
+    const centerPinnedColKeys = useMemo(() => {
+      return activeColKeys.filter((k) => columnPins[k] === 'center');
+    }, [activeColKeys, columnPins]);
+
+    // Docking status of center-pinned columns
+    const [centerDockStatus, setCenterDockStatus] = useState<Record<string, CenterDockStatus>>({});
+
+    // Compute center dock offsets & border dividers
+    const {
+      centerLeftOffsets,
+      centerRightOffsets,
+      lastEffectiveLeftColKey,
+      firstEffectiveRightColKey,
+    } = useMemo(() => {
+      const cLeftOffsets: Record<string, number> = {};
+      const cRightOffsets: Record<string, number> = {};
+
+      let runningLeft = totalLeftWidth;
+      let lastDockedLeftKey: string | null = null;
+      centerPinnedColKeys.forEach((key) => {
+        cLeftOffsets[key] = runningLeft;
+        const w = colWidths[key] || 120;
+        if (centerDockStatus[key] === 'left') {
+          runningLeft += w;
+          lastDockedLeftKey = key;
+        }
+      });
+
+      let runningRight = totalRightWidth;
+      let firstDockedRightKey: string | null = null;
+      for (let i = centerPinnedColKeys.length - 1; i >= 0; i--) {
+        const key = centerPinnedColKeys[i];
+        cRightOffsets[key] = runningRight;
+        const w = colWidths[key] || 120;
+        if (centerDockStatus[key] === 'right') {
+          runningRight += w;
+          firstDockedRightKey = key;
+        }
+      }
+
+      const effectiveLastLeft =
+        lastDockedLeftKey !== null
+          ? lastDockedLeftKey
+          : leftColumns.length > 0
+          ? leftColumns[leftColumns.length - 1].key
+          : null;
+
+      const effectiveFirstRight =
+        firstDockedRightKey !== null
+          ? firstDockedRightKey
+          : rightColumns.length > 0
+          ? rightColumns[0].key
+          : null;
+
+      return {
+        centerLeftOffsets: cLeftOffsets,
+        centerRightOffsets: cRightOffsets,
+        lastEffectiveLeftColKey: effectiveLastLeft,
+        firstEffectiveRightColKey: effectiveFirstRight,
+      };
+    }, [
+      centerPinnedColKeys,
+      totalLeftWidth,
+      totalRightWidth,
+      colWidths,
+      centerDockStatus,
+      leftColumns,
+      rightColumns,
+    ]);
+
+    // Middle elements structure (splits groups into segments when a center-pinned column docks)
+    const middleElements = useMemo(() => {
+      type MiddleElement =
+        | { type: 'standalone'; col: ColumnDef<T>; isCenterPinned?: boolean }
+        | { type: 'group'; def: BaseGroupDef; segmentKey: string; children: ColumnDef<T>[] };
+
+      const midElements: MiddleElement[] = [];
+
+      if (!columnGroups || columnGroups.length === 0) {
+        middleColumns.forEach((col) => {
+          midElements.push({
+            type: 'standalone',
+            col,
+            isCenterPinned: columnPins[col.key] === 'center',
+          });
+        });
+        return midElements;
+      }
+
+      columnGroups.forEach((grp) => {
+        if (grp.isStandalone) {
+          const key = grp.keys[0];
+          const pin = columnPins[key] || PIN_POSITIONS.NONE;
+          if (activeColKeys.includes(key) && (pin === PIN_POSITIONS.NONE || pin === PIN_POSITIONS.CENTER)) {
+            const col = colMap[key];
+            if (col) {
+              midElements.push({ type: 'standalone', col, isCenterPinned: pin === PIN_POSITIONS.CENTER });
+            }
+          }
+        } else {
+          const middleGroupKeys = grp.keys.filter((k) => {
+            if (hiddenColKeys.has(k)) return false;
+            const pin = columnPins[k] || PIN_POSITIONS.NONE;
+            return pin === PIN_POSITIONS.NONE || pin === PIN_POSITIONS.CENTER;
+          });
+
+          let currentSegment: ColumnDef<T>[] = [];
+          let segIdx = 0;
+
+          middleGroupKeys.forEach((k) => {
+            const col = colMap[k];
+            if (!col) return;
+            const pin = columnPins[k] || PIN_POSITIONS.NONE;
+            const dock = pin === PIN_POSITIONS.CENTER ? centerDockStatus[k] || 'normal' : 'normal';
+
+            if (pin === PIN_POSITIONS.CENTER && (dock === 'left' || dock === 'right')) {
+              if (currentSegment.length > 0) {
+                midElements.push({
+                  type: 'group',
+                  def: grp,
+                  segmentKey: `${grp.id}_seg_${segIdx++}`,
+                  children: currentSegment,
+                });
+                currentSegment = [];
+              }
+              midElements.push({ type: 'standalone', col, isCenterPinned: true });
+            } else {
+              currentSegment.push(col);
+            }
+          });
+
+          if (currentSegment.length > 0) {
+            midElements.push({
+              type: 'group',
+              def: grp,
+              segmentKey: `${grp.id}_seg_${segIdx++}`,
+              children: currentSegment,
+            });
+          }
+        }
+      });
+
+      return midElements;
+    }, [columnGroups, middleColumns, columnPins, activeColKeys, colMap, centerDockStatus]);
+
+    // Column Resizing Hook
+    const { handleMouseDownResize, resizingRef } = useColumnResize({
+      colMap,
+      colWidths,
+      setColWidth,
+    });
+
+    // Sample rows for auto-fit calculation (first 100 rows)
+    const sampleRows = useMemo(() => {
+      const count = Math.min(100, totalRows);
+      const rows: T[] = [];
+      for (let i = 0; i < count; i++) {
+        rows.push(getRowItem(i));
+      }
+      return rows;
+    }, [totalRows, getRowItem, dataVersion]);
+
+    // Context Menu State (Header, Band, Row)
+    const [activeContextMenu, setActiveContextMenu] = useState<ContextMenuData | null>(null);
+
+    // Column Auto-Fit Hook (vừa độ rộng tối ưu dựa trên đo chữ canvas)
+    const {
+      handleAutoFitColumn,
+      handleAutoFitAllColumns,
+      handleAutoFitBandColumns,
+    } = useColumnAutoFit({
+      colMap,
+      effectiveColumns,
+      columnGroups,
+      sampleRows,
+      columnSums,
+      totalRows,
+      setColWidth,
+      setMultipleColWidths,
+    });
+
+    // Column & Band Pinning handlers
+    const handleSetPin = useCallback(
+      (colKey: string, pin: PinPosition) => {
+        setColumnPin(colKey, pin);
+        setActiveContextMenu(null);
+      },
+      [setColumnPin]
+    );
+
+    const handleSetBandPin = useCallback(
+      (groupId: string, pin: PinPosition) => {
+        const group = columnGroups?.find((g) => g.id === groupId);
+        if (!group) return;
+        const targetKeys = group.keys;
+
+        targetKeys.forEach((key) => {
+          setColumnPin(key, pin);
+        });
+        setActiveContextMenu(null);
+      },
+      [columnGroups, setColumnPin]
+    );
+
+    // Hide / Show columns & bands handlers
+    const handleHideColumn = useCallback((colKey: string) => {
+      setHiddenColKeys((prev) => new Set(prev).add(colKey));
+      setActiveContextMenu(null);
+    }, []);
+
+    const handleHideAllEmptyColumns = useCallback(() => {
+      if (!emptyColKeys || emptyColKeys.size === 0) return;
+      setHiddenColKeys((prev) => {
+        const next = new Set(prev);
+        emptyColKeys.forEach((k) => next.add(k));
+        return next;
+      });
+      setActiveContextMenu(null);
+    }, [emptyColKeys]);
+
+    const handleShowAllHiddenColumns = useCallback(() => {
+      setHiddenColKeys(new Set());
+      setActiveContextMenu(null);
+    }, []);
+
+    const handleHideBand = useCallback(
+      (groupId: string) => {
+        const group = columnGroups?.find((g) => g.id === groupId);
+        if (!group) return;
+        const targetKeys = group.keys;
+
+        setHiddenColKeys((prev) => {
+          const next = new Set(prev);
+          targetKeys.forEach((k) => next.add(k));
+          return next;
+        });
+        setActiveContextMenu(null);
+      },
+      [columnGroups]
+    );
+
+    // Distinct values cache ref để mở lại Checklist popup 0ms
+    const distinctValuesCacheRef = useRef<
+      Record<string, { values: string[]; hasBlanks: boolean }>
+    >({});
+
+    // Xóa distinctValuesCacheRef khi tiêu chí lọc hoặc dữ liệu thay đổi để phễu cập nhật chuẩn xác
+    useEffect(() => {
+      distinctValuesCacheRef.current = {};
+    }, [columnFilters, controlledQuickFilterText, controlledAppliedQueryTree, dataVersion]);
+
+    // Checklist Popup Ref
+    const checklistPopupRef = useRef<AdvChecklistFilterPopupRef | null>(null);
+
+    // Mở popup lọc checklist cho cột (Zero re-render: chỉ popup mở độc lập)
+    // Lắng nghe đóng tất cả popups để đảm bảo chỉ có duy nhất 1 popup hiển thị trên Grid
+    useEffect(() => {
+      const handleCloseAll = (e: Event) => {
+        const ce = e as CustomEvent;
+        if (ce.detail?.except !== 'context-menu') {
+          setActiveContextMenu(null);
+        }
+        if (ce.detail?.except !== 'checklist') {
+          checklistPopupRef.current?.close();
+        }
+      };
+      window.addEventListener('agv-close-all-popups', handleCloseAll);
+      return () => {
+        window.removeEventListener('agv-close-all-popups', handleCloseAll);
+      };
+    }, []);
+
+    const handleOpenChecklistFilter = useCallback(
+      (colKey: string, e: React.MouseEvent) => {
+        if (emptyColKeys?.has(colKey)) return;
+        if (checklistPopupRef.current?.isOpenFor(colKey)) {
+          checklistPopupRef.current.close();
+          return;
+        }
+
+        window.dispatchEvent(
+          new CustomEvent('agv-close-all-popups', {
+            detail: { except: 'checklist', source: 'checklist' },
+          })
+        );
+        setActiveContextMenu(null);
+
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const vh = window.innerHeight;
+        const spaceBelow = vh - rect.bottom - 8;
+        const spaceAbove = rect.top - 8;
+        const isFlipUp = spaceBelow < 320 && spaceAbove > spaceBelow;
+
+        let left = Math.round(rect.left);
+        if (left + 270 > window.innerWidth - 10) {
+          left = Math.max(10, window.innerWidth - 270 - 10);
+        }
+
+        const curFilter = columnFilters[colKey];
+        checklistPopupRef.current?.open(
+          colKey,
+          {
+            top: rect.bottom + 4,
+            bottom: isFlipUp ? vh - rect.top + 4 : undefined,
+            left,
+            isFlipUp,
+          },
+          curFilter
+        );
+      },
+      [columnFilters, emptyColKeys]
+    );
+
+    // Áp dụng giá trị lọc checklist khi tick/untick (giữ nguyên độc lập Row Filter của cột)
+    const handleApplyChecklistFilter = useCallback(
+      (colKey: string, selected: Set<any>, includeBlanks: boolean) => {
+        if (!onColumnFilterChange) return;
+        const cur = columnFilters[colKey] || {
+          op: getDefaultFilterOpForColumn(colKey, flatColumns),
+          val: '',
+        };
+
+        onColumnFilterChange(colKey, {
+          ...cur,
+          selectedValues: Array.from(selected),
+          includeBlanks,
+        });
+      },
+      [onColumnFilterChange, columnFilters, flatColumns]
+    );
+
+    // Xóa bộ lọc checklist cho cột (bảo toàn trọn vẹn Row Filter)
+    const handleClearChecklistFilter = useCallback(
+      (colKey: string) => {
+        if (!onColumnFilterChange) return;
+        const cur = columnFilters[colKey] || {
+          op: getDefaultFilterOpForColumn(colKey, flatColumns),
+          val: '',
+        };
+        onColumnFilterChange(colKey, {
+          ...cur,
+          selectedValues: [],
+          includeBlanks: false,
+        });
+      },
+      [onColumnFilterChange, columnFilters, flatColumns]
+    );
+
+    // Scroll to Top / Bottom handlers
+    const handleScrollToTop = useCallback(() => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setActiveContextMenu(null);
+    }, []);
+
+    const handleScrollToBottom = useCallback(() => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      }
+      setActiveContextMenu(null);
+    }, []);
+
+    // Context Menu Triggers
+    const handleColumnContextMenu = useCallback(
+      (colKey: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const col = colMap[colKey];
+        if (!col || col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || col.isSelection || col.disableHeaderContextMenu) return;
+        checklistPopupRef.current?.close();
+        window.dispatchEvent(
+          new CustomEvent('agv-close-all-popups', {
+            detail: { except: 'context-menu', source: 'context-menu' },
+          })
+        );
+        setActiveContextMenu({
+          type: CONTEXT_MENU_TYPES.HEADER,
+          x: e.clientX,
+          y: e.clientY,
+          column: col,
+          currentPin: columnPins[colKey] || PIN_POSITIONS.NONE,
+          hasHiddenColumns: hiddenColKeys.size > 0,
+        });
+      },
+      [colMap, columnPins, hiddenColKeys]
+    );
+
+    const handleBandContextMenu = useCallback(
+      (groupId: string, childCols: ColumnDef<T>[], e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const group = columnGroups?.find((g) => g.id === groupId);
+        if (!group) return;
+        const currentPin = childCols[0] ? columnPins[childCols[0].key] || PIN_POSITIONS.NONE : PIN_POSITIONS.NONE;
+        checklistPopupRef.current?.close();
+        window.dispatchEvent(
+          new CustomEvent('agv-close-all-popups', {
+            detail: { except: 'context-menu', source: 'context-menu' },
+          })
+        );
+        setActiveContextMenu({
+          type: CONTEXT_MENU_TYPES.BAND,
+          x: e.clientX,
+          y: e.clientY,
+          groupDef: group,
+          childColumns: childCols,
+          currentPin,
+        });
+      },
+      [columnGroups, columnPins]
+    );
+
+    const handleCellContextMenu = useCallback(
+      (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const col = colMap[colKey];
+        // Vô hiệu hóa chuột phải ở cột hệ thống hoặc cột có disableContextMenu
+        if (!col || col.disableContextMenu || col.dataType === DATA_TYPES.SYSTEM) return;
+
+        checklistPopupRef.current?.close();
+        window.dispatchEvent(
+          new CustomEvent('agv-close-all-popups', {
+            detail: { except: 'context-menu', source: 'context-menu' },
+          })
+        );
+
+        // Nếu là cột rỗng, mở trực tiếp menu chuột phải cột rỗng ("Ẩn cột rỗng" & "Ẩn tất cả cột rỗng")
+        if (emptyColKeys?.has(colKey) && col) {
+          setActiveContextMenu({
+            type: CONTEXT_MENU_TYPES.HEADER,
+            x: e.clientX,
+            y: e.clientY,
+            column: col,
+            currentPin: columnPins[colKey] || PIN_POSITIONS.NONE,
+            hasHiddenColumns: hiddenColKeys.size > 0,
+          });
+          return;
+        }
+
+        let cellValue: any = undefined;
+        if ((row as any)?.cells instanceof Map) {
+          cellValue = (row as any).cells.get(colKey)?.value;
+        } else if ((row as any)?.[colKey] !== undefined) {
+          cellValue = (row as any)[colKey];
+        }
+        setActiveContextMenu({
+          type: CONTEXT_MENU_TYPES.ROW,
+          x: e.clientX,
+          y: e.clientY,
+          rowIndex,
+          row,
+          column: col,
+          cellValue,
+        });
+      },
+      [colMap, emptyColKeys, columnPins, hiddenColKeys]
+    );
+
+    // Handler lọc theo giá trị của ô (Filter by cell value)
+    const handleFilterByValue = useCallback(
+      (colKey: string, val: any) => {
+        if (!colKey) return;
+        if (onColumnFilterChange) {
+          onColumnFilterChange(colKey, createEqualsFilter(val));
+        } else if (onQuickFilter) {
+          onQuickFilter(colKey, val);
+        }
+      },
+      [onColumnFilterChange, onQuickFilter]
+    );
+
+    // Group header context menu handler
+    const handleGroupContextMenu = useCallback(
+      (groupRow: any, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        checklistPopupRef.current?.close();
+        window.dispatchEvent(
+          new CustomEvent('agv-close-all-popups', {
+            detail: { except: 'context-menu', source: 'context-menu' },
+          })
+        );
+        setActiveContextMenu({
+          type: CONTEXT_MENU_TYPES.GROUP,
+          x: e.clientX,
+          y: e.clientY,
+          groupRow,
+        });
+      },
+      []
+    );
+
+    // Sorting toggle handler
+    const handleToggleSort = useCallback(
+      (colKey: string) => {
+        if (!onSortChange) return;
+        if (sortConfig?.key === colKey) {
+          if (sortConfig.direction === SORT_DIRECTIONS.ASC) {
+            onSortChange({ key: colKey, direction: SORT_DIRECTIONS.DESC });
+          } else {
+            onSortChange(null);
+          }
+        } else {
+          onSortChange({ key: colKey, direction: SORT_DIRECTIONS.ASC });
+        }
+      },
+      [sortConfig, onSortChange]
+    );
+
+    // Virtualization Geometry
+    const [viewportHeight, setViewportHeight] = useState<number>(600);
+    const [viewportWidth, setViewportWidth] = useState<number>(1200);
+
+    const totalChunks = Math.ceil(totalRows / chunkSize);
+    const chunkPixelHeight = chunkSize * actualRowHeight;
+    const totalContentHeight = totalRows * actualRowHeight;
+
+    const [chunkWindow, setChunkWindow] = useState<{ start: number; end: number }>(() => {
+      if (totalRows === 0) return { start: 0, end: -1 };
+      return { start: 0, end: Math.min(totalChunks - 1, 5) };
+    });
+    const activeChunkWindowRef = useRef<{ start: number; end: number }>(
+      totalRows === 0 ? { start: 0, end: -1 } : { start: 0, end: Math.min(totalChunks - 1, 5) }
+    );
+
+    // Center docking computation
+    const computeCenterDock = useCallback(
+      (scrollLeft: number, clientWidth: number) => {
+        if (centerPinnedColKeys.length === 0) {
+          setCenterDockStatus((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+          return;
+        }
+
+        const nextStatus: Record<string, CenterDockStatus> = {};
+        let runningLeftEdge = scrollLeft + totalLeftWidth;
+        let runningRightEdge = scrollLeft + clientWidth - totalRightWidth;
+
+        // Check left docking
+        for (let i = 0; i < centerPinnedColKeys.length; i++) {
+          const key = centerPinnedColKeys[i];
+          const pos = columnNaturalPositions[key];
+          if (!pos) continue;
+          if (pos.left < runningLeftEdge) {
+            nextStatus[key] = 'left';
+            runningLeftEdge += pos.width;
+          } else {
+            nextStatus[key] = 'normal';
+          }
+        }
+
+        // Check right docking
+        for (let i = centerPinnedColKeys.length - 1; i >= 0; i--) {
+          const key = centerPinnedColKeys[i];
+          if (nextStatus[key] === 'left') continue;
+          const pos = columnNaturalPositions[key];
+          if (!pos) continue;
+          if (pos.left + pos.width > runningRightEdge) {
+            nextStatus[key] = 'right';
+            runningRightEdge -= pos.width;
+          }
+        }
+
+        setCenterDockStatus((prev) => {
+          let hasChange = Object.keys(prev).length !== Object.keys(nextStatus).length;
+          if (!hasChange) {
+            for (const k of centerPinnedColKeys) {
+              if (prev[k] !== nextStatus[k]) {
+                hasChange = true;
+                break;
+              }
+            }
+          }
+          return hasChange ? nextStatus : prev;
+        });
+      },
+      [centerPinnedColKeys, totalLeftWidth, totalRightWidth, columnNaturalPositions]
+    );
+
+    // Sync center dock on resize or viewport width change
+    useEffect(() => {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+      computeCenterDock(el.scrollLeft, el.clientWidth);
+    }, [computeCenterDock, viewportWidth]);
+
+    // Viewport resize observer
+    useEffect(() => {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+
+      const updateSize = () => {
+        setViewportHeight(el.clientHeight);
+        setViewportWidth(el.clientWidth);
+      };
+      updateSize();
+
+      const observer = new ResizeObserver(updateSize);
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
+
+    // Update chunk window on viewport/chunk changes
+    useEffect(() => {
+      const currentTop = scrollContainerRef.current?.scrollTop || 0;
+      if (totalChunks === 0) {
+        activeChunkWindowRef.current = { start: 0, end: -1 };
+        setChunkWindow({ start: 0, end: -1 });
+        return;
+      }
+      const rawStart = Math.floor(currentTop / chunkPixelHeight);
+      const rawEnd = Math.floor((currentTop + viewportHeight) / chunkPixelHeight);
+      const start = Math.max(0, rawStart - overscanChunks);
+      const end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
+
+      activeChunkWindowRef.current = { start, end };
+      setChunkWindow({ start, end });
+    }, [viewportHeight, chunkPixelHeight, totalChunks, overscanChunks]);
+
+    // Velocity & FPS tracking
+    const lastScrollTopRef = useRef<number>(0);
+    const lastScrollLeftRef = useRef<number>(0);
+    const lastScrollTimeRef = useRef<number>(performance.now());
+    const scrollStopTimeoutRef = useRef<number | null>(null);
+    const currentVelocityRef = useRef<number>(0);
+    const currentFpsRef = useRef<number>(60);
+
+    useEffect(() => {
+      let frameCount = 0;
+      let lastTime = performance.now();
+      let rafId: number;
+
+      const measureFps = (now: number) => {
+        frameCount++;
+        if (now - lastTime >= 500) {
+          const fps = Math.min(144, Math.round((frameCount * 1000) / (now - lastTime)));
+          currentFpsRef.current = fps;
+          frameCount = 0;
+          lastTime = now;
+        }
+        rafId = requestAnimationFrame(measureFps);
+      };
+
+      rafId = requestAnimationFrame(measureFps);
+      return () => cancelAnimationFrame(rafId);
+    }, []);
+
+    // Wheel snapping listener
+    useEffect(() => {
+      const el = scrollContainerRef.current;
+      if (!el || !rowSnapMode) return;
+
+      const handleWheelSnap = (e: WheelEvent) => {
+        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
+          e.preventDefault();
+          return;
+        }
+        if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+        if (e.deltaY === 0) return;
+
+        e.preventDefault();
+
+        const direction = Math.sign(e.deltaY);
+        const rawNotches =
+          e.deltaMode === 1
+            ? Math.max(1, Math.round(Math.abs(e.deltaY) / 3))
+            : Math.max(1, Math.round(Math.abs(e.deltaY) / 100));
+
+        const stepRows = direction * rawNotches * rowsPerWheelStep;
+        const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+
+        const currentSnappedRow = Math.round(el.scrollTop / actualRowHeight);
+        const targetRow = currentSnappedRow + stepRows;
+        const nextScrollTop = Math.max(0, Math.min(maxScroll, targetRow * actualRowHeight));
+
+        el.scrollTop = nextScrollTop;
+      };
+
+      el.addEventListener('wheel', handleWheelSnap, { passive: false });
+      return () => el.removeEventListener('wheel', handleWheelSnap);
+    }, [rowSnapMode, rowsPerWheelStep, actualRowHeight, activeContextMenu, activeEditingCell]);
+
+    // Popup Scroll Lock: Chặn cuộn chuột khi có bất kỳ Popup / Menu / Editor nào đang mở
+    useEffect(() => {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+
+      const handleWheelLock = (e: WheelEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest(POPUP_SELECTORS)) {
+          return; // Cho phép cuộn bên trong chính popup đó
+        }
+        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      el.addEventListener('wheel', handleWheelLock, { passive: false });
+      return () => {
+        el.removeEventListener('wheel', handleWheelLock);
+      };
+    }, [activeContextMenu, activeEditingCell]);
+
+    // Auto scrolling test mode
+    useEffect(() => {
+      if (!autoScrolling) return;
+      let rafId: number;
+      let direction = 1;
+
+      const step = () => {
+        const el = scrollContainerRef.current;
+        if (el) {
+          const maxScroll = el.scrollHeight - el.clientHeight;
+          const deltaPx = rowSnapMode
+            ? Math.max(1, Math.round(autoScrollSpeed / actualRowHeight)) * actualRowHeight
+            : autoScrollSpeed;
+
+          let nextTop = el.scrollTop + direction * deltaPx;
+          if (nextTop >= maxScroll) {
+            nextTop = maxScroll;
+            direction = -1;
+          } else if (nextTop <= 0) {
+            nextTop = 0;
+            direction = 1;
+          }
+          el.scrollTop = nextTop;
+        }
+        rafId = requestAnimationFrame(step);
+      };
+
+      rafId = requestAnimationFrame(step);
+      return () => cancelAnimationFrame(rafId);
+    }, [autoScrolling, autoScrollSpeed, rowSnapMode, actualRowHeight]);
+
+    // Scroll handler
+    const handleScroll = useCallback(
+      (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+
+        // Popup & Editing Scroll Lock: Khi đang sửa hoặc có popup mở thì Grid tuyệt đối không được cuộn (khóa cả ngang lẫn dọc)
+        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
+          const lockedPos = lockedScrollPosRef.current;
+          target.scrollTop = lockedPos ? lockedPos.top : lastScrollTopRef.current;
+          target.scrollLeft = lockedPos ? lockedPos.left : lastScrollLeftRef.current;
+          return;
+        }
+
+        let currentTop = target.scrollTop;
+        const currentScrollLeft = target.scrollLeft;
+        const currentWidth = target.clientWidth;
+
+        lastScrollLeftRef.current = currentScrollLeft;
+
+        if (centerPinnedColKeys.length > 0) {
+          computeCenterDock(currentScrollLeft, currentWidth);
+        }
+
+        if (rowSnapMode && !autoScrolling) {
+          const maxScroll = Math.max(0, target.scrollHeight - target.clientHeight);
+          const remainder = currentTop % actualRowHeight;
+          if (remainder !== 0 && currentTop < maxScroll) {
+            const snapped = Math.min(maxScroll, Math.round(currentTop / actualRowHeight) * actualRowHeight);
+            if (Math.abs(snapped - currentTop) > 0.5) {
+              target.scrollTop = snapped;
+              currentTop = snapped;
+            }
+          }
+        }
+
+        const now = performance.now();
+        const dt = Math.max(1, now - lastScrollTimeRef.current);
+        const dy = Math.abs(currentTop - lastScrollTopRef.current);
+        const pxPerSec = Math.round((dy / dt) * 1000);
+
+        lastScrollTopRef.current = currentTop;
+        lastScrollTimeRef.current = now;
+        currentVelocityRef.current = pxPerSec;
+
+        let start = 0;
+        let end = 0;
+        if (totalChunks > 0) {
+          const rawStart = Math.floor(currentTop / chunkPixelHeight);
+          const rawEnd = Math.floor((currentTop + viewportHeight) / chunkPixelHeight);
+          start = Math.max(0, rawStart - overscanChunks);
+          end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
+
+          if (
+            start !== activeChunkWindowRef.current.start ||
+            end !== activeChunkWindowRef.current.end
+          ) {
+            activeChunkWindowRef.current = { start, end };
+            setChunkWindow({ start, end });
+          }
+        }
+
+        if (scrollStopTimeoutRef.current) {
+          window.clearTimeout(scrollStopTimeoutRef.current);
+        }
+        scrollStopTimeoutRef.current = window.setTimeout(() => {
+          currentVelocityRef.current = 0;
+          if (onScrollMetrics) {
+            onScrollMetrics({
+              fps: currentFpsRef.current,
+              velocity: 0,
+              startChunk: activeChunkWindowRef.current.start,
+              endChunk: activeChunkWindowRef.current.end,
+              mountedRowCount:
+                (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
+                chunkSize,
+              totalRows,
+            });
+          }
+        }, 110);
+
+        if (onScrollMetrics) {
+          onScrollMetrics({
+            fps: currentFpsRef.current,
+            velocity: pxPerSec,
+            startChunk: start,
+            endChunk: end,
+            mountedRowCount: (end - start + 1) * chunkSize,
+            totalRows,
+          });
+        }
+      },
+      [
+        centerPinnedColKeys.length,
+        computeCenterDock,
+        rowSnapMode,
+        autoScrolling,
+        rowHeight,
+        totalChunks,
+        chunkPixelHeight,
+        viewportHeight,
+        overscanChunks,
+        onScrollMetrics,
+        chunkSize,
+        totalRows,
+        activeContextMenu,
+        activeEditingCell,
+      ]
+    );
+
+    // Visible chunks list - Tính toán đồng bộ tức thì (Zero-Delay Sync, loại bỏ 2-pass render)
+    const visibleChunkIndices = useMemo(() => {
+      if (totalChunks === 0) return [] as number[];
+
+      const currentTop = scrollContainerRef.current?.scrollTop || 0;
+      const rawStart = Math.floor(currentTop / chunkPixelHeight);
+      const rawEnd = Math.floor((currentTop + (viewportHeight || 600)) / chunkPixelHeight);
+      const start = Math.max(0, Math.min(totalChunks - 1, rawStart - overscanChunks));
+      const end = Math.min(totalChunks - 1, Math.max(start, rawEnd + overscanChunks));
+
+      const indices: number[] = [];
+      for (let c = start; c <= end; c++) {
+        indices.push(c);
+      }
+      return indices;
+    }, [chunkWindow, totalChunks, chunkPixelHeight, viewportHeight, overscanChunks]);
+
+    // Rows in visible chunks
+    const visibleChunksMap = useMemo(() => {
+      const map = new Map<number, T[]>();
+      for (const cIdx of visibleChunkIndices) {
+        const startRow = cIdx * chunkSize;
+        const endRow = Math.min(totalRows, startRow + chunkSize);
+        const chunkRows: T[] = [];
+        for (let i = startRow; i < endRow; i++) {
+          chunkRows.push(getRowItem(i));
+        }
+        map.set(cIdx, chunkRows);
+      }
+      return map;
+    }, [visibleChunkIndices, chunkSize, totalRows, getRowItem, dataVersion]);
+
+    // Imperative Ref API
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollToRow: (rowIndex: number, behavior: ScrollBehavior = 'auto') => {
+          const el = scrollContainerRef.current;
+          if (!el || totalRows === 0) return;
+          const clamped = Math.max(0, Math.min(totalRows - 1, rowIndex));
+          const targetTop = clamped * actualRowHeight;
+          if (rowSnapMode || behavior === 'auto') {
+            el.scrollTop = targetTop;
+          } else {
+            el.scrollTo({ top: targetTop, behavior });
+          }
+        },
+        scrollToChunk: (chunkIndex: number, behavior: ScrollBehavior = 'auto') => {
+          const el = scrollContainerRef.current;
+          if (!el || totalChunks === 0) return;
+          const clamped = Math.max(0, Math.min(totalChunks - 1, chunkIndex));
+          const targetTop = clamped * chunkPixelHeight;
+          if (rowSnapMode || behavior === 'auto') {
+            el.scrollTop = targetTop;
+          } else {
+            el.scrollTo({ top: targetTop, behavior });
+          }
+        },
+        getScrollContainer: () => scrollContainerRef.current,
+      }),
+      [totalRows, actualRowHeight, rowSnapMode, totalChunks, chunkPixelHeight]
+    );
+
+    const theme = getThemeClasses(surfaceTheme);
+
+    return (
+      <div
+        ref={containerRef}
+        data-theme={surfaceTheme}
+        className={`relative flex-1 flex flex-col min-h-0 overflow-hidden agv-grid-root ${isFullscreen ? 'agv-grid-fullscreen' : ''} ${getThemeClass(surfaceTheme)} ${className}`}
+        style={style}
+        onContextMenu={(e) => {
+          // Vô hiệu hóa chuột phải mặc định của trình duyệt trong Grid
+          e.preventDefault();
+        }}
+      >
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          data-agv-editing={activeEditingCell ? 'true' : undefined}
+          onContextMenu={(e) => {
+            // Vô hiệu hóa chuột phải mặc định của trình duyệt trong vùng cuộn Grid
+            e.preventDefault();
+          }}
+          style={{
+            willChange: 'scroll-position',
+            WebkitOverflowScrolling: 'touch',
+            backgroundColor: 'var(--agv-bg-root)',
+          }}
+          className={`flex-1 overflow-auto relative ${theme.viewportBg}`}
+        >
+          {/* Sticky Header (1-tier 34px or 2-tier 64px) */}
+          <GridHeader
+            totalGridWidth={totalGridWidth}
+            leftColumns={leftColumns}
+            middleElements={middleElements}
+            rightColumns={rightColumns}
+            colWidths={colWidths}
+            columnPins={columnPins}
+            leftOffsets={leftOffsets}
+            rightOffsets={rightOffsets}
+            centerDockStatus={centerDockStatus}
+            centerLeftOffsets={centerLeftOffsets}
+            centerRightOffsets={centerRightOffsets}
+            lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+            firstEffectiveRightColKey={firstEffectiveRightColKey}
+            sortConfig={sortConfig}
+            surfaceTheme={surfaceTheme}
+            columnFilters={columnFilters}
+            onOpenChecklistFilter={handleOpenChecklistFilter}
+            onToggleSort={handleToggleSort}
+            onColumnContextMenu={handleColumnContextMenu}
+            onBandContextMenu={handleBandContextMenu}
+            onMouseDownResize={handleMouseDownResize}
+            onToggleGroup={onToggleGroup}
+            onReorderColumns={onReorderColumns}
+            headerHeight={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
+            emptyColKeys={emptyColKeys}
+            hasFilterRow={showFilterRow}
+          />
+
+          {/* Sticky Inline Filter Row */}
+          {showFilterRow && (
+            <GridFilterRow
+              totalGridWidth={totalGridWidth}
+              columns={flatColumns}
+              colWidths={colWidths}
+              columnPins={columnPins}
+              leftOffsets={leftOffsets}
+              rightOffsets={rightOffsets}
+              centerDockStatus={centerDockStatus}
+              centerLeftOffsets={centerLeftOffsets}
+              centerRightOffsets={centerRightOffsets}
+              lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+              firstEffectiveRightColKey={firstEffectiveRightColKey}
+              surfaceTheme={surfaceTheme}
+              columnFilters={columnFilters}
+              onColumnFilterChange={onColumnFilterChange}
+              onClearAllColumnFilters={onClearAllColumnFilters}
+              onClearAllCriteria={onClearAllCriteria}
+              activeFilterCount={activeColumnFilterCount}
+              hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+              getColumnDateBounds={effectiveGetColumnDateBounds}
+              headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
+              columnSums={columnSums}
+              emptyColKeys={emptyColKeys}
+              groupByColumnKey={groupByColumnKey}
+              quickFilterText={controlledQuickFilterText}
+              sortConfig={sortConfig}
+              groupSortConfig={groupSortConfig}
+              appliedQueryTree={controlledAppliedQueryTree}
+              onUngroup={onUngroup}
+              onSortChange={onSortChange}
+              onToggleGroupSort={onToggleGroupSort}
+              onQuickFilterTextChange={controlledOnQuickFilterTextChange}
+              onApplyQueryTree={controlledOnApplyQueryTree}
+            />
+          )}
+
+          {/* Virtualized Rows Canvas */}
+          <div
+            style={{
+              height: `${totalContentHeight}px`,
+              width: `${totalGridWidth}px`,
+              position: 'relative',
+            }}
+          >
+            {visibleChunkIndices.map((chunkIdx) => {
+              const chunkRows = visibleChunksMap.get(chunkIdx);
+              if (!chunkRows) return null;
+
+              return (
+                <GridChunkBlock
+                  key={`chunk_${chunkSize}_${chunkIdx}`}
+                  chunkIndex={chunkIdx}
+                  rows={chunkRows}
+                  startRowIndex={chunkIdx * chunkSize}
+                  columns={flatColumns}
+                  colWidths={colWidths}
+                  rowHeight={actualRowHeight}
+                  chunkSize={chunkSize}
+                  selectedRowIndex={selectedRowIndex ?? null}
+                  selectedRowKey={selectedRowKey}
+                  checkedRowIndices={checkedRowIndices}
+                  onSelectRow={onSelectRow}
+                  onToggleCheck={onToggleCheck}
+                  antiGhostMode={antiGhostMode}
+                  surfaceTheme={surfaceTheme}
+                  columnPins={columnPins}
+                  leftOffsets={leftOffsets}
+                  rightOffsets={rightOffsets}
+                  lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                  firstEffectiveRightColKey={firstEffectiveRightColKey}
+                  centerDockStatus={centerDockStatus}
+                  centerLeftOffsets={centerLeftOffsets}
+                  centerRightOffsets={centerRightOffsets}
+                  getRowId={getRowId}
+                  renderCell={renderCell}
+                  onCellContextMenu={handleCellContextMenu}
+                  onGroupContextMenu={handleGroupContextMenu}
+                  editMode={editMode}
+                  editingCell={activeEditingCell}
+                  onStartEditCell={handleStartEditCell}
+                  onEndEditCell={handleEndEditCell}
+                  onCellChange={onCellChange}
+                  getColumnDateBounds={getColumnDateBounds}
+                  emptyColKeys={emptyColKeys}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Universal Context Menu (Header / Band / Row) */}
+        {activeContextMenu && (
+          <ColumnContextMenu
+            menu={activeContextMenu}
+            surfaceTheme={surfaceTheme}
+            columns={columns}
+            columnGroups={columnGroups}
+            onClose={() => setActiveContextMenu(null)}
+            onSetPin={handleSetPin}
+            onAutoFitColumn={handleAutoFitColumn}
+            onAutoFitAllColumns={handleAutoFitAllColumns}
+            onHideColumn={handleHideColumn}
+            onShowAllHiddenColumns={handleShowAllHiddenColumns}
+            onSetBandPin={handleSetBandPin}
+            onAutoFitBandColumns={handleAutoFitBandColumns}
+            onHideBand={handleHideBand}
+            onFilterByValue={handleFilterByValue}
+            onScrollToTop={handleScrollToTop}
+            onScrollToBottom={handleScrollToBottom}
+            groupByColumnKey={groupByColumnKey}
+            onToggleGroupByColumn={onToggleGroupByColumn}
+            onCollapseAllGroups={onCollapseAllGroups}
+            onExpandAllGroups={onExpandAllGroups}
+            onUngroup={onUngroup}
+            onCopyGroupTable={onCopyGroupTable}
+            onExportGroupExcel={onExportGroupExcel}
+            formulaMode={formulaMode}
+            onSelectFormulaMode={onFormulaModeChange}
+            emptyColKeys={emptyColKeys}
+            onHideAllEmptyColumns={handleHideAllEmptyColumns}
+            groupSortConfig={groupSortConfig}
+            onToggleGroupSort={onToggleGroupSort}
+            sortConfig={sortConfig}
+            onSortChange={onSortChange}
+          />
+        )}
+
+        {/* Portal: Checklist Filter Popup (Zero re-render: chỉ popup mở độc lập) */}
+        <AdvChecklistFilterPopup
+          ref={checklistPopupRef}
+          data={data}
+          getRowItem={getRowItem}
+          totalRowCount={totalRows}
+          getCellValue={effectiveGetCellValue}
+          getDistinctValues={getDistinctValues}
+          columnDataTypes={columnDataTypes}
+          distinctValuesCacheRef={distinctValuesCacheRef}
+          surfaceTheme={surfaceTheme}
+          formatChecklistDisplay={formatChecklistDisplay}
+          matchFilterValue={effectiveMatchFilterValue}
+          onApply={handleApplyChecklistFilter}
+          onClear={handleClearChecklistFilter}
+        />
+
+        {/* Floating Toolbar (Right-docked, 6 Buttons, 4 Popups, strictly bounded inside Grid) */}
+        {enableFloatingToolbar && (
+          <GridFloatingToolbar
+            gridContainerRef={containerRef}
+            surfaceTheme={surfaceTheme}
+            headerHeight={
+              (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
+              (showFilterRow ? 34 : 0)
+            }
+            quickFilterText={currentQuickFilterText}
+            onQuickFilterChange={handleQuickFilterChange}
+            isQuickFilterSmart={isQuickFilterSmart}
+            onToggleQuickFilterSmart={() => setIsQuickFilterSmart((prev) => !prev)}
+            appliedQueryTree={currentQueryTree}
+            onApplyQueryTree={handleApplyQueryTree}
+            totalFilteredRows={totalRows}
+            totalRowCount={totalRows}
+            data={data}
+            getCellValue={effectiveGetCellValue}
+            hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+            getColumnDateBounds={effectiveGetColumnDateBounds}
+            columns={columns}
+            columnGroups={columnGroups}
+            visibleColKeys={visibleColKeys}
+            onVisibleColKeysChange={handleVisibleColKeysChange}
+            columnPins={columnPins}
+            onColumnPinChange={handleSetPin}
+            onResetColumns={handleResetColumns}
+            onAutoFitColumn={handleAutoFitColumn}
+            onAutoFitAllColumns={handleAutoFitAllColumns}
+            onReorderColumns={onReorderColumns}
+            settings={gridSettings}
+            onUpdateSettings={setGridSettings}
+            onExportExcel={handleExportExcel}
+            isExporting={controlledIsExporting}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+VirtualizedGridComponent.displayName = 'VirtualizedGrid';
+
+export const VirtualizedGrid = VirtualizedGridComponent as <T = any>(
+  props: VirtualizedGridProps<T> & { ref?: React.Ref<VirtualizedGridRef> }
+) => React.ReactElement | null;

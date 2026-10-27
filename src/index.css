@@ -1,0 +1,618 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Giúp toàn bộ số 0-9 có chiều rộng bằng nhau, thẳng hàng cột dọc */
+.agv-cell-number,
+.agv-cell-date,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Cột mã đặt chỗ (PNR 6 ký tự), STT, mã vé, khu vực: Bắt buộc dùng font Monospace để mọi chữ cái A-Z và số 0-9 đều rộng bằng nhau 100%, thẳng tắp hàng dọc */
+.agv-cell-code,
+.agv-cell-code * {
+  /* Ép font đơn cách cho mã chỗ: mọi chữ cái A-Z và số 0-9 đều rộng bằng nhau */
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace !important;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--agv-bg-root, #ffffff);
+  color: var(--agv-text-main, #0f172a);
+  font-family: var(--font-sans);
+}
+
+*, ::before, ::after {
+  font-family: inherit;
+}
+
+body, button, input, select, textarea {
+  font-family: var(--font-sans);
+}
+
+.agv-app-container, .agv-grid-root {
+  font-family: var(--font-sans) !important;
+}
+
+/* Khóa cuộn tuyệt đối khi đang sửa ô dữ liệu (In-Cell Editing Scroll Lock) */
+[data-agv-editing="true"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+/* Đồng bộ thanh cuộn (Scrollbar) theo theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1)) var(--agv-bg-root, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--agv-bg-root, transparent);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1));
+  border-radius: 6px;
+  border: 2px solid var(--agv-bg-root, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover, var(--agv-text-muted, #94a3b8));
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--agv-bg-root, transparent);
+}
+
+/* ==============================================================================
+   PINNED FLOATING TOOLBAR (RIGHT-DOCKED) - THUỘC VỀ GRID, GIỚI HẠN TRONG GRID
+   ============================================================================== */
+.agv-floating-toolbar {
+  position: absolute;
+  right: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 10px;
+  min-width: 10px;
+  padding: 6px 0;
+  overflow: hidden;
+  background-color: var(--agv-accent) !important;
+  border: 1px solid var(--agv-accent) !important;
+  border-right: none !important;
+  border-radius: 8px 0 0 8px;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  opacity: 0.35;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  transition:
+    width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.25s ease,
+    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width, background-color, border-color, opacity, top;
+}
+
+/* Vùng đệm nhạy rê chuột phía bên trái thanh công cụ */
+.agv-floating-toolbar::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -14px;
+  width: 14px;
+  cursor: pointer;
+}
+
+/* Rãnh khía mini màu trắng khi đang thu nhỏ */
+.agv-floating-toolbar::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+/* Các nút bấm bên trong khi đang thu nhỏ: mờ dần */
+.agv-floating-toolbar .agv-float-toolbar-btn,
+.agv-floating-toolbar .agv-float-toolbar-divider,
+.agv-floating-toolbar .agv-floating-search-wrap,
+.agv-floating-toolbar .agv-float-toolbar-handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  flex-shrink: 0;
+}
+
+/* Khi hover, khi popup đang mở hoặc khi đang kéo di chuyển: bung rộng ra 38px, tuyệt đối không thu gọn */
+.agv-floating-toolbar:hover,
+.agv-floating-toolbar.is-expanded,
+.agv-floating-toolbar.is-dragging {
+  width: 38px !important;
+  min-width: 38px !important;
+  padding: 6px 4px;
+  opacity: 1 !important;
+  overflow: visible;
+  background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
+  border: 1px solid var(--agv-border-strong) !important;
+  border-right: none !important;
+  box-shadow: 0 4px 16px var(--agv-pinned-shadow, rgba(0, 0, 0, 0.15));
+  transition:
+    background-color 0s,
+    border-color 0s,
+    opacity 0s,
+    width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.22s ease;
+}
+
+.agv-floating-toolbar:hover::after,
+.agv-floating-toolbar.is-expanded::after,
+.agv-floating-toolbar.is-dragging::after {
+  opacity: 0 !important;
+  transition: opacity 0s !important;
+}
+
+.agv-floating-toolbar:hover .agv-float-toolbar-btn,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-btn,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-btn,
+.agv-floating-toolbar:hover .agv-float-toolbar-divider,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-divider,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-divider,
+.agv-floating-toolbar:hover .agv-floating-search-wrap,
+.agv-floating-toolbar.is-expanded .agv-floating-search-wrap,
+.agv-floating-toolbar.is-dragging .agv-floating-search-wrap,
+.agv-floating-toolbar:hover .agv-float-toolbar-handle,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-handle,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-handle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: opacity 0.1s ease;
+}
+
+/* Tay nắm kéo */
+.agv-float-toolbar-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 12px;
+  cursor: grab;
+  touch-action: none;
+  opacity: 0.6;
+}
+
+.agv-float-toolbar-handle:hover {
+  opacity: 1;
+}
+
+.agv-float-toolbar-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+/* Vạch phân cách */
+.agv-float-toolbar-divider {
+  width: 18px;
+  height: 1px;
+  background-color: var(--agv-border);
+  margin: 1px 0;
+}
+
+/* Nút bấm trên thanh nổi (min-height >= 28px) */
+.agv-float-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--agv-text-main);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.agv-float-toolbar-btn:hover {
+  background-color: var(--agv-bg-item-hover);
+  border-color: var(--agv-border);
+  color: var(--agv-accent);
+}
+
+.agv-float-toolbar-btn:active {
+  background-color: var(--agv-bg-item-active);
+}
+
+.agv-float-toolbar-btn.is-active,
+.agv-float-toolbar-btn.is-active:hover {
+  background-color: var(--agv-accent) !important;
+  border: none !important;
+  color: var(--agv-accent-text, #ffffff) !important;
+  opacity: 1 !important;
+}
+
+.agv-float-toolbar-btn.is-active svg {
+  color: var(--agv-accent-text, #ffffff) !important;
+  stroke: currentColor !important;
+}
+
+/* Chấm báo hiệu có query text */
+.agv-float-dot-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--agv-accent);
+  box-shadow: 0 0 0 1px var(--agv-bg-control, #ffffff);
+}
+
+.agv-float-toolbar-btn.is-active .agv-float-dot-badge {
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  box-shadow: 0 0 0 1px var(--agv-accent);
+}
+
+/* Huy hiệu đếm số lượng (Badge) */
+.agv-float-count-badge {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  line-height: 14px;
+  padding: 0 3px;
+  border-radius: 9999px;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  background-color: var(--agv-accent);
+  color: var(--agv-accent-text, #ffffff);
+  pointer-events: none;
+}
+
+.agv-float-toolbar-btn.is-active .agv-float-count-badge {
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  color: var(--agv-accent) !important;
+}
+
+/* ==============================================================================
+   POPUP 1: QUICK SEARCH FLYOUT
+   ============================================================================== */
+.agv-float-search-flyout {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
+  border: 1.5px solid var(--agv-accent) !important;
+  border-radius: 6px;
+  padding: 2px 6px;
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15) !important;
+  width: 280px;
+  min-height: 32px;
+  box-sizing: border-box;
+  animation: agv-slide-left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1210;
+}
+
+@keyframes agv-slide-left {
+  from {
+    opacity: 0;
+    transform: translate(10px, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+}
+
+.agv-float-search-input {
+  width: 100%;
+  min-height: 28px;
+  height: 28px;
+  line-height: 28px;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 24px 0 26px;
+  font-size: 12px;
+  color: var(--agv-text-main) !important;
+  box-sizing: border-box;
+}
+
+.agv-float-search-input::placeholder {
+  color: var(--agv-text-muted) !important;
+  font-size: 11px;
+}
+
+.agv-float-search-mode-btn {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  z-index: 2;
+}
+
+.agv-float-search-mode-btn.is-smart {
+  color: var(--agv-accent) !important;
+}
+
+.agv-float-search-mode-btn:not(.is-smart) {
+  color: var(--agv-text-subtle);
+}
+
+.agv-float-search-mode-btn:hover {
+  background-color: var(--agv-bg-item-hover);
+}
+
+.agv-float-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  color: var(--agv-text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+.agv-float-search-clear:hover {
+  color: var(--agv-text-main);
+  background-color: var(--agv-bg-item-hover);
+}
+
+/* ==============================================================================
+   BACKDROP OVERLAY & POPUP STYLES
+   ============================================================================== */
+.agv-grid-backdrop {
+  background: transparent;
+  cursor: default;
+}
+
+.agv-settings-popup {
+  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
+  border-color: var(--agv-border-strong) !important;
+  color: var(--agv-text-main) !important;
+}
+
+.agv-column-chooser {
+  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
+  border-color: var(--agv-border-strong) !important;
+  color: var(--agv-text-main) !important;
+}
+
+/* Nút tác vụ & Scrollbar trong Column Chooser */
+.agv-chooser-action-btn {
+  cursor: pointer;
+  user-select: none;
+}
+
+.agv-chooser-action-btn:hover {
+  filter: brightness(0.95);
+}
+
+.agv-chooser-item:hover {
+  background-color: var(--agv-bg-item-hover) !important;
+}
+
+.agv-chooser-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.agv-chooser-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.agv-chooser-scroll::-webkit-scrollbar-thumb {
+  background: var(--agv-border-strong);
+  border-radius: 3px;
+}
+.agv-chooser-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--agv-text-subtle);
+}
+
+.agv-query-builder-modal {
+  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
+  border-color: var(--agv-border-strong) !important;
+  color: var(--agv-text-main) !important;
+}
+
+/* Toàn màn hình Grid */
+.agv-grid-root.agv-grid-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* ==========================================================================
+   AGV SPRING DIRECTIONAL POPUPS & SHARED SLIDING TOOLTIP
+   Physics Easing Curve: cubic-bezier(0.16, 1, 0.3, 1) [Snappy natural spring]
+   ========================================================================== */
+
+@keyframes agv-spring-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-left {
+  0% {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-zoom {
+  0% {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.agv-spring-down {
+  animation: agv-spring-down 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-up {
+  animation: agv-spring-up 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-left {
+  animation: agv-spring-left 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: right center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-zoom {
+  animation: agv-spring-zoom 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top left;
+  will-change: transform, opacity;
+}
+
+/* Shared Sliding Tooltip */
+.agv-sliding-tooltip-wrap {
+  position: absolute;
+  right: calc(100% + 8px);
+  pointer-events: none;
+  z-index: 1300;
+  will-change: transform, opacity;
+}
+
+.agv-sliding-tooltip-pill {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  background-color: var(--agv-bg-root);
+  color: var(--agv-text-main);
+  border: 1px solid var(--agv-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+/* Animate UI Spring Tooltip */
+@keyframes agv-tooltip-spring-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+@keyframes agv-tooltip-spring-down {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.agv-tooltip-spring-up {
+  animation: agv-tooltip-spring-up 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.agv-tooltip-spring-down {
+  animation: agv-tooltip-spring-down 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}

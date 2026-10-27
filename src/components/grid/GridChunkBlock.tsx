@@ -1,0 +1,200 @@
+import React, { memo } from 'react';
+import {
+  ColumnDef,
+  PinPosition,
+  DATA_TYPES,
+  CenterDockStatus,
+  SurfaceTheme,
+  CellRenderParams,
+  GridEditMode,
+} from './types';
+import { getThemeClasses } from './constants';
+import { GridRow } from './GridRow';
+
+export interface GridChunkBlockProps<T = any> {
+  chunkIndex: number;
+  rows: T[];
+  startRowIndex: number;
+  columns: ColumnDef<T>[];
+  colWidths: Record<string, number>;
+  rowHeight: number;
+  chunkSize: number;
+  selectedRowIndex: number | null;
+  selectedRowKey?: string | number | null;
+  checkedRowIndices?: Set<number | string>;
+  onSelectRow?: (rowIndex: number, row: T) => void;
+  onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+  onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
+  onGroupContextMenu?: (groupRow: any, e: React.MouseEvent) => void;
+  antiGhostMode?: boolean;
+  surfaceTheme: SurfaceTheme;
+  columnPins: Record<string, PinPosition>;
+  leftOffsets: Record<string, number>;
+  rightOffsets: Record<string, number>;
+  lastEffectiveLeftColKey: string | null;
+  firstEffectiveRightColKey: string | null;
+  centerDockStatus: Record<string, CenterDockStatus>;
+  centerLeftOffsets: Record<string, number>;
+  centerRightOffsets: Record<string, number>;
+  getRowId?: (row: T, index: number) => string | number;
+  renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
+  editMode?: GridEditMode;
+  editingCell?: { rowIndex: number; colKey: string } | null;
+  onStartEditCell?: (rowIndex: number, colKey: string) => void;
+  onEndEditCell?: () => void;
+  onCellChange?: (rowIndex: number, row: T, colKey: string, newValue: any) => void;
+  getColumnDateBounds?: (colKey: string) => { min: string; max: string };
+  emptyColKeys?: Set<string>;
+}
+
+export const GridChunkBlock = memo(
+  <T extends any>({
+    chunkIndex,
+    rows,
+    startRowIndex,
+    columns,
+    colWidths,
+    rowHeight,
+    chunkSize,
+    selectedRowIndex,
+    selectedRowKey,
+    checkedRowIndices,
+    onSelectRow,
+    onToggleCheck,
+    antiGhostMode = true,
+    surfaceTheme,
+    columnPins,
+    leftOffsets,
+    rightOffsets,
+    lastEffectiveLeftColKey,
+    firstEffectiveRightColKey,
+    centerDockStatus,
+    centerLeftOffsets,
+    centerRightOffsets,
+    getRowId,
+    renderCell,
+    onCellContextMenu,
+    onGroupContextMenu,
+    editMode,
+    editingCell,
+    onStartEditCell,
+    onEndEditCell,
+    onCellChange,
+    getColumnDateBounds,
+    emptyColKeys,
+  }: GridChunkBlockProps<T>) => {
+    const chunkHeight = rows.length * rowHeight;
+    const topOffset = Math.round(chunkIndex * chunkSize * rowHeight);
+    const totalGridWidth = columns.reduce(
+      (acc, col) => acc + (colWidths[col.key] || col.defaultWidth),
+      0
+    );
+    const theme = getThemeClasses(surfaceTheme);
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: `${totalGridWidth}px`,
+          height: `${chunkHeight}px`,
+          transform: `translate3d(0px, ${topOffset}px, 0px)`,
+          willChange: antiGhostMode ? 'transform' : undefined,
+          backfaceVisibility: antiGhostMode ? 'hidden' : undefined,
+          contain: antiGhostMode ? 'strict' : undefined,
+        }}
+        className={theme.chunkBg}
+      >
+        {rows.map((row, localIdx) => {
+          const actualRowIndex = startRowIndex + localIdx;
+          const rowKey = getRowId
+            ? getRowId(row, actualRowIndex)
+            : (row as any)?.originalIndex ?? (row as any)?.id ?? actualRowIndex;
+
+          const isSelected =
+            selectedRowKey !== undefined && selectedRowKey !== null
+              ? selectedRowKey === rowKey || (selectedRowIndex !== null && selectedRowIndex === actualRowIndex)
+              : selectedRowIndex !== null && selectedRowIndex === actualRowIndex;
+
+          const chkCol = columns.find((c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title));
+          const chkColKey = chkCol?.key;
+          const isChecked =
+            (Boolean(chkColKey) && (row as any)?.cells?.get?.(chkColKey!)?.value === true) ||
+            (Boolean(chkColKey) && (row as any)?.[chkColKey!] === true) ||
+            (row as any)?.isChecked === true ||
+            (checkedRowIndices
+              ? checkedRowIndices.has(rowKey as any) ||
+                ((row as any)?.originalIndex !== undefined &&
+                  checkedRowIndices.has((row as any).originalIndex))
+              : false);
+
+          const key = rowKey;
+
+          return (
+            <GridRow
+              key={key}
+              row={row}
+              rowIndex={actualRowIndex}
+              columns={columns}
+              colWidths={colWidths}
+              rowHeight={rowHeight}
+              isSelected={isSelected}
+              isChecked={isChecked}
+              onSelectRow={onSelectRow}
+              onToggleCheck={onToggleCheck}
+              surfaceTheme={surfaceTheme}
+              columnPins={columnPins}
+              leftOffsets={leftOffsets}
+              rightOffsets={rightOffsets}
+              lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+              firstEffectiveRightColKey={firstEffectiveRightColKey}
+              centerDockStatus={centerDockStatus}
+              centerLeftOffsets={centerLeftOffsets}
+              centerRightOffsets={centerRightOffsets}
+              renderCell={renderCell}
+              onCellContextMenu={onCellContextMenu}
+              onGroupContextMenu={onGroupContextMenu}
+              editMode={editMode}
+              editingCell={editingCell}
+              onStartEditCell={onStartEditCell}
+              onEndEditCell={onEndEditCell}
+              onCellChange={onCellChange}
+              getColumnDateBounds={getColumnDateBounds}
+              emptyColKeys={emptyColKeys}
+            />
+          );
+        })}
+      </div>
+    );
+  },
+  (prev, next) => {
+    if (prev.columns !== next.columns) return false;
+    if (prev.columnPins !== next.columnPins) return false;
+    if (prev.leftOffsets !== next.leftOffsets) return false;
+    if (prev.rightOffsets !== next.rightOffsets) return false;
+    if (prev.lastEffectiveLeftColKey !== next.lastEffectiveLeftColKey) return false;
+    if (prev.firstEffectiveRightColKey !== next.firstEffectiveRightColKey) return false;
+    if (prev.centerDockStatus !== next.centerDockStatus) return false;
+    if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
+    if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
+    if (prev.checkedRowIndices !== next.checkedRowIndices) return false;
+    if (prev.selectedRowKey !== next.selectedRowKey) return false;
+    if (prev.selectedRowIndex !== next.selectedRowIndex) return false;
+    if (prev.editMode !== next.editMode) return false;
+    if (prev.editingCell !== next.editingCell) return false;
+    if (prev.renderCell !== next.renderCell) return false;
+    if (prev.onCellContextMenu !== next.onCellContextMenu) return false;
+    if (prev.emptyColKeys !== next.emptyColKeys) return false;
+
+    return (
+      prev.chunkIndex === next.chunkIndex &&
+      prev.rowHeight === next.rowHeight &&
+      prev.chunkSize === next.chunkSize &&
+      prev.antiGhostMode === next.antiGhostMode &&
+      prev.surfaceTheme === next.surfaceTheme &&
+      prev.rows === next.rows &&
+      prev.colWidths === next.colWidths
+    );
+  }
+) as <T = any>(props: GridChunkBlockProps<T>) => React.ReactElement | null;

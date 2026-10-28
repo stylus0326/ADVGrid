@@ -34,6 +34,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       className="agv-modal-portal fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs select-none"
       data-agv-popup="true"
       style={{ backgroundColor: 'var(--agv-backdrop-bg, rgba(0, 0, 0, 0.65))' }}
+      onClick={onClose}
     >
       <div
         className="w-full max-w-lg rounded-md border overflow-hidden flex flex-col max-h-[90vh] transition-all shadow-2xl"
@@ -42,6 +43,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           borderColor: 'var(--agv-border-strong)',
           color: 'var(--agv-text-main)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           className="flex items-center justify-between px-5 py-3.5 border-b"
@@ -51,7 +53,13 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           }}
         >
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-500 dark:text-indigo-400">
+            <div
+              className="p-1.5 rounded-lg"
+              style={{
+                backgroundColor: 'var(--agv-bg-selected)',
+                color: 'var(--agv-accent)',
+              }}
+            >
               <Filter className="w-4 h-4" />
             </div>
             <div>
@@ -229,11 +237,11 @@ export const FilterModal: React.FC<FilterModalProps> = ({
         >
           <div className="text-xs" style={{ color: 'var(--agv-text-main)' }}>
             Khớp:{' '}
-            <strong className="text-emerald-500 font-bold">
+            <strong className="text-[var(--agv-success)] font-bold">
               {totalFilteredRows.toLocaleString()} / 50.000 dòng
             </strong>
             {activeFilterCount > 0 && (
-              <span className="text-indigo-500 font-semibold ml-1.5">
+              <span className="text-[var(--agv-accent)] font-semibold ml-1.5">
                 ({activeFilterCount} tiêu chí đang bật)
               </span>
             )}
@@ -243,7 +251,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <button
               type="button"
               onClick={onResetFilters}
-              className="px-3 py-1.5 rounded-lg border transition text-xs inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80"
+              className="px-3 py-1.5 rounded-lg border transition text-xs inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 min-h-[28px]"
               style={{
                 backgroundColor: 'var(--agv-bg-root)',
                 borderColor: 'var(--agv-border)',
@@ -256,8 +264,11 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg text-white font-semibold transition text-xs cursor-pointer"
-              style={{ backgroundColor: 'var(--agv-accent)' }}
+              className="px-4 py-1.5 rounded-lg font-semibold transition text-xs cursor-pointer min-h-[28px]"
+              style={{
+                backgroundColor: 'var(--agv-accent)',
+                color: 'var(--agv-accent-text, #ffffff)',
+              }}
             >
               Áp Dụng & Đóng
             </button>

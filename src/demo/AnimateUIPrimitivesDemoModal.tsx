@@ -9,7 +9,7 @@ import {
   AdvProgress,
   AdvPreviewLinkCard,
 } from '../components/ui';
-import { getThemeClass, getPortalThemeVars } from '../components/ui/enterpriseEditorUtils';
+import { getThemeClass, getPortalThemeVars, SURFACE_THEMES } from '../components/ui/enterpriseEditorUtils';
 
 export interface AnimateUIPrimitivesDemoModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ export interface AnimateUIPrimitivesDemoModalProps {
 export const AnimateUIPrimitivesDemoModal: React.FC<AnimateUIPrimitivesDemoModalProps> = ({
   isOpen,
   onClose,
-  surfaceTheme = 'bezier-arthouse',
+  surfaceTheme = SURFACE_THEMES.BEZIER_ARTHOUSE,
 }) => {
   const [selectedCity, setSelectedCity] = useState('HAN');
   const [selectedStatus, setSelectedStatus] = useState('completed');
@@ -34,7 +34,7 @@ export const AnimateUIPrimitivesDemoModal: React.FC<AnimateUIPrimitivesDemoModal
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none ${themeClass}`}
+      className={`fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-[var(--agv-backdrop-bg)] backdrop-blur-xs select-none ${themeClass}`}
       style={themeVars}
       onClick={onClose}
     >

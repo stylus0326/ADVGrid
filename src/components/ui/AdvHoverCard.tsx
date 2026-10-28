@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getPortalThemeVars, getThemeClass } from './enterpriseEditorUtils';
+import { getPortalThemeVars, getThemeClass, SURFACE_THEMES } from './enterpriseEditorUtils';
 
 export interface AdvHoverCardProps {
   trigger: React.ReactNode;
@@ -19,7 +19,7 @@ export const AdvHoverCard: React.FC<AdvHoverCardProps> = ({
   openDelay = 150,
   closeDelay = 200,
   width = 280,
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   className = '',
   contentClassName = '',
 }) => {

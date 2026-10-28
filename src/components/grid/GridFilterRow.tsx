@@ -11,7 +11,9 @@ import {
   PIN_POSITIONS,
   PinPosition,
   CenterDockStatus,
+  CENTER_DOCK_STATUSES,
   SurfaceTheme,
+  SURFACE_THEMES,
   SortConfig,
   GroupSortConfig,
 } from './types';
@@ -430,7 +432,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
   centerRightOffsets = {},
   lastEffectiveLeftColKey,
   firstEffectiveRightColKey,
-  surfaceTheme = 'light',
+  surfaceTheme = SURFACE_THEMES.LIGHT,
   columnFilters = {},
   onColumnFilterChange,
   onClearAllColumnFilters,
@@ -687,10 +689,10 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
           const isPinnedLeft = pinPos === PIN_POSITIONS.LEFT;
           const isPinnedRight = pinPos === PIN_POSITIONS.RIGHT;
           const isCenterPinned = pinPos === PIN_POSITIONS.CENTER;
-          const dock = isCenterPinned ? centerDockStatus[col.key] || 'normal' : 'normal';
+          const dock = isCenterPinned ? centerDockStatus[col.key] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
-          const isDockedLeft = dock === 'left';
-          const isDockedRight = dock === 'right';
+          const isDockedLeft = dock === CENTER_DOCK_STATUSES.LEFT;
+          const isDockedRight = dock === CENTER_DOCK_STATUSES.RIGHT;
           const isEffectiveLeft = isPinnedLeft || isDockedLeft;
           const isEffectiveRight = isPinnedRight || isDockedRight;
 

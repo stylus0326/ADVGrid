@@ -239,6 +239,55 @@ export function evaluateQueryTreeNode(
   return evaluateValueCondition(cellVal, operator, value, dType, valueTo);
 }
 
+export const QUERY_OP_DISPLAY_MAP: Record<string, string> = {
+  [FILTER_OPS.CONTAINS]: 'Có chứa',
+  [FILTER_OPS.NOT_CONTAINS]: 'Không chứa',
+  [FILTER_OPS.STARTS_WITH]: 'Bắt đầu với',
+  [FILTER_OPS.ENDS_WITH]: 'Kết thúc với',
+  [FILTER_OPS.EQUALS]: '=',
+  [FILTER_OPS.NOT_EQUALS]: '≠',
+  [FILTER_OPS.GREATER_THAN]: '>',
+  [FILTER_OPS.GREATER_EQUALS]: '≥',
+  [FILTER_OPS.LESS_THAN]: '<',
+  [FILTER_OPS.LESS_EQUALS]: '≤',
+  [FILTER_OPS.BETWEEN]: 'nằm giữa',
+  [FILTER_OPS.IS_POSITIVE]: 'dương (> 0)',
+  [FILTER_OPS.IS_NEGATIVE]: 'âm (< 0)',
+  [FILTER_OPS.IS_EMPTY]: 'trống',
+  [FILTER_OPS.IS_NOT_EMPTY]: 'không trống',
+};
+
+export function formatQueryRuleSummary(rule: QueryRule, columns: ColumnDef<any>[]): string {
+  const col = columns.find((c) => c.key === rule.field);
+  const colName = col?.title || rule.field;
+  const opLabel =
+    rule.operator === FILTER_OPS.BETWEEN
+      ? 'từ'
+      : QUERY_OP_DISPLAY_MAP[rule.operator] || rule.operator;
+  if (Array.isArray(rule.multiValues) && rule.multiValues.length > 0) {
+    const count = rule.multiValues.length;
+    const preview = rule.multiValues
+      .slice(0, 2)
+      .map((v) => `"${v}"`)
+      .join(', ');
+    const more = count > 2 ? ` +${count - 2}` : '';
+    return `[${colName}] ${opLabel} (${preview}${more})`;
+  }
+  if (Array.isArray(rule.multiRanges) && rule.multiRanges.length > 0) {
+    return `[${colName}] (${rule.multiRanges.length} khoảng)`;
+  }
+  if (isBetweenFilterOp(rule.operator)) {
+    const fromVal = rule.value !== undefined && rule.value !== '' ? `"${rule.value}"` : '...';
+    const toVal = rule.valueTo !== undefined && rule.valueTo !== '' ? `"${rule.valueTo}"` : '...';
+    return `[${colName}] từ ${fromVal} đến ${toVal}`;
+  }
+  if (isNoInputFilterOp(rule.operator)) {
+    return `[${colName}] là ${opLabel}`;
+  }
+  const hasVal = rule.value !== undefined && rule.value !== null && String(rule.value).trim() !== '';
+  return `[${colName}] ${opLabel} ${hasVal ? `"${rule.value}"` : '...'}`;
+}
+
 export function generateNaturalLanguage(
   node: QueryTreeNode | null,
   columns: ColumnDef<any>[]
@@ -257,25 +306,7 @@ export function generateNaturalLanguage(
 
   if (!isRuleActive(node)) return '';
   const colName = colMap.get(node.field) || node.field;
-  const opMap: Record<string, string> = {
-    [FILTER_OPS.CONTAINS]: 'Có chứa',
-    [FILTER_OPS.NOT_CONTAINS]: 'Không chứa',
-    [FILTER_OPS.STARTS_WITH]: 'Bắt đầu với',
-    [FILTER_OPS.ENDS_WITH]: 'Kết thúc với',
-    [FILTER_OPS.EQUALS]: '=',
-    [FILTER_OPS.NOT_EQUALS]: '≠',
-    [FILTER_OPS.GREATER_THAN]: '>',
-    [FILTER_OPS.GREATER_EQUALS]: '≥',
-    [FILTER_OPS.LESS_THAN]: '<',
-    [FILTER_OPS.LESS_EQUALS]: '≤',
-    [FILTER_OPS.BETWEEN]: 'nằm giữa',
-    [FILTER_OPS.IS_POSITIVE]: 'dương (> 0)',
-    [FILTER_OPS.IS_NEGATIVE]: 'âm (< 0)',
-    [FILTER_OPS.IS_EMPTY]: 'trống',
-    [FILTER_OPS.IS_NOT_EMPTY]: 'không trống',
-  };
-
-  const opLabel = opMap[node.operator] || node.operator;
+  const opLabel = QUERY_OP_DISPLAY_MAP[node.operator] || node.operator;
   if (Array.isArray(node.multiValues) && node.multiValues.length > 0) {
     const listStr = node.multiValues.map((v) => `"${v}"`).join(', ');
     return `[${colName}] ${opLabel} (${listStr})`;
@@ -503,23 +534,23 @@ export function parseCmdToQueryTree(
     skipWhitespace();
 
     // Các toán tử đặc biệt
-    if (matchWord('là trống') || matchWord('trống') || matchWord('is_empty') || matchWord('is empty')) {
+    if (matchWord('là trống') || matchWord('trống') || matchWord(FILTER_OPS.IS_EMPTY) || matchWord('is empty')) {
       return { field: matchedColKey, operator: FILTER_OPS.IS_EMPTY, value: '' };
     }
-    if (matchWord('là không trống') || matchWord('không trống') || matchWord('is_not_empty') || matchWord('is not empty')) {
+    if (matchWord('là không trống') || matchWord('không trống') || matchWord(FILTER_OPS.IS_NOT_EMPTY) || matchWord('is not empty')) {
       return { field: matchedColKey, operator: FILTER_OPS.IS_NOT_EMPTY, value: '' };
     }
-    if (matchWord('là dương') || matchWord('dương') || matchWord('dương (> 0)') || matchWord('is_positive')) {
+    if (matchWord('là dương') || matchWord('dương') || matchWord('dương (> 0)') || matchWord(FILTER_OPS.IS_POSITIVE)) {
       return { field: matchedColKey, operator: FILTER_OPS.IS_POSITIVE, value: '' };
     }
-    if (matchWord('là âm') || matchWord('âm') || matchWord('âm (< 0)') || matchWord('is_negative')) {
+    if (matchWord('là âm') || matchWord('âm') || matchWord('âm (< 0)') || matchWord(FILTER_OPS.IS_NEGATIVE)) {
       return { field: matchedColKey, operator: FILTER_OPS.IS_NEGATIVE, value: '' };
     }
 
     // Between
-    if (matchWord('từ') || matchWord('nằm giữa') || matchWord('between')) {
+    if (matchWord('từ') || matchWord('nằm giữa') || matchWord(FILTER_OPS.BETWEEN)) {
       const val1 = parseValue();
-      if (!matchWord('đến') && !matchWord('và') && !matchWord('and')) {
+      if (!matchWord('đến') && !matchWord('và') && !matchWord(QUERY_COMBINATORS.AND)) {
         throw new Error(`Toán tử "từ" cần có chữ "đến" (Ví dụ: [${rawColName}] từ "10" đến "20").`);
       }
       const val2 = parseValue();
@@ -535,14 +566,14 @@ export function parseCmdToQueryTree(
     let op: QueryRule['operator'] | null = null;
     if (matchSymbol('>=') || matchSymbol('≥') || matchWord('lớn hơn hoặc bằng')) op = FILTER_OPS.GREATER_EQUALS;
     else if (matchSymbol('<=') || matchSymbol('≤') || matchWord('nhỏ hơn hoặc bằng')) op = FILTER_OPS.LESS_EQUALS;
-    else if (matchSymbol('!=') || matchSymbol('≠') || matchSymbol('<>') || matchWord('khác') || matchWord('not_equals')) op = FILTER_OPS.NOT_EQUALS;
-    else if (matchSymbol('==') || matchSymbol('=') || matchWord('bằng') || matchWord('equals')) op = FILTER_OPS.EQUALS;
-    else if (matchSymbol('>') || matchWord('lớn hơn') || matchWord('greater_than')) op = FILTER_OPS.GREATER_THAN;
-    else if (matchSymbol('<') || matchWord('nhỏ hơn') || matchWord('less_than')) op = FILTER_OPS.LESS_THAN;
-    else if (matchWord('không chứa') || matchWord('not_contains')) op = FILTER_OPS.NOT_CONTAINS;
-    else if (matchWord('có chứa') || matchWord('chứa') || matchWord('contains')) op = FILTER_OPS.CONTAINS;
-    else if (matchWord('bắt đầu với') || matchWord('bắt đầu bằng') || matchWord('starts_with')) op = FILTER_OPS.STARTS_WITH;
-    else if (matchWord('kết thúc với') || matchWord('kết thúc bằng') || matchWord('ends_with')) op = FILTER_OPS.ENDS_WITH;
+    else if (matchSymbol('!=') || matchSymbol('≠') || matchSymbol('<>') || matchWord('khác') || matchWord(FILTER_OPS.NOT_EQUALS)) op = FILTER_OPS.NOT_EQUALS;
+    else if (matchSymbol('==') || matchSymbol('=') || matchWord('bằng') || matchWord(FILTER_OPS.EQUALS)) op = FILTER_OPS.EQUALS;
+    else if (matchSymbol('>') || matchWord('lớn hơn') || matchWord(FILTER_OPS.GREATER_THAN)) op = FILTER_OPS.GREATER_THAN;
+    else if (matchSymbol('<') || matchWord('nhỏ hơn') || matchWord(FILTER_OPS.LESS_THAN)) op = FILTER_OPS.LESS_THAN;
+    else if (matchWord('không chứa') || matchWord(FILTER_OPS.NOT_CONTAINS)) op = FILTER_OPS.NOT_CONTAINS;
+    else if (matchWord('có chứa') || matchWord('chứa') || matchWord(FILTER_OPS.CONTAINS)) op = FILTER_OPS.CONTAINS;
+    else if (matchWord('bắt đầu với') || matchWord('bắt đầu bằng') || matchWord(FILTER_OPS.STARTS_WITH)) op = FILTER_OPS.STARTS_WITH;
+    else if (matchWord('kết thúc với') || matchWord('kết thúc bằng') || matchWord(FILTER_OPS.ENDS_WITH)) op = FILTER_OPS.ENDS_WITH;
 
     if (!op) {
       const remaining = trimmed.substring(idx, Math.min(len, idx + 20));

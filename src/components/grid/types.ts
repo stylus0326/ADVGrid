@@ -1,6 +1,7 @@
 import React from 'react';
-import type { GridTheme } from '../../themes/index.ts';
+import { SURFACE_THEMES, type GridTheme } from '../../themes/index.ts';
 
+export { SURFACE_THEMES };
 export type SurfaceTheme = GridTheme;
 
 /**
@@ -14,7 +15,15 @@ export const PIN_POSITIONS = {
 } as const;
 export type PinPosition = (typeof PIN_POSITIONS)[keyof typeof PIN_POSITIONS];
 
-export type CenterDockStatus = 'left' | 'right' | 'normal';
+/**
+ * Danh mục trạng thái neo cột ghim giữa (Center Dock Status)
+ */
+export const CENTER_DOCK_STATUSES = {
+  LEFT: 'left',
+  RIGHT: 'right',
+  NORMAL: 'normal',
+} as const;
+export type CenterDockStatus = (typeof CENTER_DOCK_STATUSES)[keyof typeof CENTER_DOCK_STATUSES];
 
 /**
  * Danh mục chiều sắp xếp dữ liệu
@@ -216,7 +225,7 @@ export interface VirtualizedGridRef {
 
 export interface GroupSortConfig {
   colKey: string;
-  direction: 'asc' | 'desc';
+  direction: SortDirection;
 }
 
 export interface VirtualizedGridProps<T = any> {
@@ -311,8 +320,8 @@ export interface VirtualizedGridProps<T = any> {
   onScrollMetrics?: (metrics: GridScrollMetrics) => void;
   onToggleGroup?: (groupId: string) => void;
   onQuickFilter?: (colKey: string, value: any) => void;
-  formulaMode?: 'AVG' | 'SUM' | 'MIN' | 'MAX';
-  onFormulaModeChange?: (mode: 'AVG' | 'SUM' | 'MIN' | 'MAX') => void;
+  formulaMode?: FormulaMode;
+  onFormulaModeChange?: (mode: FormulaMode) => void;
 
   // Styling
   className?: string;

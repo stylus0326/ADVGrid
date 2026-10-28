@@ -47,13 +47,22 @@ export const TOOLBAR_POPUPS = {
 } as const;
 export type FloatingPopupType = (typeof TOOLBAR_POPUPS)[keyof typeof TOOLBAR_POPUPS] | null;
 
+/**
+ * Danh mục chế độ mật độ dòng hiển thị
+ */
+export const DENSITY_MODES = {
+  COMPACT: 'compact',
+  STANDARD: 'standard',
+} as const;
+export type DensityMode = (typeof DENSITY_MODES)[keyof typeof DENSITY_MODES];
+
 export interface GridSettingsState {
   quickSearchEnabled: boolean;
   pinnedShadowEnabled: boolean;
   showVerticalGridlines: boolean;
   showRowNumber: boolean;
   showSelectionCol: boolean;
-  densityMode: 'compact' | 'standard';
+  densityMode: DensityMode;
   showSummaryRow: boolean;
   showPagerBar: boolean;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { MorphCheckbox } from '../../ui/MorphIcons';
 import { GridSettingsState } from './types';
 
 export interface AdvGridSettingsPopupProps {
@@ -8,20 +8,6 @@ export interface AdvGridSettingsPopupProps {
   style?: React.CSSProperties;
   onClose?: () => void;
 }
-
-const SettingsCheckbox: React.FC<{ checked: boolean }> = ({ checked }) => {
-  return (
-    <div
-      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors select-none ${
-        checked
-          ? 'border-agv-accent bg-agv-accent text-agv-accent-text'
-          : 'border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)]'
-      }`}
-    >
-      {checked && <Check className="h-3 w-3 stroke-[3]" />}
-    </div>
-  );
-};
 
 export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
   settings,
@@ -51,7 +37,7 @@ export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
         }
         className="group flex min-h-[28px] cursor-pointer select-none items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-[var(--agv-bg-item-hover)]"
       >
-        <SettingsCheckbox checked={settings.showRowNumber} />
+        <MorphCheckbox checked={settings.showRowNumber} size={15} className="pointer-events-none shrink-0" />
         <span className="whitespace-nowrap text-xs font-medium text-[var(--agv-text-main)]">
           Cột số thứ tự
         </span>
@@ -66,7 +52,7 @@ export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
         }
         className="group flex min-h-[28px] cursor-pointer select-none items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-[var(--agv-bg-item-hover)]"
       >
-        <SettingsCheckbox checked={settings.showSelectionCol} />
+        <MorphCheckbox checked={settings.showSelectionCol} size={15} className="pointer-events-none shrink-0" />
         <span className="whitespace-nowrap text-xs font-medium text-[var(--agv-text-main)]">
           Cột chọn dòng
         </span>
@@ -84,7 +70,7 @@ export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
         }
         className="group flex min-h-[28px] cursor-pointer select-none items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-[var(--agv-bg-item-hover)]"
       >
-        <SettingsCheckbox checked={settings.showSummaryRow} />
+        <MorphCheckbox checked={settings.showSummaryRow} size={15} className="pointer-events-none shrink-0" />
         <span className="whitespace-nowrap text-xs font-medium text-[var(--agv-text-main)]">
           Dòng công thức
         </span>
@@ -99,7 +85,7 @@ export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
         }
         className="group flex min-h-[28px] cursor-pointer select-none items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-[var(--agv-bg-item-hover)]"
       >
-        <SettingsCheckbox checked={settings.showPagerBar} />
+        <MorphCheckbox checked={settings.showPagerBar} size={15} className="pointer-events-none shrink-0" />
         <span className="whitespace-nowrap text-xs font-medium text-[var(--agv-text-main)]">
           Dòng chọn trang
         </span>

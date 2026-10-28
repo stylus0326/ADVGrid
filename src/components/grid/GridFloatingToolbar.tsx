@@ -9,7 +9,7 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { ColumnDef, DATA_TYPES } from './types';
+import { ColumnDef, DATA_TYPES, SURFACE_THEMES } from './types';
 import {
   GridFloatingToolbarProps,
   FloatingPopupType,
@@ -29,7 +29,7 @@ const AdvGridQueryBuilderModal = React.lazy(() =>
 
 export const GridFloatingToolbar = React.memo(function GridFloatingToolbar<T = any>({
   gridContainerRef,
-  surfaceTheme = 'light',
+  surfaceTheme = SURFACE_THEMES.LIGHT,
   headerHeight = 64,
 
   // 1. Quick Filter
@@ -275,8 +275,8 @@ export const GridFloatingToolbar = React.memo(function GridFloatingToolbar<T = a
       if ((e.ctrlKey || e.metaKey || (e.altKey && !e.shiftKey)) && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault();
         setActivePopup((prev) => {
-          const next = prev === 'search' ? null : 'search';
-          if (next === 'search') {
+          const next = prev === TOOLBAR_POPUPS.SEARCH ? null : TOOLBAR_POPUPS.SEARCH;
+          if (next === TOOLBAR_POPUPS.SEARCH) {
             setTimeout(() => {
               searchInputRef.current?.focus();
               searchInputRef.current?.select();

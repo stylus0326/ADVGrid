@@ -18,7 +18,10 @@ import {
   SORT_DIRECTIONS,
   FILTER_MODES,
   CenterDockStatus,
+  CENTER_DOCK_STATUSES,
   GridScrollMetrics,
+  GRID_EDIT_MODES,
+  SURFACE_THEMES,
 } from './types';
 import {
   DEFAULT_CHUNK_SIZE,
@@ -29,6 +32,7 @@ import { getThemeClass } from '../../themes';
 import { GridHeader } from './GridHeader';
 import { GridFilterRow } from './GridFilterRow';
 import { GridChunkBlock } from './GridChunkBlock';
+import { GridRow } from './GridRow';
 import { ColumnContextMenu, ContextMenuData, CONTEXT_MENU_TYPES } from './ColumnContextMenu';
 import {
   calcColAutoFitWidth,
@@ -47,7 +51,7 @@ import {
 } from './AdvChecklistFilterPopup';
 import { getDefaultFilterOpForColumn } from './FilterIcons';
 import { GridFloatingToolbar } from './GridFloatingToolbar';
-import { GridSettingsState, QueryGroup } from './floating/types';
+import { GridSettingsState, QueryGroup, DENSITY_MODES } from './floating/types';
 import { useColumnResize, useColumnAutoFit, useInCellEditor } from './hooks';
 
 const POPUP_SELECTORS = [
@@ -98,7 +102,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       rowHeight = DEFAULT_ROW_HEIGHT,
       overscanChunks = 3,
       antiGhostMode = true,
-      surfaceTheme = 'light',
+      surfaceTheme = SURFACE_THEMES.LIGHT,
       rowSnapMode = true,
       rowsPerWheelStep = 3,
       autoScrolling = false,
@@ -108,7 +112,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onQuickFilter,
       formulaMode,
       onFormulaModeChange,
-      editMode = 'view',
+      editMode = GRID_EDIT_MODES.VIEW,
       onEditModeChange: _onEditModeChange,
       editingCell: controlledEditingCell,
       onStartEditCell,
@@ -320,8 +324,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     const setColumnPin = useCallback(
       (colKey: string, pin: PinPosition) => {
-        const currentPin = columnPins[colKey] || 'none';
-        const nextPin = currentPin === pin ? 'none' : pin;
+        const currentPin = columnPins[colKey] || PIN_POSITIONS.NONE;
+        const nextPin = currentPin === pin ? PIN_POSITIONS.NONE : pin;
         const next = { ...columnPins, [colKey]: nextPin };
         if (onColumnPinsChange) onColumnPinsChange(next);
         else setInternalPins(next);
@@ -398,12 +402,12 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       showVerticalGridlines: true,
       showRowNumber: true,
       showSelectionCol: true,
-      densityMode: 'standard',
+      densityMode: DENSITY_MODES.STANDARD,
       showSummaryRow: true,
       showPagerBar: true,
     }));
 
-    const actualRowHeight = gridSettings.densityMode === 'compact' ? 28 : rowHeight;
+    const actualRowHeight = gridSettings.densityMode === DENSITY_MODES.COMPACT ? 28 : rowHeight;
 
     // Hidden columns state (controlled or uncontrolled)
     const [internalHiddenColKeys, setInternalHiddenColKeys] = useState<Set<string>>(
@@ -428,7 +432,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const columnDataTypes = useMemo(() => {
       const map: Record<string, string> = {};
       columns.forEach((col) => {
-        map[col.key] = col.dataType || 'text';
+        map[col.key] = col.dataType || DATA_TYPES.TEXT;
       });
       return map;
     }, [columns]);
@@ -587,7 +591,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     // Center-pinned column keys
     const centerPinnedColKeys = useMemo(() => {
-      return activeColKeys.filter((k) => columnPins[k] === 'center');
+      return activeColKeys.filter((k) => columnPins[k] === PIN_POSITIONS.CENTER);
     }, [activeColKeys, columnPins]);
 
     // Docking status of center-pinned columns
@@ -608,7 +612,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       centerPinnedColKeys.forEach((key) => {
         cLeftOffsets[key] = runningLeft;
         const w = colWidths[key] || 120;
-        if (centerDockStatus[key] === 'left') {
+        if (centerDockStatus[key] === CENTER_DOCK_STATUSES.LEFT) {
           runningLeft += w;
           lastDockedLeftKey = key;
         }
@@ -620,7 +624,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         const key = centerPinnedColKeys[i];
         cRightOffsets[key] = runningRight;
         const w = colWidths[key] || 120;
-        if (centerDockStatus[key] === 'right') {
+        if (centerDockStatus[key] === CENTER_DOCK_STATUSES.RIGHT) {
           runningRight += w;
           firstDockedRightKey = key;
         }
@@ -669,7 +673,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           midElements.push({
             type: 'standalone',
             col,
-            isCenterPinned: columnPins[col.key] === 'center',
+            isCenterPinned: columnPins[col.key] === PIN_POSITIONS.CENTER,
           });
         });
         return midElements;
@@ -699,9 +703,9 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             const col = colMap[k];
             if (!col) return;
             const pin = columnPins[k] || PIN_POSITIONS.NONE;
-            const dock = pin === PIN_POSITIONS.CENTER ? centerDockStatus[k] || 'normal' : 'normal';
+            const dock = pin === PIN_POSITIONS.CENTER ? centerDockStatus[k] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
-            if (pin === PIN_POSITIONS.CENTER && (dock === 'left' || dock === 'right')) {
+            if (pin === PIN_POSITIONS.CENTER && (dock === CENTER_DOCK_STATUSES.LEFT || dock === CENTER_DOCK_STATUSES.RIGHT)) {
               if (currentSegment.length > 0) {
                 midElements.push({
                   type: 'group',
@@ -848,7 +852,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         if (ce.detail?.except !== 'context-menu') {
           setActiveContextMenu(null);
         }
-        if (ce.detail?.except !== 'checklist') {
+        if (ce.detail?.except !== FILTER_MODES.CHECKLIST) {
           checklistPopupRef.current?.close();
         }
       };
@@ -868,7 +872,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
         window.dispatchEvent(
           new CustomEvent('agv-close-all-popups', {
-            detail: { except: 'checklist', source: 'checklist' },
+            detail: { except: FILTER_MODES.CHECKLIST, source: FILTER_MODES.CHECKLIST },
           })
         );
         setActiveContextMenu(null);
@@ -950,6 +954,62 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       }
       setActiveContextMenu(null);
     }, []);
+
+    // Quản lý danh sách dòng ghim cố định trên đầu bảng (Pin Row to Top)
+    const getRowKey = useCallback(
+      (row: T, rowIndex: number): string | number => {
+        if (getRowId) return getRowId(row, rowIndex);
+        return (row as any)?.originalIndex ?? (row as any)?.id ?? rowIndex;
+      },
+      [getRowId]
+    );
+
+    const [pinnedRows, setPinnedRows] = useState<
+      Array<{ rowKey: string | number; rowIndex: number; row: T }>
+    >([]);
+
+    const pinnedRowKeysSet = useMemo(
+      () => new Set(pinnedRows.map((p) => p.rowKey)),
+      [pinnedRows]
+    );
+
+    const handleTogglePinContextMenuRow = useCallback(() => {
+      if (!activeContextMenu || activeContextMenu.type !== CONTEXT_MENU_TYPES.ROW) return;
+      const { row, rowIndex } = activeContextMenu;
+      if (!row || (row as any)._isGroupRow) return;
+      const rKey = getRowKey(row, rowIndex);
+      setPinnedRows((prev) => {
+        if (prev.some((p) => p.rowKey === rKey)) {
+          return prev.filter((p) => p.rowKey !== rKey);
+        }
+        const resolvedIdx =
+          typeof (row as any)?.rowIndex === 'number' && (row as any).rowIndex >= 0
+            ? (row as any).rowIndex
+            : rowIndex;
+        return [...prev, { rowKey: rKey, rowIndex: resolvedIdx, row }];
+      });
+    }, [activeContextMenu, getRowKey]);
+
+    const handleClearPinnedRows = useCallback(() => {
+      setPinnedRows([]);
+    }, []);
+
+    const handleInternalCellChange = useCallback(
+      (rIdx: number, rObj: T, cKey: string, newVal: any) => {
+        setPinnedRows((prev) => {
+          if (prev.length === 0) return prev;
+          const rKey = getRowKey(rObj, rIdx);
+          if (!prev.some((p) => p.rowKey === rKey)) return prev;
+          return prev.map((p) =>
+            p.rowKey === rKey
+              ? { ...p, row: { ...(p.row as any), [cKey]: newVal } }
+              : p
+          );
+        });
+        onCellChange?.(rIdx, rObj, cKey, newVal);
+      },
+      [getRowKey, onCellChange]
+    );
 
     // Context Menu Triggers
     const handleColumnContextMenu = useCallback(
@@ -1133,21 +1193,21 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           const pos = columnNaturalPositions[key];
           if (!pos) continue;
           if (pos.left < runningLeftEdge) {
-            nextStatus[key] = 'left';
+            nextStatus[key] = CENTER_DOCK_STATUSES.LEFT;
             runningLeftEdge += pos.width;
           } else {
-            nextStatus[key] = 'normal';
+            nextStatus[key] = CENTER_DOCK_STATUSES.NORMAL;
           }
         }
 
         // Check right docking
         for (let i = centerPinnedColKeys.length - 1; i >= 0; i--) {
           const key = centerPinnedColKeys[i];
-          if (nextStatus[key] === 'left') continue;
+          if (nextStatus[key] === CENTER_DOCK_STATUSES.LEFT) continue;
           const pos = columnNaturalPositions[key];
           if (!pos) continue;
           if (pos.left + pos.width > runningRightEdge) {
-            nextStatus[key] = 'right';
+            nextStatus[key] = CENTER_DOCK_STATUSES.RIGHT;
             runningRightEdge -= pos.width;
           }
         }
@@ -1207,6 +1267,63 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       activeChunkWindowRef.current = { start, end };
       setChunkWindow({ start, end });
     }, [viewportHeight, chunkPixelHeight, totalChunks, overscanChunks]);
+
+    // Tính toán dòng tiêu đề nhóm dính trên đỉnh khi cuộn dọc (Sticky Group Header)
+    const [stickyGroupRowIndex, setStickyGroupRowIndex] = useState<number | null>(null);
+
+    const computeStickyGroupIdx = useCallback(
+      (currentTop: number): number | null => {
+        if (!groupByColumnKey || totalRows <= 0 || currentTop <= 0) return null;
+        const topRowIdx = Math.min(
+          totalRows - 1,
+          Math.max(0, Math.floor(currentTop / actualRowHeight))
+        );
+        const rowAtTop = getRowItem(topRowIdx) as any;
+        if (!rowAtTop) return null;
+        if (rowAtTop._isGroupRow) {
+          if (!rowAtTop.isCollapsed && rowAtTop.count > 0 && currentTop > topRowIdx * actualRowHeight) {
+            return topRowIdx;
+          }
+          return null;
+        }
+        if (typeof rowAtTop.localRowIndex === 'number') {
+          const gIdx = topRowIdx - rowAtTop.localRowIndex - 1;
+          if (gIdx >= 0 && gIdx < totalRows) {
+            const gRow = getRowItem(gIdx) as any;
+            if (gRow && gRow._isGroupRow && !gRow.isCollapsed) {
+              return gIdx;
+            }
+          }
+        }
+        for (let k = topRowIdx - 1; k >= 0; k--) {
+          const candidate = getRowItem(k) as any;
+          if (candidate && candidate._isGroupRow) {
+            return !candidate.isCollapsed ? k : null;
+          }
+        }
+        return null;
+      },
+      [groupByColumnKey, totalRows, actualRowHeight, getRowItem]
+    );
+
+    useEffect(() => {
+      const currentTop = scrollContainerRef.current?.scrollTop || 0;
+      const nextIdx = computeStickyGroupIdx(currentTop);
+      setStickyGroupRowIndex((prev) => (prev === nextIdx ? prev : nextIdx));
+    }, [computeStickyGroupIdx, dataVersion]);
+
+    const stickyGroupRow = useMemo(() => {
+      if (
+        !groupByColumnKey ||
+        stickyGroupRowIndex === null ||
+        stickyGroupRowIndex < 0 ||
+        stickyGroupRowIndex >= totalRows
+      ) {
+        return null;
+      }
+      const r = getRowItem(stickyGroupRowIndex);
+      return (r as any)?._isGroupRow ? r : null;
+    }, [groupByColumnKey, stickyGroupRowIndex, totalRows, getRowItem, dataVersion]);
 
     // Velocity & FPS tracking
     const lastScrollTopRef = useRef<number>(0);
@@ -1292,6 +1409,93 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         el.removeEventListener('wheel', handleWheelLock);
       };
     }, [activeContextMenu, activeEditingCell]);
+
+    // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space)
+    useEffect(() => {
+      const handleKeyDownNav = (e: KeyboardEvent) => {
+        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) return;
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        if (totalRows <= 0) return;
+
+        if (
+          e.key === 'ArrowDown' ||
+          e.key === 'ArrowUp' ||
+          e.key === 'PageDown' ||
+          e.key === 'PageUp'
+        ) {
+          if (!onSelectRow) return;
+          e.preventDefault();
+          const pageStep = Math.max(1, Math.floor((viewportHeight || 400) / actualRowHeight) - 1);
+          const curIdx: number =
+            typeof selectedRowIndex === 'number' && selectedRowIndex >= 0 ? selectedRowIndex : 0;
+          let nextIdx: number = curIdx;
+          if (e.key === 'ArrowDown') nextIdx = Math.min(totalRows - 1, curIdx + 1);
+          else if (e.key === 'ArrowUp') nextIdx = Math.max(0, curIdx - 1);
+          else if (e.key === 'PageDown') nextIdx = Math.min(totalRows - 1, curIdx + pageStep);
+          else if (e.key === 'PageUp') nextIdx = Math.max(0, curIdx - pageStep);
+
+          const nextRow = getRowItem(nextIdx);
+          onSelectRow(nextIdx, nextRow);
+
+          const el = scrollContainerRef.current;
+          if (el) {
+            const rowTop = nextIdx * actualRowHeight;
+            const rowBottom = rowTop + actualRowHeight;
+            const viewTop = el.scrollTop;
+            const stickyHeaderHeight =
+              (customHeaderHeight ?? (middleElements.some((m) => m.type === 'group') ? 64 : 34)) +
+              (showFilterRow ? 34 : 0) +
+              pinnedRows.length * actualRowHeight +
+              (stickyGroupRow ? actualRowHeight : 0);
+            const visibleDataHeight = Math.max(actualRowHeight, el.clientHeight - stickyHeaderHeight);
+            if (rowTop < viewTop) {
+              el.scrollTop = rowTop;
+            } else if (rowBottom > viewTop + visibleDataHeight) {
+              el.scrollTop = Math.max(0, rowBottom - visibleDataHeight);
+            }
+          }
+        } else if (
+          e.key === ' ' &&
+          typeof selectedRowIndex === 'number' &&
+          selectedRowIndex >= 0 &&
+          onToggleCheck
+        ) {
+          const curRow = getRowItem(selectedRowIndex) as any;
+          if (curRow && !curRow._isGroupRow) {
+            e.preventDefault();
+            onToggleCheck(selectedRowIndex, curRow, e as unknown as React.MouseEvent);
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDownNav);
+      return () => window.removeEventListener('keydown', handleKeyDownNav);
+    }, [
+      activeContextMenu,
+      activeEditingCell,
+      totalRows,
+      selectedRowIndex,
+      onSelectRow,
+      onToggleCheck,
+      getRowItem,
+      getRowId,
+      viewportHeight,
+      actualRowHeight,
+      customHeaderHeight,
+      middleElements,
+      showFilterRow,
+      pinnedRows.length,
+      stickyGroupRow,
+    ]);
 
     // Auto scrolling test mode
     useEffect(() => {
@@ -1385,6 +1589,11 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           }
         }
 
+        if (groupByColumnKey) {
+          const nextStickyIdx = computeStickyGroupIdx(currentTop);
+          setStickyGroupRowIndex((prev) => (prev === nextStickyIdx ? prev : nextStickyIdx));
+        }
+
         if (scrollStopTimeoutRef.current) {
           window.clearTimeout(scrollStopTimeoutRef.current);
         }
@@ -1430,6 +1639,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         totalRows,
         activeContextMenu,
         activeEditingCell,
+        groupByColumnKey,
+        computeStickyGroupIdx,
       ]
     );
 
@@ -1592,6 +1803,133 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             />
           )}
 
+          {/* Sticky Pinned Rows (Ghim dòng cố định trên đầu bảng) */}
+          {pinnedRows.length > 0 && (
+            <div
+              style={{
+                position: 'sticky',
+                top: `${
+                  (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
+                  (showFilterRow ? 34 : 0)
+                }px`,
+                width: `${totalGridWidth}px`,
+                zIndex: 19,
+                backgroundColor: 'var(--agv-bg-root)',
+              }}
+              className="border-b-2 border-b-[var(--agv-border-strong)] select-none"
+            >
+              {pinnedRows.map((p, pinIdx) => {
+                const rowKey = p.rowKey;
+                const isSelected =
+                  selectedRowKey !== undefined && selectedRowKey !== null
+                    ? selectedRowKey === rowKey ||
+                      (selectedRowIndex !== null && selectedRowIndex === p.rowIndex)
+                    : selectedRowIndex !== null && selectedRowIndex === p.rowIndex;
+
+                const chkCol = flatColumns.find(
+                  (c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title)
+                );
+                const chkColKey = chkCol?.key;
+                const isChecked = checkedRowIndices
+                  ? checkedRowIndices.has(rowKey as any) ||
+                    ((p.row as any)?.originalIndex !== undefined &&
+                      checkedRowIndices.has((p.row as any).originalIndex))
+                  : (Boolean(chkColKey) && (p.row as any)?.[chkColKey!] === true) ||
+                    (p.row as any)?.isChecked === true;
+
+                const effectiveRow =
+                  chkColKey && checkedRowIndices
+                    ? ({ ...(p.row as any), [chkColKey]: isChecked } as T)
+                    : p.row;
+
+                return (
+                  <GridRow
+                    key={`pinned_${rowKey}`}
+                    row={effectiveRow}
+                    rowIndex={-1 - pinIdx}
+                    columns={flatColumns}
+                    colWidths={colWidths}
+                    rowHeight={actualRowHeight}
+                    isSelected={Boolean(isSelected)}
+                    isChecked={Boolean(isChecked)}
+                    onSelectRow={onSelectRow}
+                    onToggleCheck={onToggleCheck}
+                    surfaceTheme={surfaceTheme}
+                    columnPins={columnPins}
+                    leftOffsets={leftOffsets}
+                    rightOffsets={rightOffsets}
+                    lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                    firstEffectiveRightColKey={firstEffectiveRightColKey}
+                    centerDockStatus={centerDockStatus}
+                    centerLeftOffsets={centerLeftOffsets}
+                    centerRightOffsets={centerRightOffsets}
+                    renderCell={renderCell}
+                    onCellContextMenu={handleCellContextMenu}
+                    onGroupContextMenu={handleGroupContextMenu}
+                    editMode={editMode}
+                    editingCell={activeEditingCell}
+                    onStartEditCell={handleStartEditCell}
+                    onEndEditCell={handleEndEditCell}
+                    onCellChange={handleInternalCellChange}
+                    getColumnDateBounds={getColumnDateBounds}
+                    emptyColKeys={emptyColKeys}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Sticky Group Header (Dính tiêu đề nhóm trên đỉnh khi cuộn dọc) */}
+          {stickyGroupRow && (stickyGroupRow as any)._isGroupRow && stickyGroupRowIndex !== null && (
+            <div
+              style={{
+                position: 'sticky',
+                top: `${
+                  (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
+                  (showFilterRow ? 34 : 0) +
+                  pinnedRows.length * actualRowHeight
+                }px`,
+                width: `${totalGridWidth}px`,
+                height: 0,
+                overflow: 'visible',
+                zIndex: 18,
+              }}
+              className="select-none"
+            >
+              <GridRow
+                key={`sticky_group_${(stickyGroupRow as any).path || stickyGroupRowIndex}`}
+                row={stickyGroupRow}
+                rowIndex={stickyGroupRowIndex}
+                columns={flatColumns}
+                colWidths={colWidths}
+                rowHeight={actualRowHeight}
+                isSelected={false}
+                isChecked={false}
+                onSelectRow={onSelectRow}
+                onToggleCheck={onToggleCheck}
+                surfaceTheme={surfaceTheme}
+                columnPins={columnPins}
+                leftOffsets={leftOffsets}
+                rightOffsets={rightOffsets}
+                lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                firstEffectiveRightColKey={firstEffectiveRightColKey}
+                centerDockStatus={centerDockStatus}
+                centerLeftOffsets={centerLeftOffsets}
+                centerRightOffsets={centerRightOffsets}
+                renderCell={renderCell}
+                onCellContextMenu={handleCellContextMenu}
+                onGroupContextMenu={handleGroupContextMenu}
+                editMode={editMode}
+                editingCell={activeEditingCell}
+                onStartEditCell={handleStartEditCell}
+                onEndEditCell={handleEndEditCell}
+                onCellChange={handleInternalCellChange}
+                getColumnDateBounds={getColumnDateBounds}
+                emptyColKeys={emptyColKeys}
+              />
+            </div>
+          )}
+
           {/* Virtualized Rows Canvas */}
           <div
             style={{
@@ -1637,7 +1975,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                   editingCell={activeEditingCell}
                   onStartEditCell={handleStartEditCell}
                   onEndEditCell={handleEndEditCell}
-                  onCellChange={onCellChange}
+                  onCellChange={handleInternalCellChange}
                   getColumnDateBounds={getColumnDateBounds}
                   emptyColKeys={emptyColKeys}
                 />
@@ -1665,6 +2003,14 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             onFilterByValue={handleFilterByValue}
             onScrollToTop={handleScrollToTop}
             onScrollToBottom={handleScrollToBottom}
+            isRowPinned={
+              activeContextMenu.type === CONTEXT_MENU_TYPES.ROW && activeContextMenu.row
+                ? pinnedRowKeysSet.has(getRowKey(activeContextMenu.row, activeContextMenu.rowIndex))
+                : false
+            }
+            pinnedRowCount={pinnedRows.length}
+            onTogglePinRow={handleTogglePinContextMenuRow}
+            onClearPinnedRows={handleClearPinnedRows}
             groupByColumnKey={groupByColumnKey}
             onToggleGroupByColumn={onToggleGroupByColumn}
             onCollapseAllGroups={onCollapseAllGroups}

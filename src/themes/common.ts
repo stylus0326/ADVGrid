@@ -3,7 +3,18 @@
    Quản lý toàn diện: Types, Selectors, Theme Class Registry, Helpers & CSS Engine
    ============================================================================== */
 
-export type GridTheme = 'light' | 'dark' | 'bezier-arthouse' | 'e-ink' | 'eink' | string;
+export const SURFACE_THEMES = {
+  LIGHT: 'light',
+  DAYLIGHT: 'daylight',
+  DARK: 'dark',
+  CALIBRATED_DARK: 'calibrated-dark',
+  DEEP_DARK: 'deep-dark',
+  BEZIER_ARTHOUSE: 'bezier-arthouse',
+  E_INK: 'e-ink',
+  EINK: 'eink',
+} as const;
+
+export type GridTheme = (typeof SURFACE_THEMES)[keyof typeof SURFACE_THEMES] | string;
 
 export interface GridThemeTokens {
   bgRoot: string;
@@ -66,32 +77,32 @@ export interface ThemeMeta {
  */
 export const REGISTERED_THEMES: ThemeMeta[] = [
   {
-    id: 'light',
+    id: SURFACE_THEMES.LIGHT,
     name: 'Sáng',
     class: 'agv-light',
     iconName: 'Sun',
-    iconColorClass: 'text-amber-500',
+    iconColorClass: 'text-[var(--agv-warning)]',
   },
   {
-    id: 'dark',
+    id: SURFACE_THEMES.DARK,
     name: 'Balham Dark',
     class: 'agv-dark',
     iconName: 'Moon',
-    iconColorClass: 'text-blue-400',
+    iconColorClass: 'text-[var(--agv-accent)]',
   },
   {
-    id: 'bezier-arthouse',
+    id: SURFACE_THEMES.BEZIER_ARTHOUSE,
     name: 'Bezier Art House',
     class: 'agv-bezier-arthouse',
     iconName: 'Palette',
-    iconColorClass: 'text-amber-400',
+    iconColorClass: 'text-[var(--agv-warning)]',
   },
   {
-    id: 'e-ink',
+    id: SURFACE_THEMES.E_INK,
     name: 'Giấy E-Ink',
     class: 'agv-e-ink theme-eink',
     iconName: 'BookOpen',
-    iconColorClass: 'text-emerald-700',
+    iconColorClass: 'text-[var(--agv-success)]',
   },
 ];
 
@@ -99,24 +110,24 @@ export const REGISTERED_THEMES: ThemeMeta[] = [
  * Bản đồ ánh xạ tên Theme -> CSS Class tương ứng.
  */
 export const THEME_CLASS_MAP: Record<string, string> = {
-  light: 'agv-light',
-  daylight: 'agv-light',
-  dark: 'agv-dark',
-  'calibrated-dark': 'agv-dark',
-  'deep-dark': 'agv-dark',
-  'bezier-arthouse': 'agv-bezier-arthouse',
-  'e-ink': 'agv-e-ink theme-eink',
-  eink: 'agv-e-ink theme-eink',
+  [SURFACE_THEMES.LIGHT]: 'agv-light',
+  [SURFACE_THEMES.DAYLIGHT]: 'agv-light',
+  [SURFACE_THEMES.DARK]: 'agv-dark',
+  [SURFACE_THEMES.CALIBRATED_DARK]: 'agv-dark',
+  [SURFACE_THEMES.DEEP_DARK]: 'agv-dark',
+  [SURFACE_THEMES.BEZIER_ARTHOUSE]: 'agv-bezier-arthouse',
+  [SURFACE_THEMES.E_INK]: 'agv-e-ink theme-eink',
+  [SURFACE_THEMES.EINK]: 'agv-e-ink theme-eink',
 };
 
 /**
  * Chuẩn hóa tên theme về các id chính thức ('light', 'dark', 'bezier-arthouse', 'e-ink')
  */
 export function normalizeThemeId(theme?: string | null): string {
-  if (!theme) return 'light';
-  if (theme === 'daylight') return 'light';
-  if (theme === 'calibrated-dark' || theme === 'deep-dark') return 'dark';
-  if (theme === 'eink') return 'e-ink';
+  if (!theme) return SURFACE_THEMES.LIGHT;
+  if (theme === SURFACE_THEMES.DAYLIGHT) return SURFACE_THEMES.LIGHT;
+  if (theme === SURFACE_THEMES.CALIBRATED_DARK || theme === SURFACE_THEMES.DEEP_DARK) return SURFACE_THEMES.DARK;
+  if (theme === SURFACE_THEMES.EINK) return SURFACE_THEMES.E_INK;
   return theme;
 }
 
@@ -141,7 +152,7 @@ export function getThemeMeta(theme?: string | null): ThemeMeta {
       name: norm,
       class: getThemeClass(norm),
       iconName: 'Sun',
-      iconColorClass: 'text-gray-400',
+      iconColorClass: 'text-[var(--agv-text-muted)]',
     }
   );
 }
@@ -169,7 +180,11 @@ export function getNextTheme(currentTheme?: string | null): GridTheme {
  * Sinh danh sách CSS Selectors tự động cho mọi theme
  */
 export function buildThemeSelectors(themeKey: string, themeClass?: string): string[] {
-  const cls = themeClass || (themeKey === 'e-ink' || themeKey === 'eink' ? 'agv-e-ink' : `agv-${themeKey}`);
+  const cls =
+    themeClass ||
+    (themeKey === SURFACE_THEMES.E_INK || themeKey === SURFACE_THEMES.EINK
+      ? 'agv-e-ink'
+      : `agv-${themeKey}`);
   const baseSelectors = [
     `.agv-app-container.${cls}`,
     `.agv-grid-root.${cls}`,
@@ -177,7 +192,7 @@ export function buildThemeSelectors(themeKey: string, themeClass?: string): stri
     `.${cls}`,
   ];
 
-  if (themeKey === 'light') {
+  if (themeKey === SURFACE_THEMES.LIGHT) {
     return [
       ':root',
       '.agv-app-container.agv-light',
@@ -188,7 +203,7 @@ export function buildThemeSelectors(themeKey: string, themeClass?: string): stri
     ];
   }
 
-  if (themeKey === 'e-ink' || themeKey === 'eink') {
+  if (themeKey === SURFACE_THEMES.E_INK || themeKey === SURFACE_THEMES.EINK) {
     return [
       ...baseSelectors,
       '.agv-app-container.theme-eink',
@@ -204,11 +219,11 @@ export function buildThemeSelectors(themeKey: string, themeClass?: string): stri
  * Danh sách selector DOM được áp dụng biến CSS cho từng Theme
  */
 export const THEME_SELECTORS: Record<string, string[]> = {
-  light: buildThemeSelectors('light', 'agv-light'),
-  dark: buildThemeSelectors('dark', 'agv-dark'),
-  'bezier-arthouse': buildThemeSelectors('bezier-arthouse', 'agv-bezier-arthouse'),
-  'e-ink': buildThemeSelectors('e-ink', 'agv-e-ink'),
-  eink: buildThemeSelectors('e-ink', 'agv-e-ink'),
+  [SURFACE_THEMES.LIGHT]: buildThemeSelectors(SURFACE_THEMES.LIGHT, 'agv-light'),
+  [SURFACE_THEMES.DARK]: buildThemeSelectors(SURFACE_THEMES.DARK, 'agv-dark'),
+  [SURFACE_THEMES.BEZIER_ARTHOUSE]: buildThemeSelectors(SURFACE_THEMES.BEZIER_ARTHOUSE, 'agv-bezier-arthouse'),
+  [SURFACE_THEMES.E_INK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
+  [SURFACE_THEMES.EINK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
 };
 
 /**
@@ -225,6 +240,8 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-bg-hover: ${tokens.bgHover};
     --agv-bg-selected: ${tokens.bgSelected};
     --agv-bg-popup: ${tokens.bgPopup};
+    --agv-bg-surface: ${tokens.bgPopup};
+    --agv-bg-card: ${tokens.bgRowAlt};
     --agv-bg-item-hover: ${tokens.bgItemHover};
     --agv-bg-item-active: ${tokens.bgItemActive};
     --agv-bg-control: ${tokens.bgControl};
@@ -253,6 +270,7 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-warning-bg: ${tokens.warningBg};
     --agv-success: ${tokens.success};
     --agv-success-bg: ${tokens.successBg};
+    --agv-info: ${tokens.accent};
     --agv-trend-up: ${tokens.trendUp};
     --agv-trend-down: ${tokens.trendDown};
     --agv-shadow-pinned: ${tokens.pinnedShadow};

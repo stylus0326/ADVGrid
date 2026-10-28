@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
-import { getThemeTokens, getThemeClass, GridTheme } from '../../themes';
-export { getThemeClass };
+import { getThemeTokens, getThemeClass, GridTheme, SURFACE_THEMES } from '../../themes';
+export { getThemeClass, SURFACE_THEMES };
+export type { GridTheme };
 
 /**
  * Trích xuất biến CSS Theme Variables để bảo vệ Dropdown Portal và Control luôn đồng bộ 100% theme
  */
-export function getPortalThemeVars(theme: string = 'bezier-arthouse'): React.CSSProperties {
+export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUSE): React.CSSProperties {
   const tokens = getThemeTokens(theme as GridTheme);
   return {
     '--agv-bg-root': tokens.bgRoot,

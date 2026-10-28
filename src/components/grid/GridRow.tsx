@@ -8,6 +8,7 @@ import {
   DATA_TYPES,
   EDITOR_TYPES,
   CenterDockStatus,
+  CENTER_DOCK_STATUSES,
   SurfaceTheme,
   CellRenderParams,
   GRID_EDIT_MODES,
@@ -458,7 +459,7 @@ export const GridRow = memo(
     renderCell,
     onCellContextMenu,
     onGroupContextMenu,
-    editMode = 'view',
+    editMode = GRID_EDIT_MODES.VIEW,
     editingCell,
     onStartEditCell,
     onEndEditCell,
@@ -623,10 +624,10 @@ export const GridRow = memo(
             const isPinnedLeft = pinPos === PIN_POSITIONS.LEFT;
             const isPinnedRight = pinPos === PIN_POSITIONS.RIGHT;
             const isCenterPinned = pinPos === PIN_POSITIONS.CENTER;
-            const dock = isCenterPinned ? centerDockStatus[col.key] || 'normal' : 'normal';
+            const dock = isCenterPinned ? centerDockStatus[col.key] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
-            const isDockedLeft = dock === 'left';
-            const isDockedRight = dock === 'right';
+            const isDockedLeft = dock === CENTER_DOCK_STATUSES.LEFT;
+            const isDockedRight = dock === CENTER_DOCK_STATUSES.RIGHT;
 
             const isLeftDivider = col.key === lastEffectiveLeftColKey;
             const isRightDivider = col.key === firstEffectiveRightColKey;
@@ -692,10 +693,10 @@ export const GridRow = memo(
           const isPinnedLeft = pinPos === PIN_POSITIONS.LEFT;
           const isPinnedRight = pinPos === PIN_POSITIONS.RIGHT;
           const isCenterPinned = pinPos === PIN_POSITIONS.CENTER;
-          const dock = isCenterPinned ? centerDockStatus[col.key] || 'normal' : 'normal';
+          const dock = isCenterPinned ? centerDockStatus[col.key] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
-          const isDockedLeft = dock === 'left';
-          const isDockedRight = dock === 'right';
+          const isDockedLeft = dock === CENTER_DOCK_STATUSES.LEFT;
+          const isDockedRight = dock === CENTER_DOCK_STATUSES.RIGHT;
 
           const isEffectiveLeft = isPinnedLeft || isDockedLeft;
           const isEffectiveRight = isPinnedRight || isDockedRight;

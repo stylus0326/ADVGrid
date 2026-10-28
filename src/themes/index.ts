@@ -1,6 +1,7 @@
 import {
   GridTheme,
   GridThemeTokens,
+  SURFACE_THEMES,
   THEME_SELECTORS,
   REGISTERED_THEMES,
   buildThemeSelectors,
@@ -21,21 +22,21 @@ export * from './eink';
  * Tập hợp toàn bộ bảng màu của các giao diện chính
  */
 export const THEME_TOKENS: Record<string, GridThemeTokens> = {
-  light: LIGHT_THEME_TOKENS,
-  daylight: LIGHT_THEME_TOKENS,
-  dark: DARK_THEME_TOKENS,
-  'calibrated-dark': DARK_THEME_TOKENS,
-  'deep-dark': DARK_THEME_TOKENS,
-  'bezier-arthouse': BEZIER_ARTHOUSE_THEME_TOKENS,
-  'e-ink': EINK_PAPER_THEME_TOKENS,
-  eink: EINK_PAPER_THEME_TOKENS,
+  [SURFACE_THEMES.LIGHT]: LIGHT_THEME_TOKENS,
+  [SURFACE_THEMES.DAYLIGHT]: LIGHT_THEME_TOKENS,
+  [SURFACE_THEMES.DARK]: DARK_THEME_TOKENS,
+  [SURFACE_THEMES.CALIBRATED_DARK]: DARK_THEME_TOKENS,
+  [SURFACE_THEMES.DEEP_DARK]: DARK_THEME_TOKENS,
+  [SURFACE_THEMES.BEZIER_ARTHOUSE]: BEZIER_ARTHOUSE_THEME_TOKENS,
+  [SURFACE_THEMES.E_INK]: EINK_PAPER_THEME_TOKENS,
+  [SURFACE_THEMES.EINK]: EINK_PAPER_THEME_TOKENS,
 };
 
 /**
  * Lấy token màu theo theme, fallback về Light nếu không tìm thấy
  */
-export function getThemeTokens(theme: GridTheme | string = 'light'): GridThemeTokens {
-  return THEME_TOKENS[theme as string] || THEME_TOKENS.light;
+export function getThemeTokens(theme: GridTheme | string = SURFACE_THEMES.LIGHT): GridThemeTokens {
+  return THEME_TOKENS[theme as string] || THEME_TOKENS[SURFACE_THEMES.LIGHT];
 }
 
 /**

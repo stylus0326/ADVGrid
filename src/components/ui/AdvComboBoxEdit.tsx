@@ -7,6 +7,7 @@ import {
   useClickOutside,
   normalizeSearchText,
   getThemeClass,
+  SURFACE_THEMES,
 } from './enterpriseEditorUtils';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../grid/constants';
 
@@ -50,7 +51,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   disabled = false,
   className = '',
   style = {},
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   onClose,
 }) => {
   const isControlled = value !== undefined;

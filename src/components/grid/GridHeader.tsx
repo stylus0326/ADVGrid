@@ -5,7 +5,9 @@ import {
   ColumnDef,
   BaseGroupDef,
   PinPosition,
+  PIN_POSITIONS,
   CenterDockStatus,
+  CENTER_DOCK_STATUSES,
   SurfaceTheme,
   SortConfig,
   ColumnFilterValue,
@@ -160,7 +162,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           <div
             onMouseDown={(e) => onMouseDownResize(col.key, e)}
             onClick={(e) => e.stopPropagation()}
-            className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-indigo-500/40 active:bg-indigo-500 transition-colors"
+            className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-[var(--agv-accent)]/40 active:bg-[var(--agv-accent)] transition-colors"
           />
         )}
       </>
@@ -259,11 +261,11 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
           const col = elem.col;
           const width = colWidths[col.key] || col.defaultWidth;
           const isSorted = sortConfig?.key === col.key;
-          const isCenterPinned = columnPins[col.key] === 'center';
-          const dock = isCenterPinned ? centerDockStatus[col.key] || 'normal' : 'normal';
+          const isCenterPinned = columnPins[col.key] === PIN_POSITIONS.CENTER;
+          const dock = isCenterPinned ? centerDockStatus[col.key] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
-          const isDockedLeft = dock === 'left';
-          const isDockedRight = dock === 'right';
+          const isDockedLeft = dock === CENTER_DOCK_STATUSES.LEFT;
+          const isDockedRight = dock === CENTER_DOCK_STATUSES.RIGHT;
           const isLeftDivider = col.key === lastEffectiveLeftColKey;
           const isRightDivider = col.key === firstEffectiveRightColKey;
 

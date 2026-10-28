@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   getPortalThemeVars,
   getThemeClass,
+  SURFACE_THEMES,
   useClickOutside,
 } from './enterpriseEditorUtils';
 
@@ -29,7 +30,7 @@ export const AdvPopover: React.FC<AdvPopoverProps> = ({
   onOpenChange,
   placement = 'auto',
   showArrow = false,
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   className = '',
   contentClassName = '',
   width = 'auto',

@@ -26,26 +26,26 @@ export const FORMULA_META: Record<
   [FORMULA_MODES.AVG]: {
     label: 'Trung Bình (AVG)',
     short: 'TB',
-    badgeDark: 'bg-sky-950 text-sky-300 border-sky-600/60',
-    badgeLight: 'bg-sky-50 text-sky-800 border-sky-300',
+    badgeDark: 'bg-[var(--agv-bg-selected)] text-[var(--agv-accent)] border-[var(--agv-accent)]',
+    badgeLight: 'bg-[var(--agv-bg-selected)] text-[var(--agv-accent)] border-[var(--agv-accent)]',
   },
   [FORMULA_MODES.SUM]: {
     label: 'Tổng Cộng (SUM)',
     short: 'TỔNG',
-    badgeDark: 'bg-indigo-950 text-indigo-300 border-indigo-500/60',
-    badgeLight: 'bg-indigo-50 text-indigo-800 border-indigo-300',
+    badgeDark: 'bg-[var(--agv-bg-selected)] text-[var(--agv-accent)] border-[var(--agv-accent)]',
+    badgeLight: 'bg-[var(--agv-bg-selected)] text-[var(--agv-accent)] border-[var(--agv-accent)]',
   },
   [FORMULA_MODES.MIN]: {
     label: 'Thấp Nhất (MIN)',
-    short: 'MIN',
-    badgeDark: 'bg-rose-950 text-rose-300 border-rose-500/60',
-    badgeLight: 'bg-rose-50 text-rose-800 border-rose-300',
+    short: FORMULA_MODES.MIN,
+    badgeDark: 'bg-[var(--agv-danger-bg)] text-[var(--agv-trend-down)] border-[var(--agv-trend-down)]',
+    badgeLight: 'bg-[var(--agv-danger-bg)] text-[var(--agv-trend-down)] border-[var(--agv-trend-down)]',
   },
   [FORMULA_MODES.MAX]: {
     label: 'Cao Nhất (MAX)',
-    short: 'MAX',
-    badgeDark: 'bg-emerald-950 text-emerald-300 border-emerald-500/60',
-    badgeLight: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    short: FORMULA_MODES.MAX,
+    badgeDark: 'bg-[var(--agv-success-bg)] text-[var(--agv-trend-up)] border-[var(--agv-trend-up)]',
+    badgeLight: 'bg-[var(--agv-success-bg)] text-[var(--agv-trend-up)] border-[var(--agv-trend-up)]',
   },
 };
 

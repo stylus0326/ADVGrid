@@ -12,6 +12,7 @@ import {
   EDITOR_TYPES,
   FILTER_MODES,
   SORT_DIRECTIONS,
+  SURFACE_THEMES,
 } from './types';
 import { getThemeClass } from '../../themes';
 import { FILTER_OP_META } from './FilterIcons';
@@ -45,7 +46,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
   isOpen,
   onClose,
   anchorRect,
-  surfaceTheme = 'light',
+  surfaceTheme = SURFACE_THEMES.LIGHT,
   columns,
   groupByColumnKey,
   columnFilters = {},

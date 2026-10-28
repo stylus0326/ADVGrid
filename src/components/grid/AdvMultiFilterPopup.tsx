@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ColumnDef, FilterOperation, ColumnFilterValue, FILTER_OPS, DATA_TYPES, FILTER_MODES, EDITOR_TYPES } from './types';
+import { X, Check } from 'lucide-react';
+import { MorphChevronIcon } from '../ui/MorphIcons';
+import { ColumnDef, FilterOperation, ColumnFilterValue, FILTER_OPS, DATA_TYPES, FILTER_MODES, EDITOR_TYPES, SURFACE_THEMES } from './types';
 import { getAllowedFilterOpsForColumn, getDefaultFilterOpForColumn, FilterOpIcon, FILTER_OP_META, RangeArrowSeparator } from './FilterIcons';
 import { getThemeClass } from '../../themes';
 import { AdvDatePicker, AdvDateRangePicker, formatDisplayDate } from '../ui/AdvDatePicker';
@@ -32,7 +34,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
   onClear,
   hasColumnEmptyCells,
   getColumnDateBounds,
-  surfaceTheme = 'light',
+  surfaceTheme = SURFACE_THEMES.LIGHT,
 }) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const dataType = column.dataType || DATA_TYPES.TEXT;
@@ -441,7 +443,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               onClick={onClose}
               className="w-5 h-5 flex items-center justify-center rounded text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer"
             >
-              ✕
+              <X size={14} strokeWidth={2.2} />
             </button>
           </div>
 
@@ -457,7 +459,12 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               >
                 <FilterOpIcon op={selectedOp} size={13} />
                 <span className="font-medium">{FILTER_OP_META[selectedOp]?.label || selectedOp}</span>
-                <span className="text-[9px] text-[var(--agv-text-muted)]">▼</span>
+                <MorphChevronIcon
+                  expanded={isOpMenuOpen}
+                  size={12}
+                  type="down-up"
+                  className="text-[var(--agv-text-muted)] shrink-0"
+                />
               </button>
             </div>
           </div>
@@ -475,7 +482,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 <button
                   type="button"
                   onClick={() => setRawText('')}
-                  className="text-[11px] text-[var(--agv-danger,#ef4444)] hover:underline cursor-pointer"
+                  className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
                 >
                   Xóa trắng
                 </button>
@@ -485,13 +492,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               placeholder="VD:&#10;VN123&#10;VJ456&#10;QH789&#10;(hỗ trợ phân tách bằng xuống dòng, dấu phẩy, tab)"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              aria-autocomplete="none"
-              data-lpignore="true"
-              data-form-type="other"
+              {...NO_AUTOFILL_PROPS}
               rows={6}
               className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent focus:ring-1 focus:ring-agv-accent resize-y min-h-[120px] max-h-[220px]"
             />
@@ -548,9 +549,9 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] hover:border-[var(--agv-danger,#ef4444)] transition cursor-pointer text-xs"
+                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        ✕
+                        <X size={12} strokeWidth={2.2} />
                       </button>
                     </div>
                   ))}
@@ -573,7 +574,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                     <button
                       type="button"
                       onClick={() => setRawText('')}
-                      className="text-[11px] text-[var(--agv-danger,#ef4444)] hover:underline cursor-pointer"
+                      className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
                     >
                       Xóa trắng
                     </button>
@@ -583,13 +584,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
                   placeholder="Nhập hoặc dán các số (VD: 10, 25, 50, 100)..."
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  aria-autocomplete="none"
-                  data-lpignore="true"
-                  data-form-type="other"
+                  {...NO_AUTOFILL_PROPS}
                   rows={5}
                   className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
                 />
@@ -638,9 +633,9 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] hover:border-[var(--agv-danger,#ef4444)] transition cursor-pointer text-xs"
+                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        ✕
+                        <X size={12} strokeWidth={2.2} />
                       </button>
                     </div>
                   ))}
@@ -694,9 +689,9 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveDiscreteDate(d)}
-                          className="hover:text-[var(--agv-danger,#ef4444)] text-[var(--agv-text-muted)] cursor-pointer"
+                          className="hover:text-[var(--agv-danger)] text-[var(--agv-text-muted)] cursor-pointer flex items-center"
                         >
-                          ✕
+                          <X size={11} strokeWidth={2.2} />
                         </button>
                       </span>
                     ))
@@ -708,7 +703,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                     <button
                       type="button"
                       onClick={() => setDiscreteDates([])}
-                      className="text-[var(--agv-danger,#ef4444)] hover:underline cursor-pointer"
+                      className="text-[var(--agv-danger)] hover:underline cursor-pointer"
                     >
                       Xóa tất cả
                     </button>
@@ -767,9 +762,9 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] hover:border-[var(--agv-danger,#ef4444)] transition cursor-pointer text-xs"
+                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        ✕
+                        <X size={12} strokeWidth={2.2} />
                       </button>
                     </div>
                   ))}
@@ -792,7 +787,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                     <button
                       type="button"
                       onClick={() => setRawText('')}
-                      className="text-[11px] text-[var(--agv-danger,#ef4444)] hover:underline cursor-pointer"
+                      className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
                     >
                       Xóa trắng
                     </button>
@@ -802,13 +797,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
                   placeholder="VD:&#10;08:30&#10;12:00&#10;17:45"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  aria-autocomplete="none"
-                  data-lpignore="true"
-                  data-form-type="other"
+                  {...NO_AUTOFILL_PROPS}
                   rows={5}
                   className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
                 />
@@ -836,7 +825,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               onClear(column.key);
               onClose();
             }}
-            className="px-2.5 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] hover:bg-[var(--agv-bg-item-hover)] text-xs text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
+            className="px-2.5 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] hover:bg-[var(--agv-bg-item-hover)] text-xs text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] transition cursor-pointer"
           >
             Xóa
           </button>
@@ -899,7 +888,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 <FilterOpIcon op={op} size={13} />
                 <span>{FILTER_OP_META[op]?.label}</span>
               </div>
-              {isSel && <span className="text-xs">✓</span>}
+              {isSel && <Check size={13} strokeWidth={2.5} className="shrink-0" />}
             </div>
           );
         })}

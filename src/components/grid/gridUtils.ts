@@ -434,7 +434,7 @@ export function matchFilterValue(
   cellVal: any,
   op: FilterOperation,
   query: string,
-  dataType: string = 'text',
+  dataType: string = DATA_TYPES.TEXT,
   filterObj?: any
 ): boolean {
   // 1. Kiểm tra bộ lọc Checklist nếu có

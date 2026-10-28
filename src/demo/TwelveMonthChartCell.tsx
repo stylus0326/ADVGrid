@@ -218,27 +218,27 @@ export const TwelveMonthChartCell = memo(
             />
           )}
 
-          {/* Điểm Cực đại (Max - Xanh lá theo mẫu AdvSparkline với viền trắng nổi) */}
+          {/* Điểm Cực đại (Max - Xanh lá theo mẫu AdvSparkline với viền nổi theo nền theme) */}
           {maxIdx !== -1 && points[maxIdx] && (
             <circle
               cx={Math.max(padX, Math.min(baseWidth - padX, points[maxIdx].x))}
               cy={Math.max(padTop, Math.min(baseHeight - padBottom, points[maxIdx].y))}
               r={hoveredIdx === maxIdx ? 4.2 : 3.2}
-              fill="var(--agv-trend-up, #4ade80)"
-              stroke="#ffffff"
+              fill="var(--agv-trend-up)"
+              stroke="var(--agv-bg-surface)"
               strokeWidth={1.4}
               className="pointer-events-none transition-all"
             />
           )}
 
-          {/* Điểm Cực tiểu (Min - Đỏ theo mẫu AdvSparkline với viền trắng nổi) */}
+          {/* Điểm Cực tiểu (Min - Đỏ theo mẫu AdvSparkline với viền nổi theo nền theme) */}
           {minIdx !== -1 && points[minIdx] && (
             <circle
               cx={Math.max(padX, Math.min(baseWidth - padX, points[minIdx].x))}
               cy={Math.max(padTop, Math.min(baseHeight - padBottom, points[minIdx].y))}
               r={hoveredIdx === minIdx ? 4.2 : 3.2}
-              fill="var(--agv-trend-down, #f87171)"
-              stroke="#ffffff"
+              fill="var(--agv-trend-down)"
+              stroke="var(--agv-bg-surface)"
               strokeWidth={1.4}
               className="pointer-events-none transition-all"
             />
@@ -260,7 +260,7 @@ export const TwelveMonthChartCell = memo(
                 cx={points[hoveredIdx].x}
                 cy={points[hoveredIdx].y}
                 r={3.8}
-                fill="#ffffff"
+                fill="var(--agv-bg-surface)"
                 stroke={activeColor}
                 strokeWidth={2}
               />

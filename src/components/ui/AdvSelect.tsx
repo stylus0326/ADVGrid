@@ -4,6 +4,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import {
   getPortalThemeVars,
   getThemeClass,
+  SURFACE_THEMES,
   computeEditorCoords,
   useClickOutside,
 } from './enterpriseEditorUtils';
@@ -37,7 +38,7 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   disabled = false,
   className = '',
   style = {},
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   size = 'sm',
   width = '100%',
 }) => {

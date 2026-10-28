@@ -10,7 +10,7 @@ import {
   Copy,
   ListFilter,
 } from 'lucide-react';
-import { ColumnDef, SurfaceTheme, FilterOperation, FILTER_OPS, FILTER_MODES, DATA_TYPES } from '../types';
+import { ColumnDef, SurfaceTheme, SURFACE_THEMES, FilterOperation, FILTER_OPS, FILTER_MODES, DATA_TYPES } from '../types';
 import { NO_AUTOFILL_PROPS } from '../constants';
 import { QueryGroup, QueryRule, QueryPreset, QUERY_COMBINATORS } from './types';
 import {
@@ -18,6 +18,7 @@ import {
   countActiveQueryRules,
   evaluateQueryTreeNode,
   generateNaturalLanguage,
+  formatQueryRuleSummary,
   isRuleActive,
   validateQueryTreeAgainstColumns,
   parseCmdToQueryTree,
@@ -29,6 +30,7 @@ import {
   useClickOutside,
   normalizeSearchText,
 } from '../../ui/enterpriseEditorUtils';
+import { MorphChevronIcon } from '../../ui/MorphIcons';
 import { AdvDatePicker, AdvDateRangePicker } from '../../ui/AdvDatePicker';
 import { TimeRangeFilterInput, TimeFilterInput } from '../GridFilterRow';
 import {
@@ -87,7 +89,7 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
   className = '',
   minWidth = 130,
   popupMinWidth,
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   showSearch,
   iconOnly = false,
 }: QueryCustomSelectProps) {
@@ -165,7 +167,12 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
           <span className="truncate font-medium">{selectedOption?.label || value}</span>
         )}
       </div>
-      <span className="text-[10px] text-[var(--agv-text-muted)] shrink-0">▾</span>
+      <MorphChevronIcon
+        expanded={isOpen}
+        size={12}
+        type="down-up"
+        className="text-[var(--agv-text-muted)] shrink-0"
+      />
 
       {isOpen &&
         createPortal(
@@ -244,55 +251,15 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
 });
 
 const LEVEL_PAREN_COLORS = [
-  'var(--agv-accent, #2563eb)',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#10b981',
+  'var(--agv-accent)',
+  'var(--agv-warning)',
+  'var(--agv-info)',
+  'var(--agv-danger)',
+  'var(--agv-success)',
+  'var(--agv-trend-up)',
 ];
 
-function formatRuleDisplay(rule: QueryRule, columns: ColumnDef<any>[]): string {
-  const col = columns.find((c) => c.key === rule.field);
-  const colName = col?.title || rule.field;
-  const opMap: Record<string, string> = {
-    contains: 'Có chứa',
-    not_contains: 'Không chứa',
-    starts_with: 'Bắt đầu với',
-    ends_with: 'Kết thúc với',
-    equals: '=',
-    not_equals: '≠',
-    greater_than: '>',
-    greater_equals: '≥',
-    less_than: '<',
-    less_equals: '≤',
-    between: 'từ',
-    is_positive: 'dương (> 0)',
-    is_negative: 'âm (< 0)',
-    is_empty: 'trống',
-    is_not_empty: 'không trống',
-  };
-  const opLabel = opMap[rule.operator] || rule.operator;
-  if (Array.isArray(rule.multiValues) && rule.multiValues.length > 0) {
-    const count = rule.multiValues.length;
-    const preview = rule.multiValues.slice(0, 2).map((v) => `"${v}"`).join(', ');
-    const more = count > 2 ? ` +${count - 2}` : '';
-    return `[${colName}] ${opLabel} (${preview}${more})`;
-  }
-  if (Array.isArray(rule.multiRanges) && rule.multiRanges.length > 0) {
-    return `[${colName}] (${rule.multiRanges.length} khoảng)`;
-  }
-  if (isBetweenFilterOp(rule.operator)) {
-    const fromVal = rule.value !== undefined && rule.value !== '' ? `"${rule.value}"` : '...';
-    const toVal = rule.valueTo !== undefined && rule.valueTo !== '' ? `"${rule.valueTo}"` : '...';
-    return `[${colName}] từ ${fromVal} đến ${toVal}`;
-  }
-  if (isNoInputFilterOp(rule.operator)) {
-    return `[${colName}] là ${opLabel}`;
-  }
-  const hasVal = rule.value !== undefined && rule.value !== null && String(rule.value).trim() !== '';
-  return `[${colName}] ${opLabel} ${hasVal ? `"${rule.value}"` : '...'}`;
-}
+const formatRuleDisplay = formatQueryRuleSummary;
 
 export const AdvGridQueryBuilderModal = React.memo(
   function AdvGridQueryBuilderModal<T = any>({
@@ -302,7 +269,7 @@ export const AdvGridQueryBuilderModal = React.memo(
     appliedTree,
     onApply,
     totalRowCount,
-    surfaceTheme = 'bezier-arthouse',
+    surfaceTheme = SURFACE_THEMES.BEZIER_ARTHOUSE,
     data = [],
     getCellValue,
     hasColumnEmptyCells,
@@ -366,6 +333,46 @@ export const AdvGridQueryBuilderModal = React.memo(
         ],
       };
     });
+
+    // Calculate match count live accurately across all rows (zero-closure getCellValue)
+    const matchCount = useMemo(() => {
+      if (!isOpen) return totalRowCount;
+      if (!hasActiveQueryRules(draftTree)) return totalRowCount;
+      if (totalRowCount <= 0) return 0;
+
+      const hasDirectData = Boolean(data && Array.isArray(data) && data.length > 0);
+      if (!hasDirectData && !getCellValue) return 0;
+
+      const countTotal = hasDirectData ? data!.length : totalRowCount;
+      let count = 0;
+
+      for (let i = 0; i < countTotal; i++) {
+        const rowItem = hasDirectData ? data![i] : null;
+        if (evaluateQueryTreeNode(draftTree, rowItem, i, getCellValue, columnDataTypes)) {
+          count++;
+        }
+      }
+
+      return count;
+    }, [isOpen, draftTree, data, totalRowCount, getCellValue, columnDataTypes]);
+
+    // Jump to element in tree, focus it, and temporarily outline
+    const jumpToTarget = useCallback((elementId: string) => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const focusable = el.querySelector<HTMLElement>(
+          'input, button, select, [tabindex="0"]'
+        );
+        focusable?.focus();
+        el.style.outline = '2px solid var(--agv-accent)';
+        el.style.outlineOffset = '1px';
+        setTimeout(() => {
+          el.style.outline = '';
+          el.style.outlineOffset = '';
+        }, 1500);
+      }
+    }, []);
 
     if (!isOpen) return null;
 
@@ -443,30 +450,6 @@ export const AdvGridQueryBuilderModal = React.memo(
       onApply(null);
       onClose();
     };
-
-    // Calculate match count live (hỗ trợ cả mảng data trực tiếp và cơ chế getCellValue ảo hóa)
-    const matchCount = useMemo(() => {
-      if (!hasActiveQueryRules(draftTree)) return totalRowCount;
-      if (totalRowCount <= 0) return 0;
-
-      const hasDirectData = Boolean(data && Array.isArray(data) && data.length > 0);
-      if (!hasDirectData && !getCellValue) return 0;
-
-      const countTotal = hasDirectData ? data!.length : totalRowCount;
-      const sampleSize = Math.min(countTotal, 2000);
-      let count = 0;
-
-      for (let i = 0; i < sampleSize; i++) {
-        const rowItem = hasDirectData ? data![i] : null;
-        if (evaluateQueryTreeNode(draftTree, rowItem, i, getCellValue, columnDataTypes)) {
-          count++;
-        }
-      }
-
-      return countTotal > sampleSize
-        ? Math.round((count / sampleSize) * countTotal)
-        : count;
-    }, [draftTree, data, totalRowCount, getCellValue, columnDataTypes]);
 
     // Tree actions
     const handleAddRule = (group: QueryGroup) => {
@@ -595,24 +578,6 @@ export const AdvGridQueryBuilderModal = React.memo(
         return next;
       });
     };
-
-    // Jump to element in tree, focus it, and temporarily outline
-    const jumpToTarget = useCallback((elementId: string) => {
-      const el = document.getElementById(elementId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        const focusable = el.querySelector<HTMLElement>(
-          'input, button, select, [tabindex="0"]'
-        );
-        focusable?.focus();
-        el.style.outline = '2px solid var(--agv-accent)';
-        el.style.outlineOffset = '1px';
-        setTimeout(() => {
-          el.style.outline = '';
-          el.style.outlineOffset = '';
-        }, 1500);
-      }
-    }, []);
 
     // Interactive structured natural language tree (mỗi () là 1 màu theo cấp tầng, click để nhảy vào đúng nhóm/điều kiện)
     const renderInteractiveQueryTree = (

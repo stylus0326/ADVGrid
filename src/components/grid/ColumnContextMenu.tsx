@@ -82,6 +82,10 @@ export interface ColumnContextMenuProps {
   onFilterByValue?: (colKey: string, val: any) => void;
   onScrollToTop?: () => void;
   onScrollToBottom?: () => void;
+  isRowPinned?: boolean;
+  pinnedRowCount?: number;
+  onTogglePinRow?: () => void;
+  onClearPinnedRows?: () => void;
   columns?: ColumnDef[];
   columnGroups?: BaseGroupDef[];
   // Grouping
@@ -121,6 +125,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   onFilterByValue,
   onScrollToTop,
   onScrollToBottom,
+  isRowPinned = false,
+  pinnedRowCount = 0,
+  onTogglePinRow,
+  onClearPinnedRows,
   columns = [],
   columnGroups = [],
   groupByColumnKey,
@@ -130,7 +138,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   onUngroup,
   onCopyGroupTable,
   onExportGroupExcel,
-  formulaMode = 'AVG',
+  formulaMode = FORMULA_MODES.AVG,
   onSelectFormulaMode,
   emptyColKeys,
   onHideAllEmptyColumns,
@@ -201,8 +209,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
       : menu.type === CONTEXT_MENU_TYPES.GROUP
       ? 230
       : isColFormula
-      ? isMinMaxFormula ? 410 : 360
-      : 250;
+      ? isMinMaxFormula ? 470 : 420
+      : 310;
   const coords = computeContextMenuCoords(menu.x, menu.y, menuWidth, menuHeight);
 
   // ============================================================================
@@ -210,7 +218,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   // ============================================================================
   if (menu.type === CONTEXT_MENU_TYPES.HEADER) {
     const { column, currentPin, hasHiddenColumns } = menu;
-    const isPinned = currentPin !== 'none';
+    const isPinned = currentPin !== PIN_POSITIONS.NONE;
     const isFormulaCol = Boolean(column.isFormula);
     const isChartCol = Boolean(column.isChart);
     const isEmptyCol = !!emptyColKeys?.has(column.key);
@@ -303,7 +311,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               Ghim: <span className="font-extrabold text-agv-accent">{colDisplayName}</span>
             </span>
             {isPinned && (
-              <span className="text-[9px] font-normal text-amber-500 lowercase">bỏ ghim</span>
+              <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
             )}
           </div>
 
@@ -645,7 +653,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   // ============================================================================
   if (menu.type === CONTEXT_MENU_TYPES.BAND) {
     const { groupDef, currentPin } = menu;
-    const isPinned = currentPin !== 'none';
+    const isPinned = currentPin !== PIN_POSITIONS.NONE;
 
     return (
       <div
@@ -672,7 +680,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               Ghim tầng: <span className="font-extrabold text-agv-accent">{groupDef.title}</span>
             </span>
             {isPinned && (
-              <span className="text-[9px] font-normal text-amber-500 lowercase">bỏ ghim</span>
+              <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
             )}
           </div>
 
@@ -1065,6 +1073,39 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
           >
             <span>Lọc theo</span>
           </button>
+        )}
+
+        {/* Ghim dòng lên đầu / Bỏ ghim dòng */}
+        {onTogglePinRow && !row?._isGroupRow && (
+          <>
+            <div className="my-1 border-b border-[var(--agv-border)]" />
+            <button
+              type="button"
+              onClick={() => {
+                onTogglePinRow();
+                onClose();
+              }}
+              className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)] ${
+                isRowPinned ? 'text-agv-accent font-semibold' : ''
+              }`}
+              style={isRowPinned ? undefined : { color: 'var(--agv-text-main)' }}
+            >
+              <span>{isRowPinned ? 'Bỏ ghim dòng' : 'Ghim dòng lên đầu'}</span>
+            </button>
+            {pinnedRowCount > 0 && onClearPinnedRows && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClearPinnedRows();
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                <span>Bỏ ghim tất cả dòng ({pinnedRowCount})</span>
+              </button>
+            )}
+          </>
         )}
 
         <div className="my-1 border-b border-[var(--agv-border)]" />

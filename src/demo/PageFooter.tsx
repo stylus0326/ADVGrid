@@ -15,6 +15,7 @@ export interface PageFooterProps {
   totalGroupCount?: number;
   expandedGroupCount?: number;
   displayedRowCount?: number;
+  checkedRowCount?: number;
 }
 
 export const PageFooter: React.FC<PageFooterProps> = ({
@@ -31,6 +32,7 @@ export const PageFooter: React.FC<PageFooterProps> = ({
   totalGroupCount = 0,
   expandedGroupCount = 0,
   displayedRowCount,
+  checkedRowCount = 0,
 }) => {
   return (
     <footer
@@ -45,7 +47,7 @@ export const PageFooter: React.FC<PageFooterProps> = ({
         {groupByColumnKey ? (
           <span>
             Gom nhóm ({groupTitle || groupByColumnKey}):{' '}
-            <strong className="text-amber-500 font-bold">
+            <strong className="text-[var(--agv-warning)] font-bold">
               {totalGroupCount} Nhóm
             </strong>{' '}
             <span className="text-[10px] text-[var(--agv-text-muted)]">
@@ -71,19 +73,25 @@ export const PageFooter: React.FC<PageFooterProps> = ({
         )}
         <span>
           Ghim:{' '}
-          <strong className="text-indigo-500 font-bold">{leftPinnedCount} Trái</strong> •{' '}
-          <strong className="text-cyan-500 font-bold">{centerPinnedCount} Giữa</strong> •{' '}
-          <strong className="text-indigo-500 font-bold">{rightPinnedCount} Phải</strong>
+          <strong className="text-[var(--agv-accent)] font-bold">{leftPinnedCount} Trái</strong> •{' '}
+          <strong className="text-[var(--agv-accent)] font-bold">{centerPinnedCount} Giữa</strong> •{' '}
+          <strong className="text-[var(--agv-accent)] font-bold">{rightPinnedCount} Phải</strong>
         </span>
         {sortConfig && (
           <span>
             Sắp xếp:{' '}
-            <strong className="text-emerald-500 font-bold">
+            <strong className="text-[var(--agv-success)] font-bold">
               {sortTitle || sortConfig.key} (
               {sortConfig.direction === SORT_DIRECTIONS.ASC ? 'Tăng dần' : 'Giảm dần'})
             </strong>
           </span>
         )}
+        <span>
+          Đã chọn:{' '}
+          <strong style={{ color: 'var(--agv-text-main)' }}>
+            {checkedRowCount.toLocaleString('vi-VN')} dòng
+          </strong>
+        </span>
       </div>
       <div className="flex items-center gap-3">
         <span>

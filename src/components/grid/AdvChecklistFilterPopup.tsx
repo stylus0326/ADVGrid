@@ -13,7 +13,7 @@ import { getThemeClass } from '../../themes';
 import { normalizeSearchText } from '../ui/enterpriseEditorUtils';
 import { AdvCheckbox } from './AdvCheckbox';
 import { isNoInputFilterOp } from './gridUtils';
-import { FILTER_MODES, DATA_TYPES } from './types';
+import { FILTER_MODES, DATA_TYPES, SURFACE_THEMES } from './types';
 import { NO_AUTOFILL_PROPS } from './constants';
 
 /* ==============================================================================
@@ -280,7 +280,7 @@ export const AdvChecklistFilterPopup = forwardRef<
     getDistinctValues,
     columnDataTypes = {},
     distinctValuesCacheRef,
-    surfaceTheme = 'bezier-arthouse',
+    surfaceTheme = SURFACE_THEMES.BEZIER_ARTHOUSE,
     portalRoot,
     formatChecklistDisplay = (_k, v) => String(v ?? ''),
     matchFilterValue,

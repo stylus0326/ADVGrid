@@ -7,6 +7,7 @@ import {
   useClickOutside,
   normalizeSearchText,
   getThemeClass,
+  SURFACE_THEMES,
   EditorCoords,
 } from './enterpriseEditorUtils';
 import { FilterOpIcon } from '../grid/FilterIcons';
@@ -89,7 +90,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   dropdownWidth = 460,
   className = '',
   style = {},
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   searchPlaceholder = 'Tìm kiếm nhanh trong danh mục...',
   searchFields,
   showFooterCount = true,

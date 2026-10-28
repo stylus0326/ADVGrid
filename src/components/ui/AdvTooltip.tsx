@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getPortalThemeVars, getThemeClass } from './enterpriseEditorUtils';
+import { getPortalThemeVars, getThemeClass, SURFACE_THEMES } from './enterpriseEditorUtils';
 
 export interface AdvTooltipProps {
   content: React.ReactNode;
@@ -17,7 +17,7 @@ export const AdvTooltip: React.FC<AdvTooltipProps> = ({
   children,
   delay = 200,
   placement = 'auto',
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   disabled = false,
   className = '',
 }) => {

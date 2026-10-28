@@ -28,13 +28,14 @@ import { FormulaMode, MonthAnalyticsMode, FORMULA_META } from '../services/apiSe
 import { NO_AUTOFILL_PROPS } from '../components/grid/constants';
 import {
   SurfaceTheme,
+  SURFACE_THEMES,
   SortConfig,
   GridEditMode,
   GRID_EDIT_MODES,
   SORT_DIRECTIONS,
   MONTH_ANALYTICS_MODES,
 } from '../components/grid/types';
-import { REGISTERED_THEMES } from '../themes';
+import { REGISTERED_THEMES, normalizeThemeId } from '../themes';
 
 export interface PageToolbarProps {
   monthAnalyticsMode: MonthAnalyticsMode;
@@ -121,8 +122,14 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left branding and action tags */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shrink-0">
-            <Layers className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              backgroundColor: 'var(--agv-accent)',
+              color: 'var(--agv-accent-text, #ffffff)',
+            }}
+          >
+            <Layers className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -173,12 +180,19 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
                   color: 'var(--agv-text-main)',
                 }}
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <Sparkles className="w-3.5 h-3.5 text-[var(--agv-warning)]" />
                 <span>Công Thức: {FORMULA_META[formulaMode].label}</span>
               </button>
 
               {sortConfig && (
-                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-400/40">
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border"
+                  style={{
+                    backgroundColor: 'var(--agv-success-bg)',
+                    color: 'var(--agv-success)',
+                    borderColor: 'var(--agv-success)',
+                  }}
+                >
                   <span>
                     Sắp xếp: {sortTitle || sortConfig.key} (
                     {sortConfig.direction === SORT_DIRECTIONS.ASC ? 'Tăng dần' : 'Giảm dần'})
@@ -189,7 +203,8 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
                       e.stopPropagation();
                       onClearSort();
                     }}
-                    className="p-0.5 hover:bg-emerald-500/30 rounded text-emerald-600 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-white transition cursor-pointer"
+                    className="p-0.5 rounded hover:opacity-75 transition cursor-pointer"
+                    style={{ color: 'var(--agv-success)' }}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -214,7 +229,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               borderColor: 'var(--agv-border)',
             }}
           >
-            <Activity className="w-4 h-4 text-emerald-500" />
+            <Activity className="w-4 h-4 text-[var(--agv-success)]" />
             <div>
               <div
                 className="text-[10px] uppercase tracking-wider"
@@ -222,7 +237,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               >
                 FPS thực
               </div>
-              <div className="text-xs font-bold text-emerald-500">{fps} FPS</div>
+              <div className="text-xs font-bold text-[var(--agv-success)]">{fps} FPS</div>
             </div>
           </div>
 
@@ -233,7 +248,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               borderColor: 'var(--agv-border)',
             }}
           >
-            <Layers className="w-4 h-4 text-cyan-500" />
+            <Layers className="w-4 h-4 text-[var(--agv-accent)]" />
             <div>
               <div
                 className="text-[10px] uppercase tracking-wider"
@@ -241,7 +256,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               >
                 Chunks Active
               </div>
-              <div className="text-xs font-bold text-cyan-500 dark:text-cyan-300">
+              <div className="text-xs font-bold text-[var(--agv-accent)]">
                 #{startChunkIndex} → #{Math.max(0, endChunkIndex)}
               </div>
             </div>
@@ -254,7 +269,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               borderColor: 'var(--agv-border)',
             }}
           >
-            <Cpu className="w-4 h-4 text-indigo-500" />
+            <Cpu className="w-4 h-4 text-[var(--agv-accent)]" />
             <div>
               <div
                 className="text-[10px] uppercase tracking-wider"
@@ -262,7 +277,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               >
                 DOM Rows
               </div>
-              <div className="text-xs font-bold text-indigo-500 dark:text-indigo-300">
+              <div className="text-xs font-bold text-[var(--agv-accent)]">
                 {mountedRowCount} / {totalFilteredRows.toLocaleString()} dòng
               </div>
             </div>
@@ -275,7 +290,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               borderColor: 'var(--agv-border)',
             }}
           >
-            <Zap className="w-4 h-4 text-amber-500" />
+            <Zap className="w-4 h-4 text-[var(--agv-warning)]" />
             <div>
               <div
                 className="text-[10px] uppercase tracking-wider"
@@ -283,7 +298,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               >
                 Tốc độ cuộn
               </div>
-              <div className="text-xs font-bold text-amber-500 dark:text-amber-300">
+              <div className="text-xs font-bold text-[var(--agv-warning)]">
                 {scrollVelocity.toLocaleString()} px/s
               </div>
             </div>
@@ -324,25 +339,23 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
           <button
             type="button"
             onClick={onOpenFilters}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-              activeFilterCount > 0
-                ? 'bg-blue-600 border-blue-600 text-white'
-                : 'hover:opacity-90'
-            }`}
-            style={
-              activeFilterCount === 0
-                ? {
-                    backgroundColor: 'var(--agv-bg-root)',
-                    borderColor: 'var(--agv-border)',
-                    color: 'var(--agv-text-main)',
-                  }
-                : undefined
-            }
+            className="inline-flex items-center gap-1.5 px-2.5 h-[28px] min-h-[28px] rounded-lg border text-xs font-semibold transition cursor-pointer hover:opacity-90"
+            style={{
+              backgroundColor: activeFilterCount > 0 ? 'var(--agv-accent)' : 'var(--agv-bg-root)',
+              borderColor: activeFilterCount > 0 ? 'var(--agv-accent)' : 'var(--agv-border)',
+              color: activeFilterCount > 0 ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-main)',
+            }}
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Bộ Lọc</span>
             {activeFilterCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-white text-blue-700">
+              <span
+                className="px-1.5 py-0.2 rounded-full text-[10px] font-bold"
+                style={{
+                  backgroundColor: 'var(--agv-accent-text, #ffffff)',
+                  color: 'var(--agv-accent)',
+                }}
+              >
                 {activeFilterCount}
               </span>
             )}
@@ -411,8 +424,11 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
             />
             <button
               type="submit"
-              className="px-2 py-0.5 rounded text-white text-[11px] font-medium transition cursor-pointer"
-              style={{ backgroundColor: 'var(--agv-accent)' }}
+              className="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer min-h-[28px]"
+              style={{
+                backgroundColor: 'var(--agv-accent)',
+                color: 'var(--agv-accent-text, #ffffff)',
+              }}
             >
               Nhảy
             </button>
@@ -434,9 +450,9 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
             </span>
             {(
               [
-                { id: 'view', label: 'Xem' },
-                { id: 'single-click', label: 'Sửa (1 click)' },
-                { id: 'double-click', label: 'Sửa (2 click)' },
+                { id: GRID_EDIT_MODES.VIEW, label: 'Xem' },
+                { id: GRID_EDIT_MODES.SINGLE_CLICK, label: 'Sửa (1 click)' },
+                { id: GRID_EDIT_MODES.DOUBLE_CLICK, label: 'Sửa (2 click)' },
               ] as const
             ).map((item) => {
               const isActive = editMode === item.id;
@@ -481,12 +497,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
               Theme:
             </span>
             {REGISTERED_THEMES.map((t) => {
-              const isActive =
-                surfaceTheme === t.id ||
-                (t.id === 'light' && surfaceTheme === 'daylight') ||
-                (t.id === 'dark' &&
-                  (surfaceTheme === 'calibrated-dark' || surfaceTheme === 'deep-dark')) ||
-                (t.id === 'e-ink' && surfaceTheme === 'eink');
+              const isActive = normalizeThemeId(surfaceTheme) === t.id;
 
               const IconComp =
                 t.iconName === 'Sun'
@@ -502,31 +513,26 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
                   key={t.id}
                   type="button"
                   onClick={() => onThemeChange(t.id as SurfaceTheme)}
-                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer ${
-                    isActive
-                      ? t.id === 'light'
-                        ? 'bg-blue-600 text-white'
-                        : t.id === 'dark'
-                        ? 'bg-sky-600 text-white'
-                        : t.id === 'bezier-arthouse'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-stone-700 text-amber-50'
-                      : 'hover:opacity-75'
+                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer min-h-[28px] ${
+                    isActive ? '' : 'hover:opacity-75'
                   }`}
                   style={
-                    !isActive
+                    isActive
                       ? {
+                          backgroundColor: 'var(--agv-accent)',
+                          color: 'var(--agv-accent-text, #ffffff)',
+                        }
+                      : {
                           color: 'var(--agv-text-muted)',
                           backgroundColor: 'transparent',
                         }
-                      : undefined
                   }
                 >
                   <MorphIcon
                     icon={IconComp}
                     size={13}
                     spring="snappy"
-                    className={isActive ? 'text-white' : t.iconColorClass}
+                    className={isActive ? 'text-[var(--agv-accent-text,#ffffff)]' : t.iconColorClass}
                   />
                   <span>{t.name}</span>
                 </button>
@@ -548,17 +554,19 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
             <button
               type="button"
               onClick={onToggleRowSnap}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition cursor-pointer ${
-                rowSnapMode
-                  ? 'bg-amber-500 text-slate-950'
-                  : 'hover:opacity-80'
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition cursor-pointer min-h-[28px] ${
+                rowSnapMode ? '' : 'hover:opacity-80'
               }`}
               style={
-                !rowSnapMode
+                rowSnapMode
                   ? {
-                      color: 'var(--agv-text-muted)',
+                      backgroundColor: 'var(--agv-accent)',
+                      color: 'var(--agv-accent-text, #ffffff)',
                     }
-                  : undefined
+                  : {
+                      color: 'var(--agv-text-muted)',
+                      backgroundColor: 'transparent',
+                    }
               }
             >
               <MorphIcon
@@ -585,15 +593,18 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
                     key={step}
                     type="button"
                     onClick={() => onRowsPerWheelStepChange(step)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer ${
+                    className={`px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer min-h-[28px] ${
                       rowsPerWheelStep === step
-                        ? 'bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40 font-bold'
+                        ? 'font-bold'
                         : 'opacity-70 hover:opacity-100'
                     }`}
                     style={
-                      rowsPerWheelStep !== step
-                        ? { color: 'var(--agv-text-muted)' }
-                        : undefined
+                      rowsPerWheelStep === step
+                        ? {
+                            backgroundColor: 'var(--agv-accent)',
+                            color: 'var(--agv-accent-text, #ffffff)',
+                          }
+                        : { color: 'var(--agv-text-muted)' }
                     }
                   >
                     {step === 20 ? '1Chunk' : `${step}d`}
@@ -607,18 +618,19 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
           <button
             type="button"
             onClick={onToggleAutoScroll}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium border transition cursor-pointer ${
-              autoScrolling
-                ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                : 'text-white'
-            }`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium border transition cursor-pointer min-h-[28px]"
             style={
-              !autoScrolling
+              autoScrolling
                 ? {
+                    backgroundColor: 'var(--agv-warning-bg)',
+                    borderColor: 'var(--agv-warning)',
+                    color: 'var(--agv-warning)',
+                  }
+                : {
                     backgroundColor: 'var(--agv-accent)',
                     borderColor: 'var(--agv-accent)',
+                    color: 'var(--agv-accent-text, #ffffff)',
                   }
-                : undefined
             }
           >
             <MorphIcon

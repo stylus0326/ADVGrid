@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, Globe } from 'lucide-react';
-import { getPortalThemeVars, getThemeClass } from './enterpriseEditorUtils';
+import { getPortalThemeVars, getThemeClass, SURFACE_THEMES } from './enterpriseEditorUtils';
 
 export interface AdvPreviewLinkCardProps {
   url: string;
@@ -21,7 +21,7 @@ export const AdvPreviewLinkCard: React.FC<AdvPreviewLinkCardProps> = ({
   imageUrl,
   domain,
   children,
-  theme = 'bezier-arthouse',
+  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);

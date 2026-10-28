@@ -362,11 +362,11 @@ export const FilterOpIcon: React.FC<{ op: FilterOperation; className?: string; s
 export function getColumnFilterType(
   colKey: string,
   columns?: Array<{ key: string; dataType?: string; isCurrency?: boolean }>
-): 'text' | 'number' | 'date' | 'time' {
+): typeof DATA_TYPES.TEXT | typeof DATA_TYPES.NUMBER | typeof DATA_TYPES.DATE | typeof DATA_TYPES.TIME {
   const col = columns?.find((c) => c.key === colKey);
   // Quyết định kiểu toán tử thuần túy 100% theo kiểu dữ liệu truyền vào (dataType / isCurrency)
   // Tuyệt đối không dùng colKey để đoán mò chuỗi ký tự tránh gây sai lệch toán tử
-  if (col?.isCurrency) return 'number';
+  if (col?.isCurrency) return DATA_TYPES.NUMBER;
   if (col?.dataType === DATA_TYPES.DATE || col?.dataType === DATA_TYPES.TIME || col?.dataType === DATA_TYPES.NUMBER) {
     return col.dataType;
   }

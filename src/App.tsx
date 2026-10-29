@@ -652,9 +652,12 @@ export function App() {
     });
   }, [checkedRowIndices.size]);
 
+  const selectedDisplayIndexHintRef = useRef<number | null>(null);
+
   // Select row
   const handleSelectRow = useCallback(
     (rowIndex: number, row?: any) => {
+      selectedDisplayIndexHintRef.current = rowIndex;
       const origIdx = row?.originalIndex !== undefined ? row.originalIndex : rowIndex;
       setSelectedRowKey(origIdx);
     },
@@ -1592,6 +1595,7 @@ export function App() {
   const jumpToRowNumber = useCallback(
     (rowNumberOneBased: number) => {
       const clampedIdx = Math.max(0, Math.min(totalVirtualRowCount - 1, rowNumberOneBased - 1));
+      selectedDisplayIndexHintRef.current = clampedIdx;
       gridRef.current?.scrollToRow(clampedIdx);
       if (groupedDisplayModel) {
         const item = groupedDisplayModel[clampedIdx];
@@ -1622,14 +1626,35 @@ export function App() {
 
   const selectedDisplayIndex = useMemo(() => {
     if (selectedRowKey === null) return undefined;
+    const hintIdx = selectedDisplayIndexHintRef.current;
     if (groupedDisplayModel) {
+      if (hintIdx !== null && hintIdx >= 0 && hintIdx < groupedDisplayModel.length) {
+        const hintedItem = groupedDisplayModel[hintIdx];
+        if (
+          hintedItem &&
+          !hintedItem._isGroupRow &&
+          (hintedItem.originalIndex === selectedRowKey || hintedItem === selectedRowKey)
+        ) {
+          return hintIdx;
+        }
+      }
       const idx = groupedDisplayModel.findIndex(
         (it) => it && !it._isGroupRow && (it.originalIndex === selectedRowKey || it === selectedRowKey)
       );
+      selectedDisplayIndexHintRef.current = idx >= 0 ? idx : null;
       return idx >= 0 ? idx : undefined;
     }
     if (activeRowIndices) {
+      if (
+        hintIdx !== null &&
+        hintIdx >= 0 &&
+        hintIdx < activeRowIndices.length &&
+        activeRowIndices[hintIdx] === selectedRowKey
+      ) {
+        return hintIdx;
+      }
       const idx = activeRowIndices.indexOf(selectedRowKey);
+      selectedDisplayIndexHintRef.current = idx >= 0 ? idx : null;
       return idx >= 0 ? idx : undefined;
     }
     return selectedRowKey < totalRowCount ? selectedRowKey : undefined;

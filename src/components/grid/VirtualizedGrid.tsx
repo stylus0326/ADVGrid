@@ -370,6 +370,10 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       [controlledOnQuickFilterTextChange, onQuickFilter]
     );
 
+    const handleToggleQuickFilterSmart = useCallback(() => {
+      setIsQuickFilterSmart((prev) => !prev);
+    }, []);
+
     const currentQueryTree =
       controlledAppliedQueryTree !== undefined
         ? controlledAppliedQueryTree
@@ -2166,7 +2170,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             quickFilterText={currentQuickFilterText}
             onQuickFilterChange={handleQuickFilterChange}
             isQuickFilterSmart={isQuickFilterSmart}
-            onToggleQuickFilterSmart={() => setIsQuickFilterSmart((prev) => !prev)}
+            onToggleQuickFilterSmart={handleToggleQuickFilterSmart}
             appliedQueryTree={currentQueryTree}
             onApplyQueryTree={handleApplyQueryTree}
             totalFilteredRows={totalRows}

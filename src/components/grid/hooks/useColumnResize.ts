@@ -34,9 +34,13 @@ export function useColumnResize<T>({
         startWidth: colWidths[key] || 100,
       };
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
+      let rafId: number | null = null;
+      let latestClientX = e.clientX;
+
+      const applyResize = () => {
+        rafId = null;
         if (!resizingRef.current) return;
-        const delta = moveEvent.clientX - resizingRef.current.startX;
+        const delta = latestClientX - resizingRef.current.startX;
         const targetColDef = colMap[resizingRef.current.key];
         const minW = targetColDef?.minWidth || 50;
         const maxW = targetColDef?.maxWidth || 1200;
@@ -44,7 +48,19 @@ export function useColumnResize<T>({
         setColWidth(resizingRef.current.key, newWidth);
       };
 
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!resizingRef.current) return;
+        latestClientX = moveEvent.clientX;
+        if (rafId === null) {
+          rafId = window.requestAnimationFrame(applyResize);
+        }
+      };
+
       const handleMouseUp = () => {
+        if (rafId !== null) {
+          window.cancelAnimationFrame(rafId);
+          rafId = null;
+        }
         resizingRef.current = null;
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);

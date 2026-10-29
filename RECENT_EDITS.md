@@ -4,7 +4,22 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
+## 🕒 Lần 3 (Mới nhất): Tối Ưu Hóa Chuyển Dòng Chọn O(1) (`selectedDisplayIndexHintRef` & Range-Aware Chunk Memo), Kéo Giãn Cột `requestAnimationFrame` & Bảo Toàn `React.memo` Cho `GridFloatingToolbar`
+- **Thời gian**: 2026-10-29 01:06
+- **Files thay đổi**:
+  - `src/components/grid/GridChunkBlock.tsx` (244 dòng):
+    - Nâng cấp comparator `React.memo` (Dòng 181 - 228): Kiểm tra phạm vi dòng `[startRowIndex, endRowIndex]` của chunk khi `selectedRowIndex`, `selectedRowKey` hoặc `editingCell` thay đổi, giúp 6–7 chunk không chứa dòng cũ/mới bỏ qua render 100%.
+  - `src/App.tsx` (1826 dòng):
+    - Bổ sung `selectedDisplayIndexHintRef` (Dòng 655 - 664, 1591 - 1656): Lưu trực tiếp vị trí dòng hiển thị khi click dòng hoặc nhảy dòng, giúp `selectedDisplayIndex` đạt tốc độ $O(1)$ thay vì quét tuyến tính `indexOf`/`findIndex` trên 50.000 phần tử.
+  - `src/components/grid/hooks/useColumnResize.ts` (80 dòng):
+    - Gom (`coalesce`) sự kiện `mousemove` qua `requestAnimationFrame` (Dòng 37 - 65) để chỉ cập nhật độ rộng cột tối đa 1 lần mỗi khung hình màn hình.
+  - `src/components/grid/VirtualizedGrid.tsx` (2210 dòng):
+    - Bọc `useCallback` cho `handleToggleQuickFilterSmart` (Dòng 373 - 375, 2172) để bảo toàn 100% `React.memo` của `GridFloatingToolbar` khi cuộn.
+  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
+
+---
+
+## 🕒 Lần 2: Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
 - **Thời gian**: 2026-10-29 00:49
 - **Files thay đổi**:
   - `src/components/grid/VirtualizedGrid.tsx` (2204 dòng):
@@ -13,7 +28,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Khắc Phục Triệt Để Hiện Tượng Khựng Khi Test Cuộn Cao Tốc (`chunkRowsCacheRef`, `WeakMap` 12 Tháng & `React.memo` Toàn Diện)
+## 🕒 Lần 1: Khắc Phục Triệt Để Hiện Tượng Khựng Khi Test Cuộn Cao Tốc (`chunkRowsCacheRef`, `WeakMap` 12 Tháng & `React.memo` Toàn Diện)
 - **Thời gian**: 2026-10-29 00:41
 - **Files thay đổi**:
   - `src/components/grid/VirtualizedGrid.tsx` (2152 dòng):
@@ -23,19 +38,4 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - **Cache thống kê 12 tháng bằng `WeakMap` (`monthStatsCacheRef`)** (Dòng 1407 - 1480) và **cố định `handleGetRowId` bằng `useCallback`** (Dòng 1585 - 1588, 1738).
   - `src/components/grid/GridHeader.tsx` (538 dòng) & `src/components/grid/GridFilterRow.tsx` (1298 dòng):
     - Bọc `React.memo` cho `GridHeader` và `GridFilterRow`.
-  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
-
----
-
-## 🕒 Lần 1: Tối Ưu Hóa Độ Mượt Giao Diện 4 Điểm Nghẽn (`React.memo` GridRow, Lọc/Sort, Gom Nhóm & Cuộn Chuột)
-- **Thời gian**: 2026-10-29 00:26
-- **Files thay đổi**:
-  - `src/App.tsx` (1765 dòng):
-    - **Bảo toàn `React.memo` của `GridRow` khi tích chọn dòng & kéo giãn cột** (Dòng 1358 - 1554): Tách `checkedRowIndices` khỏi dependency của `getRow` và `renderCell`.
-    - **Loại bỏ chạy lại Lọc & Sort 50.000 dòng thừa khi tích checkbox** (Dòng 769 - 1080): Bổ sung `effectiveCheckedForFilter` và `effectiveCheckedForSort`.
-    - **Tách riêng bước Chia nhóm (`rawGroupBuckets`) và Tính tổng (`baseGroupData`)** (Dòng 1085 - 1182).
-  - `src/components/grid/GridChunkBlock.tsx` (198 dòng):
-    - Đưa phép tìm cột `chkCol` ra ngoài vòng lặp `rows.map` và ưu tiên kiểm tra `checkedRowIndices.has(...)` trước tiên cho `isChecked` (Dòng 94 - 127).
-  - `src/components/grid/VirtualizedGrid.tsx` (2112 dòng):
-    - Bổ sung `lastMetricsEmitTimeRef` tiết lưu `onScrollMetrics` trong `handleScroll`.
   - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.

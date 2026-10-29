@@ -178,10 +178,54 @@ export const GridChunkBlock = memo(
     if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
     if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
     if (prev.checkedRowIndices !== next.checkedRowIndices) return false;
-    if (prev.selectedRowKey !== next.selectedRowKey) return false;
-    if (prev.selectedRowIndex !== next.selectedRowIndex) return false;
+    if (
+      prev.selectedRowKey !== next.selectedRowKey ||
+      prev.selectedRowIndex !== next.selectedRowIndex
+    ) {
+      const start = next.startRowIndex;
+      const end = start + next.rows.length - 1;
+      const prevIdxInChunk =
+        prev.selectedRowIndex !== null &&
+        prev.selectedRowIndex !== undefined &&
+        prev.selectedRowIndex >= start &&
+        prev.selectedRowIndex <= end;
+      const nextIdxInChunk =
+        next.selectedRowIndex !== null &&
+        next.selectedRowIndex !== undefined &&
+        next.selectedRowIndex >= start &&
+        next.selectedRowIndex <= end;
+
+      if (prevIdxInChunk || nextIdxInChunk) return false;
+
+      if (prev.selectedRowKey !== next.selectedRowKey) {
+        for (let i = 0; i < next.rows.length; i++) {
+          const r = next.rows[i] as any;
+          const actualIdx = start + i;
+          const rKey = next.getRowId
+            ? next.getRowId(r, actualIdx)
+            : r?.originalIndex ?? r?.id ?? actualIdx;
+          if (rKey === prev.selectedRowKey || rKey === next.selectedRowKey) {
+            return false;
+          }
+        }
+      }
+    }
     if (prev.editMode !== next.editMode) return false;
-    if (prev.editingCell !== next.editingCell) return false;
+    if (prev.editingCell !== next.editingCell) {
+      const start = next.startRowIndex;
+      const end = start + next.rows.length - 1;
+      const prevEditInChunk =
+        prev.editingCell !== null &&
+        prev.editingCell !== undefined &&
+        prev.editingCell.rowIndex >= start &&
+        prev.editingCell.rowIndex <= end;
+      const nextEditInChunk =
+        next.editingCell !== null &&
+        next.editingCell !== undefined &&
+        next.editingCell.rowIndex >= start &&
+        next.editingCell.rowIndex <= end;
+      if (prevEditInChunk || nextEditInChunk) return false;
+    }
     if (prev.renderCell !== next.renderCell) return false;
     if (prev.onCellContextMenu !== next.onCellContextMenu) return false;
     if (prev.emptyColKeys !== next.emptyColKeys) return false;

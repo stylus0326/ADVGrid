@@ -345,6 +345,7 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --border: ${tokens.border};
     --input: ${tokens.borderStrong};
     --ring: ${tokens.accent};
+    --radius: 0.5rem;
     --scroll-thumb: ${tokens.scrollThumb || tokens.borderStrong};
     --scroll-thumb-hover: ${tokens.scrollThumbHover || tokens.textSubtle};
   }

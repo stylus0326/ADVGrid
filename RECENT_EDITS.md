@@ -4,10 +4,27 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Chuẩn Hóa Toàn Bộ Code Theo Chuẩn Tweakcn & Chuyển Đổi Toàn Bộ Tên Class Về Dạng Chung Chuẩn Shadcn/UI (`src/index.css`, `postcss.config.js`, `tailwind.config.js`, `src/themes/*`, `src/components/grid/*`, `src/main.tsx`)
+## 🕒 Lần 3 (Mới nhất): Tích Hợp Theme Mới Tweakcn Hổ Phách & Tweakcn Tối Vào Hệ Thống Giao Diện Demo (`src/themes/tweakcnDemo.ts`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/components/ui/MorphIcons.tsx`)
+- **Thời gian**: 2026-10-29 21:12
+- **Files thay đổi**:
+  - `src/themes/tweakcnDemo.ts` (87 dòng):
+    - Khởi tạo bộ tokens `TWEAKCN_DEMO_LIGHT_THEME_TOKENS` và `TWEAKCN_DEMO_DARK_THEME_TOKENS` theo đúng bảng màu quang học OKLCH trích xuất từ tweakcn: Primary hổ phách `oklch(0.6397 0.1720 36.4421)`, Background sáng `oklch(0.9383 0.0042 236.4993)`, Background tối `oklch(0.2598 0.0306 262.6666)`, Card/Popover `oklch(1 0 0)` / `oklch(0.3106 0.0301 268.6365)`.
+  - `src/themes/common.ts` (352 dòng):
+    - Bổ sung `TWEAKCN_DEMO: 'tweakcn-demo'` và `TWEAKCN_DEMO_DARK: 'tweakcn-demo-dark'` vào `SURFACE_THEMES`.
+    - Đăng ký 2 mục theme mới vào `REGISTERED_THEMES` với `iconName: 'Sparkles'`, bổ sung vào `THEME_CLASS_MAP` và `THEME_SELECTORS`.
+  - `src/themes/index.ts` (109 dòng):
+    - Xuất khẩu toàn bộ từ `./tweakcnDemo` và đăng ký token vào `THEME_TOKENS` phục vụ sinh động biến CSS qua `generateThemeCssVariables()`.
+  - `src/components/ui/MorphIcons.tsx` (174 dòng):
+    - Tích hợp và xuất khẩu `SparklesIcon` từ `lucide` tương thích chuẩn tuple `IconNode` của bộ biến hình lò xo `morphicons`.
+  - `src/demo/PageToolbar.tsx` (575 dòng):
+    - Hỗ trợ icon `SparklesIcon` cho các nút theme mới trên thanh công cụ điều khiển giao diện, đảm bảo min-height 28px và tương thích 100% theme active styling.
+
+---
+
+## 🕒 Lần 2: Chuẩn Hóa Toàn Bộ Code Theo Chuẩn Tweakcn & Chuyển Đổi Toàn Bộ Tên Class Về Dạng Chung Chuẩn Shadcn/UI (`src/index.css`, `postcss.config.js`, `tailwind.config.js`, `src/themes/*`, `src/components/grid/*`, `src/main.tsx`)
 - **Thời gian**: 2026-10-29 20:34
 - **Files thay đổi**:
-  - `src/index.css` (1003 dòng):
+  - `src/index.css` (1002 dòng):
     - Khởi tạo chuẩn Tailwind directives (`@tailwind base; @tailwind components; @tailwind utilities;`), `@custom-variant dark`, bộ biến `:root` và `.dark` chuẩn không gian màu `oklch(...)`, `@theme inline` và `@layer base { * { border-color: var(--border); outline-color: color-mix(...); } body { background-color: var(--background); color: var(--foreground); } }`.
     - Tích hợp cầu nối CSS variables hai chiều đồng bộ giữa các token chuẩn Shadcn (`--primary`, `--background`, `--border`...) và các biến nội bộ `--agv-*`.
     - Bảo toàn 100% định dạng Monospace `.agv-cell-code`, thanh cuộn, hiệu ứng FLIP sort animation và tối ưu hóa 120fps column resize.
@@ -25,7 +42,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Cấu Hình Chuẩn Shadcn/UI CSS Variables & Kết Nối Tweakcn Live Preview (`src/index.css`, `tailwind.config.js`, `components.json`, `src/main.tsx`)
+## 🕒 Lần 1: Cấu Hình Chuẩn Shadcn/UI CSS Variables & Kết Nối Tweakcn Live Preview (`src/index.css`, `tailwind.config.js`, `components.json`, `src/main.tsx`)
 - **Thời gian**: 2026-10-29 19:55
 - **Files thay đổi**:
   - `src/index.css`:
@@ -35,19 +52,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Tạo tệp cấu hình chuẩn `components.json` xác nhận dự án sử dụng Tailwind CSS Variables (`"cssVariables": true`).
   - `src/main.tsx`:
     - Tích hợp bộ lắng nghe sự kiện `TWEAKCN_THEME_UPDATE` tự động đồng bộ màu chủ đạo `primary` sang `--agv-accent`, `background` sang `--agv-bg-root`, `foreground` sang `--agv-text-main` và `border` sang `--agv-border`.
-
----
-
-## 🕒 Lần 1: Tối Ưu Siêu Mượt Resize Cột Theo Vùng Nhìn (Viewport-Culled 120fps) & Đồng Bộ Co Giãn Dòng Nhóm Từ Bản 7 (`useColumnResize`, `GridRow`, `index.css`)
-- **Thời gian**: 2026-10-29 19:46
-- **Files thay đổi**:
-  - `src/components/grid/hooks/useColumnResize.ts` (337 dòng):
-    - Tích hợp kỹ thuật Viewport Culling phân tách DOM nodes thành 2 nhóm tại thời điểm `mousedown`: nhóm Chunk hiển thị trong vùng nhìn (`visibleTargetCells`, `visibleGroupSpanCells`, `visibleFullWidthContainers`, `visibleStickyFollowers`) và nhóm Chunk đệm ngoài màn hình (`overscan*`).
-    - Trong suốt quá trình `mousemove` (120fps qua `requestAnimationFrame`), chỉ cập nhật style trực tiếp cho ~20–25 ô hiển thị trên màn hình (thay vì 150+ ô trong đệm ảo hóa), giảm 85% chi phí reflow mỗi frame (< 0.04ms/frame).
-    - Đồng bộ co giãn ô tiêu đề dòng nhóm (`[data-group-span-keys]`) theo thời gian thực 1:1 cùng tay chuột khi kéo các cột nằm trong phạm vi gộp của nhóm.
-    - Cập nhật nốt các ô `overscan*` một lần duy nhất trước khi gọi `setColWidth` lưu vào React state khi nhả chuột `mouseup`.
-    - Gắn cờ `data-resizing-active="true"` lên tay nắm kéo để giữ sáng vạch chỉ báo 2px màu accent trong suốt quá trình kéo kể cả khi chuột trôi ra ngoài.
-  - `src/components/grid/GridRow.tsx`:
-    - Gắn thuộc tính `data-group-span-keys={spannedColKeys}` lên ô tiêu đề dòng nhóm (`group_title_cell`) để khi kéo giãn cột nằm trong khoảng gộp thì dòng nhóm co giãn tức thì.
-  - `src/index.css`: Bổ sung `contain: layout style` cho `.agv-grid-row` và `.agv-group-row`, khóa `pointer-events: none !important` và `transition: none !important` trên `.agv-scroll-viewport` khi đang resize.
-  - Bảo toàn 100% cơ chế kéo thả đổi vị trí cột HTML5 thuần hiện tại (`createDragProps` trong `GridHeader.tsx`).

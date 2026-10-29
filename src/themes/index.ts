@@ -11,12 +11,17 @@ import { LIGHT_THEME_TOKENS } from './light';
 import { DARK_THEME_TOKENS } from './dark';
 import { BEZIER_ARTHOUSE_THEME_TOKENS } from './bezierArthouse';
 import { EINK_PAPER_THEME_TOKENS } from './eink';
+import {
+  TWEAKCN_DEMO_LIGHT_THEME_TOKENS,
+  TWEAKCN_DEMO_DARK_THEME_TOKENS,
+} from './tweakcnDemo';
 
 export * from './common';
 export * from './light';
 export * from './dark';
 export * from './bezierArthouse';
 export * from './eink';
+export * from './tweakcnDemo';
 
 /**
  * Tập hợp toàn bộ bảng màu của các giao diện chính
@@ -30,6 +35,8 @@ export const THEME_TOKENS: Record<string, GridThemeTokens> = {
   [SURFACE_THEMES.BEZIER_ARTHOUSE]: BEZIER_ARTHOUSE_THEME_TOKENS,
   [SURFACE_THEMES.E_INK]: EINK_PAPER_THEME_TOKENS,
   [SURFACE_THEMES.EINK]: EINK_PAPER_THEME_TOKENS,
+  [SURFACE_THEMES.TWEAKCN_DEMO]: TWEAKCN_DEMO_LIGHT_THEME_TOKENS,
+  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: TWEAKCN_DEMO_DARK_THEME_TOKENS,
 };
 
 /**

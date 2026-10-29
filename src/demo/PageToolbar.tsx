@@ -19,6 +19,7 @@ import {
   Monitor,
   Palette,
   BookOpen,
+  SparklesIcon,
   ColumnsIcon,
   BarChart2,
 } from '../components/ui/MorphIcons';
@@ -496,6 +497,8 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
                   ? Moon
                   : t.iconName === 'Palette'
                   ? Palette
+                  : t.iconName === 'Sparkles'
+                  ? SparklesIcon
                   : BookOpen;
 
               return (

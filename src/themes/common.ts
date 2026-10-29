@@ -12,6 +12,8 @@ export const SURFACE_THEMES = {
   BEZIER_ARTHOUSE: 'bezier-arthouse',
   E_INK: 'e-ink',
   EINK: 'eink',
+  TWEAKCN_DEMO: 'tweakcn-demo',
+  TWEAKCN_DEMO_DARK: 'tweakcn-demo-dark',
 } as const;
 
 export type GridTheme = (typeof SURFACE_THEMES)[keyof typeof SURFACE_THEMES] | string;
@@ -104,6 +106,20 @@ export const REGISTERED_THEMES: ThemeMeta[] = [
     iconName: 'BookOpen',
     iconColorClass: 'text-[var(--agv-success)]',
   },
+  {
+    id: SURFACE_THEMES.TWEAKCN_DEMO,
+    name: 'Tweakcn Hổ Phách',
+    class: 'agv-tweakcn-demo',
+    iconName: 'Sparkles',
+    iconColorClass: 'text-[var(--agv-warning)]',
+  },
+  {
+    id: SURFACE_THEMES.TWEAKCN_DEMO_DARK,
+    name: 'Tweakcn Tối',
+    class: 'agv-tweakcn-demo-dark agv-dark',
+    iconName: 'Sparkles',
+    iconColorClass: 'text-[var(--agv-accent)]',
+  },
 ];
 
 /**
@@ -118,6 +134,8 @@ export const THEME_CLASS_MAP: Record<string, string> = {
   [SURFACE_THEMES.BEZIER_ARTHOUSE]: 'agv-bezier-arthouse',
   [SURFACE_THEMES.E_INK]: 'agv-e-ink theme-eink',
   [SURFACE_THEMES.EINK]: 'agv-e-ink theme-eink',
+  [SURFACE_THEMES.TWEAKCN_DEMO]: 'agv-tweakcn-demo',
+  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: 'agv-tweakcn-demo-dark agv-dark',
 };
 
 /**
@@ -224,6 +242,8 @@ export const THEME_SELECTORS: Record<string, string[]> = {
   [SURFACE_THEMES.BEZIER_ARTHOUSE]: buildThemeSelectors(SURFACE_THEMES.BEZIER_ARTHOUSE, 'agv-bezier-arthouse'),
   [SURFACE_THEMES.E_INK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
   [SURFACE_THEMES.EINK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
+  [SURFACE_THEMES.TWEAKCN_DEMO]: buildThemeSelectors(SURFACE_THEMES.TWEAKCN_DEMO, 'agv-tweakcn-demo'),
+  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: buildThemeSelectors(SURFACE_THEMES.TWEAKCN_DEMO_DARK, 'agv-tweakcn-demo-dark'),
 };
 
 /**

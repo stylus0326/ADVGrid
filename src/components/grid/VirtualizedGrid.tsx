@@ -70,9 +70,18 @@ const POPUP_SELECTORS = [
   '[data-agv-popup="true"]',
 ].join(', ');
 
-function isAnyPopupActive(): boolean {
+let cachedPopupActive = false;
+let lastPopupCheckTime = 0;
+
+function isAnyPopupActive(force: boolean = false): boolean {
   if (typeof document === 'undefined') return false;
-  return Boolean(document.querySelector(POPUP_SELECTORS));
+  const now = performance.now();
+  if (!force && now - lastPopupCheckTime < 64) {
+    return cachedPopupActive;
+  }
+  lastPopupCheckTime = now;
+  cachedPopupActive = Boolean(document.querySelector(POPUP_SELECTORS));
+  return cachedPopupActive;
 }
 
 const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridProps>(
@@ -1334,6 +1343,9 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const lastScrollTopRef = useRef<number>(0);
     const lastScrollLeftRef = useRef<number>(0);
     const lastScrollTimeRef = useRef<number>(performance.now());
+    const lastMetricsEmitTimeRef = useRef<number>(0);
+    const windowAccumDistanceRef = useRef<number>(0);
+    const windowStartTimeRef = useRef<number>(performance.now());
     const scrollStopTimeoutRef = useRef<number | null>(null);
     const currentVelocityRef = useRef<number>(0);
     const currentFpsRef = useRef<number>(60);
@@ -1502,36 +1514,74 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       stickyGroupRow,
     ]);
 
-    // Auto scrolling test mode
+    // Auto scrolling test mode (Tối ưu dt mượt 60-144Hz, không đọc scrollHeight gây Forced Reflow)
     useEffect(() => {
       if (!autoScrolling) return;
       let rafId: number;
       let direction = 1;
+      let lastFrameTime = performance.now();
+      let virtualTop = scrollContainerRef.current?.scrollTop || 0;
 
-      const step = () => {
+      const step = (now: number) => {
         const el = scrollContainerRef.current;
         if (el) {
-          const maxScroll = el.scrollHeight - el.clientHeight;
-          const deltaPx = rowSnapMode
-            ? Math.max(1, Math.round(autoScrollSpeed / actualRowHeight)) * actualRowHeight
-            : autoScrollSpeed;
+          const dt = Math.min(50, Math.max(1, now - lastFrameTime));
+          lastFrameTime = now;
 
-          let nextTop = el.scrollTop + direction * deltaPx;
-          if (nextTop >= maxScroll) {
-            nextTop = maxScroll;
+          const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || el.clientHeight));
+          const stepPx = (autoScrollSpeed * dt) / 16.667;
+
+          virtualTop += direction * stepPx;
+          if (virtualTop >= maxScroll) {
+            virtualTop = maxScroll;
             direction = -1;
-          } else if (nextTop <= 0) {
-            nextTop = 0;
+          } else if (virtualTop <= 0) {
+            virtualTop = 0;
             direction = 1;
           }
-          el.scrollTop = nextTop;
+          el.scrollTop = Math.round(virtualTop);
         }
         rafId = requestAnimationFrame(step);
       };
 
       rafId = requestAnimationFrame(step);
-      return () => cancelAnimationFrame(rafId);
-    }, [autoScrolling, autoScrollSpeed, rowSnapMode, actualRowHeight]);
+      return () => {
+        cancelAnimationFrame(rafId);
+        // Khi dừng auto-scroll, căn chỉnh snap dòng mượt mà và đưa vận tốc hiển thị về 0 px/s
+        const el = scrollContainerRef.current;
+        if (el && rowSnapMode && actualRowHeight > 0) {
+          const snapped = Math.round(el.scrollTop / actualRowHeight) * actualRowHeight;
+          if (Math.abs(snapped - el.scrollTop) > 0.5) {
+            el.scrollTop = snapped;
+          }
+        }
+        currentVelocityRef.current = 0;
+        windowAccumDistanceRef.current = 0;
+        windowStartTimeRef.current = performance.now();
+        if (onScrollMetrics) {
+          onScrollMetrics({
+            fps: currentFpsRef.current,
+            velocity: 0,
+            startChunk: activeChunkWindowRef.current.start,
+            endChunk: activeChunkWindowRef.current.end,
+            mountedRowCount:
+              (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
+              chunkSize,
+            totalRows,
+          });
+        }
+      };
+    }, [
+      autoScrolling,
+      autoScrollSpeed,
+      rowSnapMode,
+      actualRowHeight,
+      totalContentHeight,
+      viewportHeight,
+      onScrollMetrics,
+      chunkSize,
+      totalRows,
+    ]);
 
     // Scroll handler
     const handleScroll = useCallback(
@@ -1539,7 +1589,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         const target = e.currentTarget;
 
         // Popup & Editing Scroll Lock: Khi đang sửa hoặc có popup mở thì Grid tuyệt đối không được cuộn (khóa cả ngang lẫn dọc)
-        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
+        if (!autoScrolling && (activeContextMenu || activeEditingCell || isAnyPopupActive())) {
           const lockedPos = lockedScrollPosRef.current;
           target.scrollTop = lockedPos ? lockedPos.top : lastScrollTopRef.current;
           target.scrollLeft = lockedPos ? lockedPos.left : lastScrollLeftRef.current;
@@ -1548,16 +1598,16 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
         let currentTop = target.scrollTop;
         const currentScrollLeft = target.scrollLeft;
-        const currentWidth = target.clientWidth;
 
-        lastScrollLeftRef.current = currentScrollLeft;
-
-        if (centerPinnedColKeys.length > 0) {
-          computeCenterDock(currentScrollLeft, currentWidth);
+        if (currentScrollLeft !== lastScrollLeftRef.current) {
+          lastScrollLeftRef.current = currentScrollLeft;
+          if (centerPinnedColKeys.length > 0) {
+            computeCenterDock(currentScrollLeft, target.clientWidth);
+          }
         }
 
         if (rowSnapMode && !autoScrolling) {
-          const maxScroll = Math.max(0, target.scrollHeight - target.clientHeight);
+          const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || target.clientHeight));
           const remainder = currentTop % actualRowHeight;
           if (remainder !== 0 && currentTop < maxScroll) {
             const snapped = Math.min(maxScroll, Math.round(currentTop / actualRowHeight) * actualRowHeight);
@@ -1569,16 +1619,15 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         }
 
         const now = performance.now();
-        const dt = Math.max(1, now - lastScrollTimeRef.current);
         const dy = Math.abs(currentTop - lastScrollTopRef.current);
-        const pxPerSec = Math.round((dy / dt) * 1000);
+        windowAccumDistanceRef.current += dy;
 
         lastScrollTopRef.current = currentTop;
         lastScrollTimeRef.current = now;
-        currentVelocityRef.current = pxPerSec;
 
-        let start = 0;
-        let end = 0;
+        let start = activeChunkWindowRef.current.start;
+        let end = activeChunkWindowRef.current.end;
+        let chunkChanged = false;
         if (totalChunks > 0) {
           const rawStart = Math.floor(currentTop / chunkPixelHeight);
           const rawEnd = Math.floor((currentTop + viewportHeight) / chunkPixelHeight);
@@ -1589,6 +1638,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             start !== activeChunkWindowRef.current.start ||
             end !== activeChunkWindowRef.current.end
           ) {
+            chunkChanged = true;
             activeChunkWindowRef.current = { start, end };
             setChunkWindow({ start, end });
           }
@@ -1599,26 +1649,41 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           setStickyGroupRowIndex((prev) => (prev === nextStickyIdx ? prev : nextStickyIdx));
         }
 
-        if (scrollStopTimeoutRef.current) {
-          window.clearTimeout(scrollStopTimeoutRef.current);
-        }
-        scrollStopTimeoutRef.current = window.setTimeout(() => {
-          currentVelocityRef.current = 0;
-          if (onScrollMetrics) {
-            onScrollMetrics({
-              fps: currentFpsRef.current,
-              velocity: 0,
-              startChunk: activeChunkWindowRef.current.start,
-              endChunk: activeChunkWindowRef.current.end,
-              mountedRowCount:
-                (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
-                chunkSize,
-              totalRows,
-            });
+        if (!autoScrolling) {
+          if (scrollStopTimeoutRef.current) {
+            window.clearTimeout(scrollStopTimeoutRef.current);
           }
-        }, 110);
+          scrollStopTimeoutRef.current = window.setTimeout(() => {
+            currentVelocityRef.current = 0;
+            windowAccumDistanceRef.current = 0;
+            windowStartTimeRef.current = performance.now();
+            lastMetricsEmitTimeRef.current = performance.now();
+            if (onScrollMetrics) {
+              onScrollMetrics({
+                fps: currentFpsRef.current,
+                velocity: 0,
+                startChunk: activeChunkWindowRef.current.start,
+                endChunk: activeChunkWindowRef.current.end,
+                mountedRowCount:
+                  (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
+                  chunkSize,
+                totalRows,
+              });
+            }
+          }, 110);
+        }
 
-        if (onScrollMetrics) {
+        // Đo vận tốc trung bình trên toàn chu kỳ 120ms và tách khỏi frame mount chunk mới
+        const windowElapsed = now - lastMetricsEmitTimeRef.current;
+        if (onScrollMetrics && !chunkChanged && windowElapsed >= 120) {
+          const measureDt = Math.max(1, now - windowStartTimeRef.current);
+          const pxPerSec = autoScrolling
+            ? Math.round(autoScrollSpeed * 60)
+            : Math.round((windowAccumDistanceRef.current / measureDt) * 1000);
+          currentVelocityRef.current = pxPerSec;
+          windowAccumDistanceRef.current = 0;
+          windowStartTimeRef.current = now;
+          lastMetricsEmitTimeRef.current = now;
           onScrollMetrics({
             fps: currentFpsRef.current,
             velocity: pxPerSec,
@@ -1634,7 +1699,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         computeCenterDock,
         rowSnapMode,
         autoScrolling,
-        rowHeight,
+        actualRowHeight,
+        totalContentHeight,
         totalChunks,
         chunkPixelHeight,
         viewportHeight,
@@ -1666,17 +1732,48 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       return indices;
     }, [chunkWindow, totalChunks, chunkPixelHeight, viewportHeight, overscanChunks]);
 
+    // Bộ đệm lưu trữ mảng dòng của từng Chunk (Giữ nguyên tham chiếu chunkRows cho các chunk cũ khi cuộn, giúp GridChunkBlock đạt 100% React.memo hit)
+    const chunkRowsCacheRef = useRef<{
+      key: string;
+      getRowRef: any;
+      map: Map<number, T[]>;
+    }>({ key: '', getRowRef: null, map: new Map() });
+
     // Rows in visible chunks
     const visibleChunksMap = useMemo(() => {
+      const cacheKey = `${chunkSize}_${totalRows}_${dataVersion ?? 0}`;
+      if (
+        chunkRowsCacheRef.current.key !== cacheKey ||
+        chunkRowsCacheRef.current.getRowRef !== getRowItem
+      ) {
+        chunkRowsCacheRef.current = {
+          key: cacheKey,
+          getRowRef: getRowItem,
+          map: new Map<number, T[]>(),
+        };
+      }
+      const cache = chunkRowsCacheRef.current.map;
       const map = new Map<number, T[]>();
       for (const cIdx of visibleChunkIndices) {
-        const startRow = cIdx * chunkSize;
-        const endRow = Math.min(totalRows, startRow + chunkSize);
-        const chunkRows: T[] = [];
-        for (let i = startRow; i < endRow; i++) {
-          chunkRows.push(getRowItem(i));
+        let chunkRows = cache.get(cIdx);
+        if (!chunkRows) {
+          const startRow = cIdx * chunkSize;
+          const endRow = Math.min(totalRows, startRow + chunkSize);
+          chunkRows = [];
+          for (let i = startRow; i < endRow; i++) {
+            chunkRows.push(getRowItem(i));
+          }
+          cache.set(cIdx, chunkRows);
         }
         map.set(cIdx, chunkRows);
+      }
+      if (cache.size > 40) {
+        for (const cachedIdx of cache.keys()) {
+          if (!map.has(cachedIdx)) {
+            cache.delete(cachedIdx);
+            if (cache.size <= 30) break;
+          }
+        }
       }
       return map;
     }, [visibleChunkIndices, chunkSize, totalRows, getRowItem, dataVersion]);
@@ -2103,6 +2200,6 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
 VirtualizedGridComponent.displayName = 'VirtualizedGrid';
 
-export const VirtualizedGrid = VirtualizedGridComponent as <T = any>(
+export const VirtualizedGrid = React.memo(VirtualizedGridComponent) as unknown as <T = any>(
   props: VirtualizedGridProps<T> & { ref?: React.Ref<VirtualizedGridRef> }
 ) => React.ReactElement | null;

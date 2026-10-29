@@ -54,7 +54,7 @@ export interface GridHeaderProps<T = any> {
   hasFilterRow?: boolean;
 }
 
-export const GridHeader: React.FC<GridHeaderProps> = ({
+export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
   totalGridWidth,
   leftColumns,
   middleElements,
@@ -534,4 +534,4 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       })}
     </div>
   );
-};
+});

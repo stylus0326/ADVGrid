@@ -610,20 +610,21 @@ export const CODE_DICTIONARY = {
     { name: 'getAirlineEmptyColumns', file: 'src/demo/airlineData.ts', line: 137, desc: 'Phát hiện nhanh các cột rỗng hoàn toàn trong bộ dữ liệu (~0ms) và cache cho các lần truy vấn tiếp theo' },
 
     // --- src/App.tsx ---
-    { name: 'renderCell', file: 'src/App.tsx', line: 883, desc: 'Bộ render ô tùy biến: đọc trực tiếp rawTuple zero-GC, gỡ bỏ toàn bộ badge/css cell cứng (col_name Nghiệp vụ, col_bi_danh), trả về text thuần truncate chuẩn Montserrat kế thừa theme, định dạng tiền VND toLocaleString tabular-nums' },
-    { name: 'handleReorderColumns', file: 'src/App.tsx', line: 318, desc: 'Kéo thả đổi thứ tự cột và tự động lưu vào localStorage' },
-    { name: 'handleToggleCheck', file: 'src/App.tsx', line: 402, desc: 'Chuyển đổi trạng thái chọn/bỏ chọn dòng trong Set checkedRowIndices' },
-    { name: 'handleToggleGroupByColumn', file: 'src/App.tsx', line: 356, desc: 'Chuyển đổi trạng thái nhóm theo cột từ chuột phải Context Menu, tự động thiết lập mặc định thu gọn tất cả (collapsed by default), lưu localStorage' },
+    { name: 'renderCell', file: 'src/App.tsx', line: 1398, desc: 'Bộ render ô tùy biến: bảo toàn 100% React.memo của GridRow bằng cách đọc trực tiếp prop isChecked từ CellRenderParams và phụ thuộc đúng giá trị số chartColumnWidth thay vì cả object colWidths' },
+    { name: 'handleReorderColumns', file: 'src/App.tsx', line: 375, desc: 'Kéo thả đổi thứ tự cột và tự động lưu vào localStorage' },
+    { name: 'handleToggleCheck', file: 'src/App.tsx', line: 521, desc: 'Chuyển đổi trạng thái chọn/bỏ chọn dòng trong Set checkedRowIndices (hỗ trợ Shift + Click chọn dải dòng liên tiếp)' },
+    { name: 'handleToggleGroupByColumn', file: 'src/App.tsx', line: 414, desc: 'Chuyển đổi trạng thái nhóm theo cột từ chuột phải Context Menu, tự động thiết lập mặc định thu gọn tất cả (collapsed by default), lưu localStorage' },
     { name: 'handleToggleGroupSort', file: 'src/App.tsx', line: 241, desc: 'Chuyển đổi luân phiên 3 trạng thái sắp xếp nhóm theo tổng của cột số: Giảm dần -> Tăng dần -> Mặc định (Option B Toolbar3) và lưu localStorage' },
-    { name: 'handleToggleGroupCollapse', file: 'src/App.tsx', line: 367, desc: 'Đóng/mở nhóm dòng phân cấp khi click vào dòng Group Header' },
-    { name: 'handleCollapseAllGroups', file: 'src/App.tsx', line: 759, desc: 'Thu gọn toàn bộ tất cả các nhóm trên bảng' },
-    { name: 'handleExpandAllGroups', file: 'src/App.tsx', line: 770, desc: 'Mở rộng toàn bộ tất cả các nhóm trên bảng' },
-    { name: 'handleUngroup', file: 'src/App.tsx', line: 774, desc: 'Hủy nhóm theo cột, khôi phục bảng phẳng 339.737 dòng' },
-    { name: 'handleCopyGroupTable', file: 'src/App.tsx', line: 781, desc: 'Sao chép toàn bộ dữ liệu của nhóm sang định dạng TSV vào clipboard (có/không kèm tên cột)' },
-    { name: 'handleExportGroupExcel', file: 'src/App.tsx', line: 1109, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho nhóm dữ liệu' },
-    { name: 'handleExportAllExcel', file: 'src/App.tsx', line: 1140, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho toàn bộ bảng dữ liệu' },
-    { name: 'columnSums', file: 'src/App.tsx', line: 1037, desc: 'Tính toán tổng giá trị cho tất cả các cột số bằng động cơ Single-Pass Stream O(N); khi có dòng được chọn (checkedRowIndices.size > 0) tự động tính theo các dòng đang chọn với fast-path O(K)' },
-    { name: 'groupedDisplayModel', file: 'src/App.tsx', line: 1040, desc: 'Động cơ nhóm dòng, cộng dồn tổng và sắp xếp các nhóm theo tổng số tiền (groupSortConfig) trong đúng 1 vòng lặp duy nhất (~12ms)' },
+    { name: 'handleToggleGroupCollapse', file: 'src/App.tsx', line: 425, desc: 'Đóng/mở nhóm dòng phân cấp khi click vào dòng Group Header' },
+    { name: 'handleCollapseAllGroups', file: 'src/App.tsx', line: 1243, desc: 'Thu gọn toàn bộ tất cả các nhóm trên bảng' },
+    { name: 'handleExpandAllGroups', file: 'src/App.tsx', line: 1247, desc: 'Mở rộng toàn bộ tất cả các nhóm trên bảng' },
+    { name: 'handleUngroup', file: 'src/App.tsx', line: 1256, desc: 'Hủy nhóm theo cột, khôi phục bảng phẳng 50.000 dòng' },
+    { name: 'handleCopyGroupTable', file: 'src/App.tsx', line: 1263, desc: 'Sao chép toàn bộ dữ liệu của nhóm sang định dạng TSV vào clipboard (có/không kèm tên cột)' },
+    { name: 'handleExportGroupExcel', file: 'src/App.tsx', line: 1293, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho nhóm dữ liệu' },
+    { name: 'handleExportAllExcel', file: 'src/App.tsx', line: 1323, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho toàn bộ bảng dữ liệu' },
+    { name: 'rawGroupBuckets', file: 'src/App.tsx', line: 1086, desc: 'Chia nhóm cấu trúc 50.000 dòng tách biệt khỏi luồng tính tổng (không phải gom nhóm lại khi tích chọn dòng)' },
+    { name: 'columnSums', file: 'src/App.tsx', line: 1181, desc: 'Tính toán tổng giá trị cho tất cả các cột số bằng động cơ Single-Pass Stream O(N); khi có dòng được chọn (checkedRowIndices.size > 0) tự động tính theo các dòng đang chọn với fast-path O(K)' },
+    { name: 'groupedDisplayModel', file: 'src/App.tsx', line: 1184, desc: 'Động cơ nhóm dòng, cộng dồn tổng và sắp xếp các nhóm theo tổng số tiền (groupSortConfig) trong đúng 1 vòng lặp duy nhất' },
     { name: 'renderGroupHeaderRow', file: 'src/components/grid/GridRow.tsx', line: 446, desc: 'Render dòng tiêu đề nhóm dữ liệu: icon mở/đóng ▼/▶, line ngang borderBottom liền mạch qua toàn bộ ô, ẩn tiền tố tên cột chỉ hiển thị trực tiếp giá trị nhóm và badge số lượng bản ghi, tổng sum các cột số căn đúng vị trí cột' }
   ],
 
@@ -662,22 +663,17 @@ export const CODE_DICTIONARY = {
   files: [
     {
       fileName: 'src/components/grid/VirtualizedGrid.tsx',
-      totalLines: 1871,
-      description: 'Động cơ chính của Grid: Điều khiển ảo hóa, cuộn, ghim cột, kéo độ rộng, phím tắt, menu ngữ cảnh & 3 chế độ tương tác ô, In-Cell Editing Scroll Lock (khóa cuộn ngang & dọc khi đang sửa ô dữ liệu), Popup Scroll Lock, dynamic header height, columnSums and grouping props forwarding, chặn chuột phải mặc định của trình duyệt, menu nổi tiêu đề nhóm handleGroupContextMenu',
+      totalLines: 2204,
+      description: 'Động cơ chính của Grid (bọc React.memo): Điều khiển ảo hóa chunkRowsCacheRef giữ nguyên 100% tham chiếu chunk cũ khi cuộn cao tốc, cuộn mượt theo dt 60-144Hz, đo vận tốc trung bình cửa sổ 120ms (windowAccumDistanceRef), ghim cột, kéo độ rộng, phím tắt, menu ngữ cảnh & 3 chế độ tương tác ô, In-Cell Editing Scroll Lock, Popup Scroll Lock (cache 64ms), dynamic header height, columnSums and grouping props forwarding',
       sections: [
-        { lineRange: '1 - 50', category: 'Imports, Prop Types & Popup Selectors', functions: ['POPUP_SELECTORS', 'isAnyPopupActive', 'VirtualizedGridProps', 'VirtualizedGridRef'] },
-        { lineRange: '51 - 150', category: 'State & Refs Initialization', functions: ['colWidths', 'columnPins', 'hiddenColKeys', 'effectiveColumns', 'setColWidth', 'setMultipleColWidths', 'viewportRef'] },
-        { lineRange: '151 - 240', category: 'Column Offsets & Pin Calculation', functions: ['calculatePinnedOffsets', 'leftOffsets', 'rightOffsets'] },
-        { lineRange: '241 - 365', category: 'Column Group Definitions & Memoization', functions: ['flatColumns', 'middleElements', 'collapsedBands'] },
-        { lineRange: '366 - 415', category: 'Column Resize Handlers', functions: ['handleMouseDownResize', 'handleMouseMove', 'handleMouseUp'] },
-        { lineRange: '416 - 515', category: 'Auto-Fit, Pinning, Hide/Show & Scroll Handlers', functions: ['handleAutoFitColumn', 'handleAutoFitAllColumns', 'handleAutoFitBandColumns', 'handleSetPin', 'handleSetBandPin', 'handleHideColumn', 'handleShowAllHiddenColumns', 'handleHideBand', 'handleScrollToTop', 'handleScrollToBottom'] },
-        { lineRange: '516 - 575', category: 'In-Cell Editing Handlers', functions: ['internalEditingCell', 'handleStartEditCell', 'handleEndEditCell'] },
-        { lineRange: '576 - 660', category: 'Sorting & Selection Logic', functions: ['handleToggleSort', 'selectedRowIndices'] },
-        { lineRange: '661 - 810', category: 'Keyboard Navigation', functions: ['handleKeyDown'] },
-        { lineRange: '811 - 880', category: 'Wheel Snapping & Popup/Editing Scroll Lock Listeners', functions: ['handleWheelSnap', 'handleWheelLock', 'In-Cell Editing Global Capture Lock (wheel & touchmove)'] },
-        { lineRange: '881 - 960', category: 'Context Menu Trigger Handlers', functions: ['handleColumnContextMenu', 'handleBandContextMenu', 'handleCellContextMenu', 'handleGroupContextMenu'] },
-        { lineRange: '961 - 1050', category: 'Scroll Engine & Chunk Virtualization', functions: ['handleScroll (Popup & Editing Scroll Lock guard)', 'syncChunkOffsets', 'activeChunks'] },
-        { lineRange: '1051 - 1761', category: 'JSX Render Viewport [data-agv-editing], Chunks Block, FilterRow, FloatingToolbar & ContextMenu Portal (vô hiệu hóa chuột phải mặc định trình duyệt)', functions: ['container onContextMenu preventDefault', 'GridHeader render', 'GridFilterRow with columnSums', 'GridChunkBlock iteration with onGroupContextMenu', 'GridFloatingToolbar', 'ColumnContextMenu render with group callbacks'] }
+        { lineRange: '1 - 85', category: 'Imports, Prop Types & Cached Popup Selectors', functions: ['POPUP_SELECTORS', 'isAnyPopupActive (64ms cached)', 'VirtualizedGridProps', 'VirtualizedGridRef'] },
+        { lineRange: '86 - 350', category: 'State & Refs Initialization', functions: ['colWidths', 'columnPins', 'hiddenColKeys', 'effectiveColumns', 'setColWidth', 'setMultipleColWidths'] },
+        { lineRange: '351 - 660', category: 'Column Offsets & Pin Calculation', functions: ['calculatePinnedOffsets', 'leftOffsets', 'rightOffsets'] },
+        { lineRange: '661 - 745', category: 'Column Group Definitions & Memoization', functions: ['flatColumns', 'middleElements', 'collapsedBands'] },
+        { lineRange: '746 - 1020', category: 'Column Resize, Auto-Fit, Pinning, Hide/Show & Context Menu Handlers', functions: ['handleMouseDownResize', 'handleAutoFitColumn', 'handleAutoFitAllColumns', 'handleSetPin', 'handleHideColumn', 'handleColumnContextMenu', 'handleBandContextMenu', 'handleCellContextMenu', 'handleGroupContextMenu'] },
+        { lineRange: '1260 - 1515', category: 'Sticky Group Header, Wheel Snapping, Popup Scroll Lock & Keyboard Navigation', functions: ['computeStickyGroupIdx', 'handleWheelSnap', 'handleWheelLock', 'handleKeyDownNav'] },
+        { lineRange: '1516 - 1760', category: 'High-Speed AutoScroll Loop, 120ms Window Velocity Scroll Engine & Chunk Row Cache (chunkRowsCacheRef)', functions: ['autoScrolling dt loop', 'windowAccumDistanceRef', 'handleScroll', 'visibleChunkIndices', 'chunkRowsCacheRef', 'visibleChunksMap'] },
+        { lineRange: '1761 - 2204', category: 'JSX Render Viewport, Memoized GridHeader & GridFilterRow, Chunks Block, FloatingToolbar & ContextMenu Portal', functions: ['GridHeader (React.memo)', 'GridFilterRow (React.memo)', 'GridChunkBlock iteration', 'GridFloatingToolbar', 'ColumnContextMenu', 'React.memo(VirtualizedGridComponent)'] }
       ]
     },
     {

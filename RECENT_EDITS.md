@@ -4,44 +4,38 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Chọn Dải Dòng Liên Tiếp Bằng `Shift + Click` & Mục `Bỏ chọn tất cả dòng (N)` Trong `ColumnContextMenu`
-- **Thời gian**: 2026-10-27 23:33
+## 🕒 Lần 3 (Mới nhất): Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
+- **Thời gian**: 2026-10-29 00:49
 - **Files thay đổi**:
-  - `src/App.tsx` (1742 dòng):
-    - **Mục 1 (`Shift + Click` chọn dải dòng)**: Bổ sung `lastCheckedRowRef` và `activeRowIndicesRef` trong `handleToggleCheck` (Dòng 517 - 621), tự động chọn hoặc bỏ chọn toàn bộ dải dòng từ dòng vừa tích trước đó đến dòng hiện tại theo đúng thứ tự đang hiển thị (hỗ trợ cả khi đang gom nhóm, đang lọc/sắp xếp và bảng phẳng gốc).
-    - **Mục 2 (`handleClearCheckedRows`)**: Bổ sung hàm `handleClearCheckedRows` (Dòng 624 - 635) xóa sạch tập `checkedRowIndices` và tự động gỡ lọc cột chọn `col_chk` nếu đang bật chế độ "Chỉ hiện dòng đang chọn".
-  - `src/components/grid/ColumnContextMenu.tsx` (1163 dòng):
-    - **Mục 2**: Bổ sung `checkedRowCount` và `onClearCheckedRows` vào `ColumnContextMenuProps`, render nút `Bỏ chọn tất cả dòng ({checkedRowCount})` (Dòng 1110 - 1122) trong menu chuột phải dòng (`CONTEXT_MENU_TYPES.ROW`) chuẩn `min-h-[28px]`, không icon, không tooltip, 100% biến CSS `var(--agv-*)`.
-  - `src/components/grid/VirtualizedGrid.tsx` (2109 dòng) & `src/components/grid/types.ts` (353 dòng):
-    - Bổ sung prop `onClearCheckedRows` và chuyển tiếp `checkedRowCount`, `onClearCheckedRows` xuống `ColumnContextMenu` (Dòng 2021 - 2022).
+  - `src/components/grid/VirtualizedGrid.tsx` (2204 dòng):
+    - Bổ sung `windowAccumDistanceRef` và `windowStartTimeRef` (Dòng 1347 - 1348, 1618 - 1692): Tích lũy tổng quãng đường cuộn `dy` trên toàn bộ cửa sổ 120ms (`windowAccumDistanceRef.current / measureDt * 1000`) thay vì chỉ lấy `dy / dt` của 1 frame 16ms cuối cùng; giữ ổn định tốc độ chuẩn `autoScrollSpeed * 60` (`1,920 px/s`) khi đang chạy `autoScrolling` và tự động đưa vận tốc hiển thị về `0 px/s` ngay khi tắt `autoScrolling` (Dòng 1554 - 1568).
+  - `code_index.js`: Cập nhật đồng bộ số dòng `VirtualizedGrid.tsx`.
+
+---
+
+## 🕒 Lần 2: Khắc Phục Triệt Để Hiện Tượng Khựng Khi Test Cuộn Cao Tốc (`chunkRowsCacheRef`, `WeakMap` 12 Tháng & `React.memo` Toàn Diện)
+- **Thời gian**: 2026-10-29 00:41
+- **Files thay đổi**:
+  - `src/components/grid/VirtualizedGrid.tsx` (2152 dòng):
+    - **Cache mảng dòng theo Chunk (`chunkRowsCacheRef`)** (Dòng 1679 - 1725): Giữ nguyên 100% tham chiếu mảng `chunkRows` và từng object `row` cho các chunk đã nằm trên màn hình khi cuộn sang chunk mới.
+    - **Tối ưu vòng lặp `autoScrolling` & `handleScroll`** (Dòng 73 - 85, 1514 - 1656): Cuộn mượt theo thời gian thực `dt` 60–144Hz, dùng `totalContentHeight` thay vì đọc `el.scrollHeight` gây Forced Synchronous Reflow; cache kết quả `isAnyPopupActive()` trong 64ms; bọc `React.memo` cho `VirtualizedGrid`.
+  - `src/App.tsx` (1801 dòng):
+    - **Cache thống kê 12 tháng bằng `WeakMap` (`monthStatsCacheRef`)** (Dòng 1407 - 1480) và **cố định `handleGetRowId` bằng `useCallback`** (Dòng 1585 - 1588, 1738).
+  - `src/components/grid/GridHeader.tsx` (538 dòng) & `src/components/grid/GridFilterRow.tsx` (1298 dòng):
+    - Bọc `React.memo` cho `GridHeader` và `GridFilterRow`.
   - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
 
 ---
 
-## 🕒 Lần 2: Nhận Diện Màu Tổng Dòng Chọn Trên `GridFilterRow`, Nút 1 Chạm "Chỉ Hiện Dòng Đang Chọn" Tại `PageFooter` & Mục `DÒNG ĐANG GHIM` Trong `AdvCriteriaSummaryPopup`
-- **Thời gian**: 2026-10-27 21:50
+## 🕒 Lần 1: Tối Ưu Hóa Độ Mượt Giao Diện 4 Điểm Nghẽn (`React.memo` GridRow, Lọc/Sort, Gom Nhóm & Cuộn Chuột)
+- **Thời gian**: 2026-10-29 00:26
 - **Files thay đổi**:
-  - `src/components/grid/GridFilterRow.tsx` (1296 dòng):
-    - **Mục 2**: Bổ sung `hasCheckedRows` và `isHighlightPlaceholder` cho `SmartNumberFilterInput` (Dòng 346 - 418, 1102 - 1109): Khi đang chọn dòng (`hasCheckedRows === true`), đổi màu chữ con số tổng sang `placeholder:text-[var(--agv-accent)] placeholder:opacity-100 placeholder:font-semibold`.
-    - **Mục 4**: Bổ sung `pinnedRows`, `onUnpinRow`, `onClearPinnedRows` vào `GridFilterRowProps`, cộng `pinnedRows.length` vào `totalActiveCriteriaCount` (Dòng 472 - 488) và truyền xuống `AdvCriteriaSummaryPopup` (Dòng 1239 - 1265).
-  - `src/components/grid/AdvCriteriaSummaryPopup.tsx` (606 dòng):
-    - **Mục 4**: Tính toán `pinnedRowItems` (Dòng 244 - 276) hiển thị `Dòng #{STT}` kèm giá trị định danh tự nhiên của cột đầu tiên; render mục `DÒNG ĐANG GHIM ({pinnedRowItems.length})` (Dòng 553 - 582) chuẩn chip `min-h-[28px]` để gỡ từng dòng ghim hoặc gỡ toàn bộ khi bấm `Xóa tất cả tiêu chí`.
-  - `src/components/grid/VirtualizedGrid.tsx` (2106 dòng):
-    - Bổ sung `handleUnpinRow` (Dòng 993 - 995) và truyền `hasCheckedRows`, `pinnedRows`, `onUnpinRow`, `onClearPinnedRows` xuống `GridFilterRow` (Dòng 1790 - 1805).
-  - `src/demo/PageFooter.tsx` (129 dòng):
-    - **Mục 3**: Bổ sung `isFilterCheckedOnly` và `onToggleFilterCheckedOnly` (Dòng 87 - 115): Khi `checkedRowCount > 0`, mục `Đã chọn: {checkedRowCount} dòng` trở thành nút bấm `min-h-[28px]`, trạng thái active hiển thị nền `var(--agv-accent)` chữ trắng `var(--agv-accent-text, #ffffff)`.
-  - `src/App.tsx` (1642 dòng):
-    - Bổ sung `handleToggleFilterCheckedOnly` (Dòng 540 - 554) bật/tắt lọc cột `col_chk` (`CHECK_FILTER_STATES.CHECKED`), tự động gỡ lọc `col_chk` trong `handleToggleCheck` khi bỏ chọn hết dòng (`next.size === 0`).
+  - `src/App.tsx` (1765 dòng):
+    - **Bảo toàn `React.memo` của `GridRow` khi tích chọn dòng & kéo giãn cột** (Dòng 1358 - 1554): Tách `checkedRowIndices` khỏi dependency của `getRow` và `renderCell`.
+    - **Loại bỏ chạy lại Lọc & Sort 50.000 dòng thừa khi tích checkbox** (Dòng 769 - 1080): Bổ sung `effectiveCheckedForFilter` và `effectiveCheckedForSort`.
+    - **Tách riêng bước Chia nhóm (`rawGroupBuckets`) và Tính tổng (`baseGroupData`)** (Dòng 1085 - 1182).
+  - `src/components/grid/GridChunkBlock.tsx` (198 dòng):
+    - Đưa phép tìm cột `chkCol` ra ngoài vòng lặp `rows.map` và ưu tiên kiểm tra `checkedRowIndices.has(...)` trước tiên cho `isChecked` (Dòng 94 - 127).
+  - `src/components/grid/VirtualizedGrid.tsx` (2112 dòng):
+    - Bổ sung `lastMetricsEmitTimeRef` tiết lưu `onScrollMetrics` trong `handleScroll`.
   - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
-
----
-
-## 🕒 Lần 1: Tính Tổng Toán Tử Theo Cột (`columnSums`) Dựa Trên Số Dòng Đang Chọn Thay Vì Toàn Bảng & Gỡ Bỏ Thống Kê Phụ Trên `PageFooter`
-- **Thời gian**: 2026-10-27 20:28
-- **Files thay đổi**:
-  - `src/App.tsx` (1614 dòng):
-    - Cập nhật `baseGroupData` / `columnSums` (Dòng 951 - 1039): Khi người dùng tích chọn dòng (`checkedRowIndices.size > 0`), toàn bộ giá trị tổng theo cột (`columnSums` hiển thị tại ô toán tử từng cột trên `GridFilterRow` và `groupSums` trên dòng nhóm) tự động tính theo các dòng đang chọn (`checkedRowIndices`) thay vì cộng toàn bảng; tích hợp fast-path $O(K)$ duyệt trực tiếp `checkedRowIndices` khi không có bộ lọc. Khi bỏ chọn hết (`checkedRowIndices.size === 0`), tự động khôi phục tính tổng toàn bảng.
-    - Xóa `checkedRowStats` khỏi `src/App.tsx`.
-  - `src/demo/PageFooter.tsx` (104 dòng):
-    - Gỡ bỏ `checkedRowStats` khỏi thanh trạng thái đáy, giữ nguyên hiển thị `Đã chọn: {checkedRowCount} dòng` tinh gọn.
-  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả `columnSums`.

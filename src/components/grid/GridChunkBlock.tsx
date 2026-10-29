@@ -91,6 +91,9 @@ export const GridChunkBlock = memo(
     );
     const theme = getThemeClasses(surfaceTheme);
 
+    const chkCol = columns.find((c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title));
+    const chkColKey = chkCol?.key;
+
     return (
       <div
         style={{
@@ -117,17 +120,13 @@ export const GridChunkBlock = memo(
               ? selectedRowKey === rowKey || (selectedRowIndex !== null && selectedRowIndex === actualRowIndex)
               : selectedRowIndex !== null && selectedRowIndex === actualRowIndex;
 
-          const chkCol = columns.find((c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title));
-          const chkColKey = chkCol?.key;
-          const isChecked =
-            (Boolean(chkColKey) && (row as any)?.cells?.get?.(chkColKey!)?.value === true) ||
-            (Boolean(chkColKey) && (row as any)?.[chkColKey!] === true) ||
-            (row as any)?.isChecked === true ||
-            (checkedRowIndices
-              ? checkedRowIndices.has(rowKey as any) ||
-                ((row as any)?.originalIndex !== undefined &&
-                  checkedRowIndices.has((row as any).originalIndex))
-              : false);
+          const isChecked = checkedRowIndices
+            ? checkedRowIndices.has(rowKey as any) ||
+              ((row as any)?.originalIndex !== undefined &&
+                checkedRowIndices.has((row as any).originalIndex))
+            : (Boolean(chkColKey) && (row as any)?.cells?.get?.(chkColKey!)?.value === true) ||
+              (Boolean(chkColKey) && (row as any)?.[chkColKey!] === true) ||
+              (row as any)?.isChecked === true;
 
           const key = rowKey;
 

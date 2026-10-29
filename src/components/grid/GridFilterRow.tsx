@@ -427,7 +427,7 @@ export const SmartNumberFilterInput: React.FC<{
   );
 };
 
-export const GridFilterRow: React.FC<GridFilterRowProps> = ({
+export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
   totalGridWidth,
   columns,
   colWidths,
@@ -1294,4 +1294,4 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
       )}
     </>
   );
-};
+});

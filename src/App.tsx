@@ -766,6 +766,17 @@ export function App() {
     });
   }, [deferredColumnFilters]);
 
+  const checkedRowIndicesRef = useRef(checkedRowIndices);
+  checkedRowIndicesRef.current = checkedRowIndices;
+
+  const chkFilterVal = deferredColumnFilters['col_chk']?.val;
+  const isChkFilterActive =
+    chkFilterVal === CHECK_FILTER_STATES.CHECKED || chkFilterVal === CHECK_FILTER_STATES.UNCHECKED;
+  const effectiveCheckedForFilter = isChkFilterActive ? checkedRowIndices : null;
+
+  const isSortingByChk = sortConfig?.key === 'col_chk';
+  const effectiveCheckedForSort = isSortingByChk ? checkedRowIndices : null;
+
   // Filter pipeline (<5ms for 50,000 rows)
   const filteredRowIndices = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -784,8 +795,8 @@ export function App() {
     const matched: number[] = [];
 
     for (let r = 0; r < total; r++) {
-      if (requireChecked && !checkedRowIndices.has(r)) continue;
-      if (requireUnchecked && checkedRowIndices.has(r)) continue;
+      if (requireChecked && !effectiveCheckedForFilter?.has(r)) continue;
+      if (requireUnchecked && effectiveCheckedForFilter?.has(r)) continue;
 
       // Check Column Filters
       if (hasColFilters) {
@@ -829,7 +840,7 @@ export function App() {
   }, [
     searchQuery,
     appliedQueryTree,
-    checkedRowIndices,
+    effectiveCheckedForFilter,
     activeColEntries,
     deferredColumnFilters,
     colMap,
@@ -894,8 +905,8 @@ export function App() {
       } else {
         const total = totalRowCount;
         for (let r = 0; r < total; r++) {
-          if (requireChecked && !checkedRowIndices.has(r)) continue;
-          if (requireUnchecked && checkedRowIndices.has(r)) continue;
+          if (requireChecked && !effectiveCheckedForFilter?.has(r)) continue;
+          if (requireUnchecked && effectiveCheckedForFilter?.has(r)) continue;
 
           if (otherCount > 0) {
             let matchedOther = true;
@@ -982,7 +993,7 @@ export function App() {
     [
       searchQuery,
       appliedQueryTree,
-      checkedRowIndices,
+      effectiveCheckedForFilter,
       activeColEntries,
       deferredColumnFilters,
       colMap,
@@ -1030,7 +1041,7 @@ export function App() {
       if (sortConfig.key === 'col_stt' || sortConfig.key === 'col_id') {
         sortVals[i] = origIdx + 1;
       } else if (sortConfig.key === 'col_chk') {
-        sortVals[i] = checkedRowIndices.has(origIdx) ? 1 : 0;
+        sortVals[i] = effectiveCheckedForSort?.has(origIdx) ? 1 : 0;
       } else if (sortConfig.key === 'col_chunk') {
         sortVals[i] = Math.floor(origIdx / chunkSize);
       } else {
@@ -1062,7 +1073,7 @@ export function App() {
       sorted[i] = base[order[i]];
     }
     return sorted;
-  }, [filteredRowIndices, sortConfig, totalRowCount, colMap, checkedRowIndices, chunkSize, apiData, formulaMode]);
+  }, [filteredRowIndices, sortConfig, totalRowCount, colMap, effectiveCheckedForSort, chunkSize, apiData, formulaMode]);
 
   const activeRowIndices = displayRowIndices || filteredRowIndices;
   activeRowIndicesRef.current = activeRowIndices;
@@ -1073,7 +1084,35 @@ export function App() {
     return INITIAL_COLUMNS.filter((c) => c.dataType === DATA_TYPES.NUMBER).map((c) => c.key);
   }, []);
 
-  // TẦNG 1: Gom nhóm & Tính tổng cực tốc (Khi có dòng được chọn, tính theo các dòng đang chọn thay vì toàn bảng)
+  // TẦNG 1A: Chia nhóm cấu trúc (Chỉ chạy lại khi đổi cột gom nhóm hoặc bộ lọc/sắp xếp, KHÔNG chạy lại khi tích chọn dòng)
+  const rawGroupBuckets = useMemo(() => {
+    if (!groupByColumnKey) return null;
+    const count = activeRowIndices ? activeRowIndices.length : totalRowCount;
+    const groupsMap = new Map<string, number[]>();
+
+    for (let i = 0; i < count; i++) {
+      const origIdx = activeRowIndices ? activeRowIndices[i] : i;
+      const rawVal = getRowVal(origIdx, groupByColumnKey);
+      const valStr = rawVal === '' || rawVal === null || rawVal === undefined ? '(Trống)' : String(rawVal);
+      let indices = groupsMap.get(valStr);
+      if (!indices) {
+        indices = [];
+        groupsMap.set(valStr, indices);
+      }
+      indices.push(origIdx);
+    }
+
+    const colTitle = colMap[groupByColumnKey]?.title || groupByColumnKey;
+    return {
+      colTitle,
+      buckets: Array.from(groupsMap.entries()).map(([groupValue, indices]) => ({
+        groupValue,
+        indices,
+      })),
+    };
+  }, [groupByColumnKey, activeRowIndices, totalRowCount, colMap, getRowVal]);
+
+  // TẦNG 1B: Tính tổng cực tốc (Khi có dòng được chọn, tính theo các dòng đang chọn thay vì toàn bảng)
   const baseGroupData = useMemo(() => {
     const numKeys = numericColKeys;
     const numCount = numKeys.length;
@@ -1083,7 +1122,7 @@ export function App() {
     const count = activeRowIndices ? activeRowIndices.length : totalRowCount;
 
     // Fast path: Không gom nhóm
-    if (!groupByColumnKey) {
+    if (!rawGroupBuckets) {
       if (hasCheckedRows && !activeRowIndices) {
         checkedRowIndices.forEach((origIdx) => {
           if (origIdx < 0 || origIdx >= totalRowCount) return;
@@ -1113,22 +1152,14 @@ export function App() {
       return { columnSums: sumsObj, groupEntries: null, colTitle: '' };
     }
 
-    // Single-pass Grouping + Summaries
-    const groupsMap = new Map<string, { indices: number[]; sums: Float64Array }>();
-
-    for (let i = 0; i < count; i++) {
-      const origIdx = activeRowIndices ? activeRowIndices[i] : i;
-      const rawVal = getRowVal(origIdx, groupByColumnKey);
-      const valStr = rawVal === '' || rawVal === null || rawVal === undefined ? '(Trống)' : String(rawVal);
-      let gBucket = groupsMap.get(valStr);
-      if (!gBucket) {
-        gBucket = { indices: [], sums: new Float64Array(numCount) };
-        groupsMap.set(valStr, gBucket);
-      }
-      gBucket.indices.push(origIdx);
-
-      if (!hasCheckedRows || checkedRowIndices.has(origIdx)) {
-        const gSums = gBucket.sums;
+    // Tính tổng trực tiếp trên các bucket đã chia nhóm (bỏ qua hoàn toàn quét chuỗi & tạo Map)
+    const entries = rawGroupBuckets.buckets.map((bucket) => {
+      const gSums = new Float64Array(numCount);
+      const bIndices = bucket.indices;
+      const bLen = bIndices.length;
+      for (let i = 0; i < bLen; i++) {
+        const origIdx = bIndices[i];
+        if (hasCheckedRows && !checkedRowIndices.has(origIdx)) continue;
         for (let c = 0; c < numCount; c++) {
           const val = getRowVal(origIdx, numKeys[c]);
           if (typeof val === 'number') {
@@ -1137,28 +1168,24 @@ export function App() {
           }
         }
       }
-    }
+      const gSumsObj: Record<string, number> = {};
+      for (let c = 0; c < numCount; c++) {
+        gSumsObj[numKeys[c]] = gSums[c];
+      }
+      return {
+        groupValue: bucket.groupValue,
+        indices: bIndices,
+        sums: gSumsObj,
+      };
+    });
 
     const tableSums: Record<string, number> = {};
     for (let c = 0; c < numCount; c++) {
       tableSums[numKeys[c]] = totalSums[c];
     }
 
-    const entries = Array.from(groupsMap.entries()).map(([groupValue, data]) => {
-      const gSumsObj: Record<string, number> = {};
-      for (let c = 0; c < numCount; c++) {
-        gSumsObj[numKeys[c]] = data.sums[c];
-      }
-      return {
-        groupValue,
-        indices: data.indices,
-        sums: gSumsObj,
-      };
-    });
-
-    const colTitle = colMap[groupByColumnKey]?.title || groupByColumnKey;
-    return { columnSums: tableSums, groupEntries: entries, colTitle };
-  }, [groupByColumnKey, activeRowIndices, totalRowCount, numericColKeys, formulaMode, colMap, checkedRowIndices, getRowVal]);
+    return { columnSums: tableSums, groupEntries: entries, colTitle: rawGroupBuckets.colTitle };
+  }, [rawGroupBuckets, activeRowIndices, totalRowCount, numericColKeys, checkedRowIndices, getRowVal]);
 
   const columnSums = baseGroupData.columnSums;
 
@@ -1336,7 +1363,7 @@ export function App() {
 
   const totalVirtualRowCount = groupedDisplayModel ? groupedDisplayModel.length : totalFilteredRows;
 
-  // Row getter function for VirtualizedGrid (Đọc trực tiếp từ mảng Plain JSON API)
+  // Row getter function for VirtualizedGrid (Đọc trực tiếp từ mảng Plain JSON API, bảo toàn tham chiếu row khi tích checkbox)
   const getRow = useCallback(
     (index: number): any => {
       if (groupedDisplayModel) {
@@ -1356,7 +1383,7 @@ export function App() {
           localRowIndex: localIndex,
           groupIndex,
           col_stt: localIndex + 1,
-          col_chk: checkedRowIndices.has(originalRowIdx),
+          col_chk: checkedRowIndicesRef.current.has(originalRowIdx),
           col_chunk: `C#${String(Math.floor(localIndex / chunkSize)).padStart(4, '0')}`,
         };
       }
@@ -1368,16 +1395,34 @@ export function App() {
         rowIndex: index,
         originalIndex: originalRowIdx,
         col_stt: index + 1,
-        col_chk: checkedRowIndices.has(originalRowIdx),
+        col_chk: checkedRowIndicesRef.current.has(originalRowIdx),
         col_chunk: `C#${String(Math.floor(index / chunkSize)).padStart(4, '0')}`,
       };
     },
-    [groupedDisplayModel, activeRowIndices, checkedRowIndices, chunkSize, apiData]
+    [groupedDisplayModel, activeRowIndices, chunkSize, apiData]
   );
 
-  // Custom Cell Renderer (Tương thích 100% Plain JSON API Objects)
+  const chartColumnWidth = colWidths['col_chart'];
+
+  // Bộ đệm WeakMap lưu thống kê 12 tháng theo từng dòng (Tránh cấp phát mảng mVals 13 lần/dòng khi render 13 cột tháng & công thức)
+  const monthStatsCacheRef = useRef(
+    new WeakMap<
+      object,
+      {
+        mVals: number[];
+        minVal: number;
+        maxVal: number;
+        minIdx: number;
+        maxIdx: number;
+        sumVal: number;
+        avgVal: number;
+      }
+    >()
+  );
+
+  // Custom Cell Renderer (Tương thích 100% Plain JSON API Objects, bảo toàn React.memo của GridRow)
   const renderCell = useCallback(
-    ({ column, row }: CellRenderParams<any>) => {
+    ({ column, row, isChecked }: CellRenderParams<any>) => {
       if (!row) return null;
 
       // 1. Cột STT
@@ -1398,7 +1443,7 @@ export function App() {
         return (
           <div className="flex items-center justify-center w-full h-full border-none bg-transparent">
             <MorphCheckbox
-              checked={checkedRowIndices.has(row.originalIndex)}
+              checked={Boolean(isChecked)}
               onChange={(e) => handleToggleCheck(row.rowIndex, row, e)}
               size={16}
               spring="bouncy"
@@ -1407,45 +1452,51 @@ export function App() {
         );
       }
 
-      // 3, 4, 5. Chỉ tính toán mảng 12 tháng khi render cột Biểu đồ, Công thức hoặc các Tháng (col_m1..col_m12)
+      // 3, 4, 5. Chỉ tính toán mảng 12 tháng 1 lần duy nhất cho mỗi dòng nhờ WeakMap
       const isMonthCol = column.key.startsWith('col_m');
       if (column.key === 'col_chart' || column.key === 'col_formula' || isMonthCol) {
-        const mVals = [
-          Number(row.col_m1) || 0,
-          Number(row.col_m2) || 0,
-          Number(row.col_m3) || 0,
-          Number(row.col_m4) || 0,
-          Number(row.col_m5) || 0,
-          Number(row.col_m6) || 0,
-          Number(row.col_m7) || 0,
-          Number(row.col_m8) || 0,
-          Number(row.col_m9) || 0,
-          Number(row.col_m10) || 0,
-          Number(row.col_m11) || 0,
-          Number(row.col_m12) || 0,
-        ];
-        let minVal = Infinity;
-        let maxVal = -Infinity;
-        let minIdx = 0;
-        let maxIdx = 0;
-        let sumVal = 0;
-        for (let m = 0; m < 12; m++) {
-          const v = mVals[m];
-          sumVal += v;
-          if (v < minVal) {
-            minVal = v;
-            minIdx = m;
+        let stats = monthStatsCacheRef.current.get(row);
+        if (!stats) {
+          const mVals = [
+            Number(row.col_m1) || 0,
+            Number(row.col_m2) || 0,
+            Number(row.col_m3) || 0,
+            Number(row.col_m4) || 0,
+            Number(row.col_m5) || 0,
+            Number(row.col_m6) || 0,
+            Number(row.col_m7) || 0,
+            Number(row.col_m8) || 0,
+            Number(row.col_m9) || 0,
+            Number(row.col_m10) || 0,
+            Number(row.col_m11) || 0,
+            Number(row.col_m12) || 0,
+          ];
+          let minVal = Infinity;
+          let maxVal = -Infinity;
+          let minIdx = 0;
+          let maxIdx = 0;
+          let sumVal = 0;
+          for (let m = 0; m < 12; m++) {
+            const v = mVals[m];
+            sumVal += v;
+            if (v < minVal) {
+              minVal = v;
+              minIdx = m;
+            }
+            if (v > maxVal) {
+              maxVal = v;
+              maxIdx = m;
+            }
           }
-          if (v > maxVal) {
-            maxVal = v;
-            maxIdx = m;
-          }
+          const avgVal = Math.round((sumVal / 12) * 100) / 100;
+          stats = { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal };
+          monthStatsCacheRef.current.set(row, stats);
         }
-        const avgVal = Math.round((sumVal / 12) * 100) / 100;
+        const { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal } = stats;
 
         // 3. Cột Biểu đồ 12 Tháng (Catmull-Rom SVG Sparkline)
         if (column.key === 'col_chart') {
-          const chartColWidth = colWidths['col_chart'] || column.defaultWidth || 150;
+          const chartColWidth = chartColumnWidth || column.defaultWidth || 150;
           return (
             <TwelveMonthChartCell
               values={mVals}
@@ -1530,7 +1581,12 @@ export function App() {
         </span>
       );
     },
-    [checkedRowIndices, handleToggleCheck, formulaMode, surfaceTheme, colWidths]
+    [handleToggleCheck, formulaMode, surfaceTheme, chartColumnWidth]
+  );
+
+  const handleGetRowId = useCallback(
+    (row: any) => (row?._isGroupRow ? row.path : (row.originalIndex ?? row.id)),
+    []
   );
 
   const jumpToRowNumber = useCallback(
@@ -1685,7 +1741,7 @@ export function App() {
           checkedRowIndices={checkedRowIndices}
           onToggleCheck={handleToggleCheck}
           onClearCheckedRows={handleClearCheckedRows}
-          getRowId={(row) => ((row as any)?._isGroupRow ? (row as any).path : (row.originalIndex ?? row.id))}
+          getRowId={handleGetRowId}
           renderCell={renderCell}
           chunkSize={chunkSize}
           rowHeight={rowHeight}

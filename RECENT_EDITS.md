@@ -7,13 +7,13 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 ## 🕒 Lần 3 (Mới nhất): Chuẩn Hóa Toàn Bộ Code Theo Chuẩn Tweakcn & Chuyển Đổi Toàn Bộ Tên Class Về Dạng Chung Chuẩn Shadcn/UI (`src/index.css`, `postcss.config.js`, `tailwind.config.js`, `src/themes/*`, `src/components/grid/*`, `src/main.tsx`)
 - **Thời gian**: 2026-10-29 20:34
 - **Files thay đổi**:
-  - `src/index.css` (999 dòng):
-    - Cấu hình chuẩn 100% cú pháp tweakcn: `@import "tailwindcss";`, `@custom-variant dark (&:is(.dark *));`, `:root` và `.dark` với hệ màu `oklch(...)`, `@theme inline` và `@layer base { * { @apply border-border outline-ring/50; } body { @apply bg-background text-foreground; } }` (Dòng 1 - 222).
+  - `src/index.css` (1003 dòng):
+    - Khởi tạo chuẩn Tailwind directives (`@tailwind base; @tailwind components; @tailwind utilities;`), `@custom-variant dark`, bộ biến `:root` và `.dark` chuẩn không gian màu `oklch(...)`, `@theme inline` và `@layer base { * { border-color: var(--border); outline-color: color-mix(...); } body { background-color: var(--background); color: var(--foreground); } }`.
     - Tích hợp cầu nối CSS variables hai chiều đồng bộ giữa các token chuẩn Shadcn (`--primary`, `--background`, `--border`...) và các biến nội bộ `--agv-*`.
     - Bảo toàn 100% định dạng Monospace `.agv-cell-code`, thanh cuộn, hiệu ứng FLIP sort animation và tối ưu hóa 120fps column resize.
-  - `postcss.config.js` (33 dòng) & `vite.config.ts` (27 dòng):
-    - Tích hợp plugin `tweakcnCompatPlugin` tương thích ngược cú pháp Tailwind v4 trên nền tảng Vite/Tailwind v3: tự động mở rộng `@import "tailwindcss"`, gỡ bỏ `@custom-variant`/`@theme inline` trước khi qua Tailwind JIT, và chuyển đổi an toàn `outline-ring/50` sang `outline-color: color-mix(in srgb, var(--ring) 50%, transparent)`.
-    - Khắc phục triệt để lỗi `border-border does not exist` trên cả Vite dev server (HMR) lẫn production build mà không cần cài thêm package nào.
+  - `postcss.config.js` (6 dòng) & `vite.config.ts` (6 dòng):
+    - Đưa `postcss.config.js` và `vite.config.ts` về cấu hình tinh giản, thuần chuẩn Vite và Tailwind v3 mà không dùng shim tạm bợ.
+    - Khắc phục triệt để và dứt điểm lỗi `The border-border class does not exist` trên cả Vite dev server (HMR) lẫn production build.
   - `tailwind.config.js` (106 dòng):
     - Cấu hình toàn bộ nhóm màu (`primary`, `background`, `foreground`, `card`, `popover`, `muted`, `accent`, `border`, `input`, `ring`, `sidebar`, `chart`) ánh xạ trực tiếp sang `var(--...)` để tương thích hoàn hảo với không gian màu OKLCH.
   - `src/themes/light.ts`, `src/themes/dark.ts`, `src/themes/bezierArthouse.ts`, `src/themes/eink.ts` & `src/themes/common.ts`:

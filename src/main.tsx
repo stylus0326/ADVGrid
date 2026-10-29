@@ -21,6 +21,29 @@ if (typeof window !== 'undefined') {
           containers.forEach((c) => c.style.setProperty(prop, cssVal));
         };
 
+        // Biến chuẩn Shadcn / Tweakcn UI
+        applyVar('--primary', styles.primary);
+        applyVar('--primary-foreground', styles['primary-foreground']);
+        applyVar('--background', styles.background);
+        applyVar('--foreground', styles.foreground);
+        applyVar('--card', styles.card);
+        applyVar('--card-foreground', styles['card-foreground']);
+        applyVar('--popover', styles.popover);
+        applyVar('--popover-foreground', styles['popover-foreground']);
+        applyVar('--secondary', styles.secondary);
+        applyVar('--secondary-foreground', styles['secondary-foreground']);
+        applyVar('--muted', styles.muted);
+        applyVar('--muted-foreground', styles['muted-foreground']);
+        applyVar('--accent', styles.accent);
+        applyVar('--accent-foreground', styles['accent-foreground']);
+        applyVar('--destructive', styles.destructive);
+        applyVar('--destructive-foreground', styles['destructive-foreground']);
+        applyVar('--border', styles.border);
+        applyVar('--input', styles.input || styles.border);
+        applyVar('--ring', styles.ring || styles.primary);
+        applyVar('--radius', styles.radius);
+
+        // Biến cầu nối AGV Engine
         applyVar('--agv-accent', styles.primary);
         applyVar('--agv-accent-hover', styles.primary);
         applyVar('--agv-text-active', styles.primary);

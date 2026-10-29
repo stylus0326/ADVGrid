@@ -304,6 +304,27 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --accent-color: ${tokens.accent};
     --pos-color: ${tokens.trendUp};
     --neg-color: ${tokens.trendDown};
+
+    /* Biến chuẩn Tweakcn / Shadcn UI */
+    --background: ${tokens.bgRoot};
+    --foreground: ${tokens.textMain};
+    --card: ${tokens.bgRowAlt || tokens.bgControl};
+    --card-foreground: ${tokens.textMain};
+    --popover: ${tokens.bgPopup};
+    --popover-foreground: ${tokens.textMain};
+    --primary: ${tokens.accent};
+    --primary-foreground: ${tokens.accentText};
+    --secondary: ${tokens.bgSelected};
+    --secondary-foreground: ${tokens.textMain};
+    --muted: ${tokens.bgControl};
+    --muted-foreground: ${tokens.textMuted};
+    --accent: ${tokens.bgHover};
+    --accent-foreground: ${tokens.textMain};
+    --destructive: ${tokens.danger};
+    --destructive-foreground: #ffffff;
+    --border: ${tokens.border};
+    --input: ${tokens.borderStrong};
+    --ring: ${tokens.accent};
     --scroll-thumb: ${tokens.scrollThumb || tokens.borderStrong};
     --scroll-thumb-hover: ${tokens.scrollThumbHover || tokens.textSubtle};
   }

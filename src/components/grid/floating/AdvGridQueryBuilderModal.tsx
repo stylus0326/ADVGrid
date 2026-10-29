@@ -155,8 +155,8 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
       }}
       className={`relative inline-flex min-h-[28px] h-7 items-center justify-between gap-1 rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] ${
         iconOnly ? 'px-1.5' : 'px-2'
-      } text-xs text-[var(--agv-text-main)] cursor-pointer select-none transition-colors hover:border-agv-accent shrink-0 ${
-        isOpen ? 'border-agv-accent ring-1 ring-agv-accent' : ''
+      } text-xs text-[var(--agv-text-main)] cursor-pointer select-none transition-colors hover:border-primary shrink-0 ${
+        isOpen ? 'border-primary ring-1 ring-ring' : ''
       } ${className}`.trim()}
     >
       <div className="flex items-center gap-1 shrink-0">
@@ -206,7 +206,7 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Tìm kiếm..."
                   {...NO_AUTOFILL_PROPS}
-                  className="w-full min-h-[28px] h-7 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                  className="w-full min-h-[28px] h-7 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
                 />
               </div>
             )}
@@ -227,7 +227,7 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
                       }}
                       className={`flex min-h-[28px] items-center justify-between px-2.5 py-1 cursor-pointer transition-colors text-xs select-none ${
                         isSelected
-                          ? 'bg-agv-accent text-agv-accent-text font-medium'
+                          ? 'bg-primary text-primary-foreground font-medium'
                           : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-hover)]'
                       }`}
                     >
@@ -790,8 +790,8 @@ export const AdvGridQueryBuilderModal = React.memo(
                 onClick={() => handleToggleCombinator(group)}
                 className={`min-h-[28px] h-7 px-3 rounded text-xs font-bold transition-colors select-none cursor-pointer ${
                   isAnd
-                    ? 'bg-agv-accent text-agv-accent-text'
-                    : 'bg-[var(--agv-warning)] text-agv-accent-text'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-[var(--agv-warning)] text-primary-foreground'
                 }`}
               >
                 {isAnd ? 'VÀ' : 'HOẶC'}
@@ -829,8 +829,8 @@ export const AdvGridQueryBuilderModal = React.memo(
                   }}
                   className={`flex min-h-[28px] min-w-[28px] h-7 w-7 items-center justify-center rounded border text-xs font-bold transition-all cursor-pointer ${
                     isExplainOpen
-                      ? 'bg-agv-accent border-agv-accent text-agv-accent-text'
-                      : 'border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] hover:text-agv-accent hover:border-agv-accent'
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] hover:text-primary hover:border-primary'
                   }`}
                 >
                   !
@@ -851,7 +851,7 @@ export const AdvGridQueryBuilderModal = React.memo(
           {/* Group Natural Language Explanation Banner (Chỉ mở khi người dùng bấm nút [!] ở nhóm con) */}
           {isExplainOpen && (
             <div className="mt-1.5 mb-1 flex items-start gap-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] px-2.5 py-1.5 text-xs text-[var(--agv-text-main)]">
-              <span className="font-bold text-agv-accent shrink-0 select-none">
+              <span className="font-bold text-primary shrink-0 select-none">
                 Giải nghĩa:
               </span>
               <span className="leading-relaxed select-text font-medium text-[var(--agv-text-main)]">
@@ -944,14 +944,14 @@ export const AdvGridQueryBuilderModal = React.memo(
                                 anchorRect: rect,
                               });
                             }}
-                            className="flex min-h-[28px] h-7 flex-1 items-center justify-between rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2.5 text-xs text-[var(--agv-text-main)] cursor-pointer hover:border-agv-accent select-none truncate"
+                            className="flex min-h-[28px] h-7 flex-1 items-center justify-between rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2.5 text-xs text-[var(--agv-text-main)] cursor-pointer hover:border-primary select-none truncate"
                           >
                             <span className="truncate font-medium">
                               {rule.multiValues
                                 ? `${rule.multiValues.slice(0, 2).map((v) => `"${v}"`).join(', ')}${rule.multiValues.length > 2 ? ` (+${rule.multiValues.length - 2})` : ''}`
                                 : `${rule.multiRanges?.length || 0} khoảng`}
                             </span>
-                            <span className="ml-1.5 rounded bg-agv-accent px-1.5 py-0.2 text-[10px] font-bold text-agv-accent-text shrink-0">
+                            <span className="ml-1.5 rounded bg-primary px-1.5 py-0.2 text-[10px] font-bold text-primary-foreground shrink-0">
                               {rule.multiValues ? `${rule.multiValues.length} giá trị` : 'Khoảng'}
                             </span>
                           </div>
@@ -1065,7 +1065,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                                 }
                                 placeholder={colType === DATA_TYPES.NUMBER ? 'Từ số...' : 'Từ...'}
                                 {...NO_AUTOFILL_PROPS}
-                                className="min-h-[28px] h-7 flex-1 min-w-0 rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                                className="min-h-[28px] h-7 flex-1 min-w-0 rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
                               />
                               <RangeArrowSeparator className="mx-0.5" />
                               <input
@@ -1079,7 +1079,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                                 }
                                 placeholder={colType === DATA_TYPES.NUMBER ? 'Đến số...' : 'Đến...'}
                                 {...NO_AUTOFILL_PROPS}
-                                className="min-h-[28px] h-7 flex-1 min-w-0 rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                                className="min-h-[28px] h-7 flex-1 min-w-0 rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
                               />
                             </div>
                           ) : (
@@ -1094,7 +1094,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                               }
                               placeholder={colType === DATA_TYPES.NUMBER ? 'Nhập số tiền...' : 'Nhập giá trị...'}
                               {...NO_AUTOFILL_PROPS}
-                              className="min-h-[28px] h-7 flex-1 min-w-[120px] rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                              className="min-h-[28px] h-7 flex-1 min-w-[120px] rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] px-2 text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
                             />
                           )}
 
@@ -1111,7 +1111,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                                 anchorRect: rect,
                               });
                             }}
-                            className="flex min-h-[28px] min-w-[28px] h-7 w-7 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] hover:text-agv-accent hover:border-agv-accent hover:bg-[var(--agv-bg-item-hover)] cursor-pointer select-none shrink-0 transition-colors"
+                            className="flex min-h-[28px] min-w-[28px] h-7 w-7 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] hover:text-primary hover:border-primary hover:bg-[var(--agv-bg-item-hover)] cursor-pointer select-none shrink-0 transition-colors"
                           >
                             <ListFilter className="h-3.5 w-3.5" />
                           </button>
@@ -1173,13 +1173,13 @@ export const AdvGridQueryBuilderModal = React.memo(
               onClick={() => setActiveTab('builder')}
               className={`min-h-[28px] h-full px-2.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                 activeTab === 'builder'
-                  ? 'border-agv-accent text-agv-accent font-bold'
+                  ? 'border-primary text-primary font-bold'
                   : 'border-transparent text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)]'
               }`}
             >
               <span>Cây Điều Kiện</span>
               {hasActiveQueryRules(draftTree) && (
-                <span className="rounded bg-agv-accent px-1.5 py-0.5 text-[10px] font-bold text-agv-accent-text">
+                <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                   {countActiveQueryRules(draftTree)}
                 </span>
               )}
@@ -1189,7 +1189,7 @@ export const AdvGridQueryBuilderModal = React.memo(
               onClick={() => setActiveTab('presets')}
               className={`min-h-[28px] h-full px-2.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                 activeTab === 'presets'
-                  ? 'border-agv-accent text-agv-accent font-bold'
+                  ? 'border-primary text-primary font-bold'
                   : 'border-transparent text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)]'
               }`}
             >
@@ -1239,10 +1239,10 @@ export const AdvGridQueryBuilderModal = React.memo(
                         setTimeout(() => setCopiedCmd(false), 2000);
                       }
                     }}
-                    className="absolute bottom-1.5 right-1.5 flex min-h-[28px] min-w-[28px] h-7 w-7 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-popup)] text-[var(--agv-text-muted)] hover:text-agv-accent hover:border-agv-accent hover:bg-[var(--agv-bg-item-hover)] cursor-pointer select-none transition-colors"
+                    className="absolute bottom-1.5 right-1.5 flex min-h-[28px] min-w-[28px] h-7 w-7 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-popup)] text-[var(--agv-text-muted)] hover:text-primary hover:border-primary hover:bg-[var(--agv-bg-item-hover)] cursor-pointer select-none transition-colors"
                   >
                     {copiedCmd ? (
-                      <Check className="h-3.5 w-3.5 text-agv-accent" />
+                      <Check className="h-3.5 w-3.5 text-primary" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )}
@@ -1279,7 +1279,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                   <button
                     type="button"
                     onClick={handleAddFromCmd}
-                    className="min-h-[28px] h-7 px-3 rounded bg-agv-accent text-xs font-bold text-agv-accent-text cursor-pointer select-none"
+                    className="min-h-[28px] h-7 px-3 rounded bg-primary text-xs font-bold text-primary-foreground cursor-pointer select-none"
                   >
                     Kiểm tra & Thêm
                   </button>
@@ -1337,7 +1337,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                             {preset.name}
                           </span>
                           {validation.isValid ? (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-agv-accent text-agv-accent-text select-none">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground select-none">
                               Hợp lệ
                             </span>
                           ) : (
@@ -1387,7 +1387,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                             }}
                             className={`min-h-[28px] h-7 px-2.5 rounded font-bold text-xs select-none ${
                               validation.isValid
-                                ? 'bg-agv-accent text-agv-accent-text cursor-pointer hover:opacity-90'
+                                ? 'bg-primary text-primary-foreground cursor-pointer hover:opacity-90'
                                 : 'opacity-40 cursor-not-allowed bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] border border-[var(--agv-border)]'
                             }`}
                           >
@@ -1413,7 +1413,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                       {/* Câu lệnh CMD & Biểu thức cấu trúc */}
                       <div className="flex flex-col gap-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-popup)] px-2.5 py-1.5 text-xs select-text">
                         <div className="flex items-center gap-1.5 overflow-hidden">
-                          <span className="font-semibold text-agv-accent select-none shrink-0">
+                          <span className="font-semibold text-primary select-none shrink-0">
                             Lệnh CMD:
                           </span>
                           <span className="font-mono text-xs text-[var(--agv-text-main)] truncate select-all">
@@ -1452,7 +1452,7 @@ export const AdvGridQueryBuilderModal = React.memo(
                 onApply(JSON.parse(JSON.stringify(draftTree)));
                 onClose();
               }}
-              className="flex min-h-[28px] h-7 items-center gap-1 rounded bg-agv-accent px-3 text-xs font-bold text-agv-accent-text cursor-pointer select-none"
+              className="flex min-h-[28px] h-7 items-center gap-1 rounded bg-primary px-3 text-xs font-bold text-primary-foreground cursor-pointer select-none"
             >
               <Check className="h-3 w-3 stroke-[3]" />
               <span>Áp dụng</span>

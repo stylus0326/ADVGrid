@@ -527,7 +527,7 @@ export const AdvChecklistFilterPopup = forwardRef<
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="text-agv-text-muted hover:text-agv-accent p-0.5 transition cursor-pointer shrink-0 mr-1"
+              className="text-muted-foreground hover:text-primary p-0.5 transition cursor-pointer shrink-0 mr-1"
             >
               <X size={10} strokeWidth={2.5} />
             </button>

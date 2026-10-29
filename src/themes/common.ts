@@ -1,19 +1,65 @@
+import { TWEAKCN_THEME_PRESETS } from './presets/data';
+
 /* ==============================================================================
-   HỆ THỐNG MÀU GIAO DIỆN CHUNG (COMMON THEME SYSTEM) - SINGLE SOURCE OF TRUTH
+   HỆ THỐNG MÀU GIAO DIỆN CHUNG (COMMON THEME SYSTEM) - TWEAKCN 42 THEMES
    Quản lý toàn diện: Types, Selectors, Theme Class Registry, Helpers & CSS Engine
    ============================================================================== */
 
 export const SURFACE_THEMES = {
-  LIGHT: 'light',
-  DAYLIGHT: 'daylight',
-  DARK: 'dark',
-  CALIBRATED_DARK: 'calibrated-dark',
-  DEEP_DARK: 'deep-dark',
-  BEZIER_ARTHOUSE: 'bezier-arthouse',
-  E_INK: 'e-ink',
-  EINK: 'eink',
-  TWEAKCN_DEMO: 'tweakcn-demo',
-  TWEAKCN_DEMO_DARK: 'tweakcn-demo-dark',
+  MODERN_MINIMAL: 'modern-minimal',
+  VIOLET_BLOOM: 'violet-bloom',
+  T3_CHAT: 't3-chat',
+  MOCHA_MOUSSE: 'mocha-mousse',
+  AMETHYST_HAZE: 'amethyst-haze',
+  DOOM_64: 'doom-64',
+  KODAMA_GROVE: 'kodama-grove',
+  COSMIC_NIGHT: 'cosmic-night',
+  QUANTUM_ROSE: 'quantum-rose',
+  BOLD_TECH: 'bold-tech',
+  ELEGANT_LUXURY: 'elegant-luxury',
+  AMBER_MINIMAL: 'amber-minimal',
+  NEO_BRUTALISM: 'neo-brutalism',
+  SOLAR_DUSK: 'solar-dusk',
+  PASTEL_DREAMS: 'pastel-dreams',
+  CLEAN_SLATE: 'clean-slate',
+  OCEAN_BREEZE: 'ocean-breeze',
+  RETRO_ARCADE: 'retro-arcade',
+  MIDNIGHT_BLOOM: 'midnight-bloom',
+  NORTHERN_LIGHTS: 'northern-lights',
+  VINTAGE_PAPER: 'vintage-paper',
+  SUNSET_HORIZON: 'sunset-horizon',
+  STARRY_NIGHT: 'starry-night',
+  SOFT_POP: 'soft-pop',
+  SAGE_GARDEN: 'sage-garden',
+  TWITTER: 'twitter',
+  BUBBLEGUM: 'bubblegum',
+  NOTEBOOK: 'notebook',
+  CATPPUCCIN: 'catppuccin',
+  GRAPHITE: 'graphite',
+  PERPETUITY: 'perpetuity',
+  TANGERINE: 'tangerine',
+  NATURE: 'nature',
+  SUPABASE: 'supabase',
+  CLAYMORPHISM: 'claymorphism',
+  CYBERPUNK: 'cyberpunk',
+  CAFFEINE: 'caffeine',
+  CANDYLAND: 'candyland',
+  CLAUDE: 'claude',
+  VERCEL: 'vercel',
+  DARKMATTER: 'darkmatter',
+  MONO: 'mono',
+
+  // Alias để bảo toàn tương thích ngược cho các component gọi tên cũ
+  LIGHT: 'modern-minimal',
+  DAYLIGHT: 'modern-minimal',
+  DARK: 'darkmatter',
+  CALIBRATED_DARK: 'darkmatter',
+  DEEP_DARK: 'darkmatter',
+  BEZIER_ARTHOUSE: 'amber-minimal',
+  E_INK: 'vintage-paper',
+  EINK: 'vintage-paper',
+  TWEAKCN_DEMO: 'amber-minimal',
+  TWEAKCN_DEMO_DARK: 'darkmatter',
 } as const;
 
 export type GridTheme = (typeof SURFACE_THEMES)[keyof typeof SURFACE_THEMES] | string;
@@ -75,88 +121,54 @@ export interface ThemeMeta {
 }
 
 /**
- * Registry danh sách toàn bộ các giao diện được đăng ký trong hệ thống
+ * Registry danh sách toàn bộ 42 giao diện Tweakcn được đăng ký trong hệ thống
  */
-export const REGISTERED_THEMES: ThemeMeta[] = [
-  {
-    id: SURFACE_THEMES.LIGHT,
-    name: 'Sáng',
-    class: 'agv-light',
-    iconName: 'Sun',
-    iconColorClass: 'text-[var(--agv-warning)]',
-  },
-  {
-    id: SURFACE_THEMES.DARK,
-    name: 'Balham Dark',
-    class: 'agv-dark',
-    iconName: 'Moon',
-    iconColorClass: 'text-[var(--agv-accent)]',
-  },
-  {
-    id: SURFACE_THEMES.BEZIER_ARTHOUSE,
-    name: 'Bezier Art House',
-    class: 'agv-bezier-arthouse',
+export const REGISTERED_THEMES: ThemeMeta[] = Object.entries(TWEAKCN_THEME_PRESETS).map(
+  ([key, preset]) => ({
+    id: key,
+    name: preset.label,
+    class: `agv-theme-${key}`,
     iconName: 'Palette',
-    iconColorClass: 'text-[var(--agv-warning)]',
-  },
-  {
-    id: SURFACE_THEMES.E_INK,
-    name: 'Giấy E-Ink',
-    class: 'agv-e-ink theme-eink',
-    iconName: 'BookOpen',
-    iconColorClass: 'text-[var(--agv-success)]',
-  },
-  {
-    id: SURFACE_THEMES.TWEAKCN_DEMO,
-    name: 'Tweakcn Hổ Phách',
-    class: 'agv-tweakcn-demo',
-    iconName: 'Sparkles',
-    iconColorClass: 'text-[var(--agv-warning)]',
-  },
-  {
-    id: SURFACE_THEMES.TWEAKCN_DEMO_DARK,
-    name: 'Tweakcn Tối',
-    class: 'agv-tweakcn-demo-dark agv-dark',
-    iconName: 'Sparkles',
     iconColorClass: 'text-[var(--agv-accent)]',
-  },
-];
+  })
+);
 
 /**
  * Bản đồ ánh xạ tên Theme -> CSS Class tương ứng.
  */
 export const THEME_CLASS_MAP: Record<string, string> = {
-  [SURFACE_THEMES.LIGHT]: 'agv-light',
-  [SURFACE_THEMES.DAYLIGHT]: 'agv-light',
-  [SURFACE_THEMES.DARK]: 'agv-dark',
-  [SURFACE_THEMES.CALIBRATED_DARK]: 'agv-dark',
-  [SURFACE_THEMES.DEEP_DARK]: 'agv-dark',
-  [SURFACE_THEMES.BEZIER_ARTHOUSE]: 'agv-bezier-arthouse',
-  [SURFACE_THEMES.E_INK]: 'agv-e-ink theme-eink',
-  [SURFACE_THEMES.EINK]: 'agv-e-ink theme-eink',
-  [SURFACE_THEMES.TWEAKCN_DEMO]: 'agv-tweakcn-demo',
-  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: 'agv-tweakcn-demo-dark agv-dark',
+  ...Object.fromEntries(
+    Object.keys(TWEAKCN_THEME_PRESETS).map((k) => [k, `agv-theme-${k}`])
+  ),
+  light: 'agv-theme-modern-minimal',
+  dark: 'agv-theme-darkmatter agv-dark',
+  'bezier-arthouse': 'agv-theme-amber-minimal',
+  'e-ink': 'agv-theme-vintage-paper',
+  eink: 'agv-theme-vintage-paper',
 };
 
 /**
- * Chuẩn hóa tên theme về các id chính thức ('light', 'dark', 'bezier-arthouse', 'e-ink')
+ * Chuẩn hóa tên theme về id chính thức
  */
 export function normalizeThemeId(theme?: string | null): string {
-  if (!theme) return SURFACE_THEMES.LIGHT;
-  if (theme === SURFACE_THEMES.DAYLIGHT) return SURFACE_THEMES.LIGHT;
-  if (theme === SURFACE_THEMES.CALIBRATED_DARK || theme === SURFACE_THEMES.DEEP_DARK) return SURFACE_THEMES.DARK;
-  if (theme === SURFACE_THEMES.EINK) return SURFACE_THEMES.E_INK;
-  return theme;
+  if (!theme) return 'modern-minimal';
+  if (theme === 'light' || theme === 'daylight') return 'modern-minimal';
+  if (theme === 'dark' || theme === 'calibrated-dark' || theme === 'deep-dark') return 'darkmatter';
+  if (theme === 'bezier-arthouse') return 'amber-minimal';
+  if (theme === 'e-ink' || theme === 'eink') return 'vintage-paper';
+  if (TWEAKCN_THEME_PRESETS[theme]) return theme;
+  return 'modern-minimal';
 }
 
 /**
  * Lấy class CSS chuẩn của theme.
  */
-export function getThemeClass(theme?: string | null, fallback: string = 'agv-light'): string {
+export function getThemeClass(theme?: string | null, fallback: string = 'agv-theme-modern-minimal'): string {
   if (!theme) return fallback;
-  if (THEME_CLASS_MAP[theme]) return THEME_CLASS_MAP[theme];
+  const norm = normalizeThemeId(theme);
+  if (THEME_CLASS_MAP[norm]) return THEME_CLASS_MAP[norm];
   if (theme.startsWith('agv-')) return theme;
-  return `agv-${theme}`;
+  return `agv-theme-${norm}`;
 }
 
 /**
@@ -167,10 +179,10 @@ export function getThemeMeta(theme?: string | null): ThemeMeta {
   return (
     REGISTERED_THEMES.find((t) => t.id === norm) || {
       id: norm,
-      name: norm,
+      name: TWEAKCN_THEME_PRESETS[norm]?.label || norm,
       class: getThemeClass(norm),
-      iconName: 'Sun',
-      iconColorClass: 'text-[var(--agv-text-muted)]',
+      iconName: 'Palette',
+      iconColorClass: 'text-[var(--agv-accent)]',
     }
   );
 }
@@ -198,11 +210,7 @@ export function getNextTheme(currentTheme?: string | null): GridTheme {
  * Sinh danh sách CSS Selectors tự động cho mọi theme
  */
 export function buildThemeSelectors(themeKey: string, themeClass?: string): string[] {
-  const cls =
-    themeClass ||
-    (themeKey === SURFACE_THEMES.E_INK || themeKey === SURFACE_THEMES.EINK
-      ? 'agv-e-ink'
-      : `agv-${themeKey}`);
+  const cls = themeClass || `agv-theme-${themeKey}`;
   const baseSelectors = [
     `.agv-app-container.${cls}`,
     `.agv-grid-root.${cls}`,
@@ -210,23 +218,12 @@ export function buildThemeSelectors(themeKey: string, themeClass?: string): stri
     `.${cls}`,
   ];
 
-  if (themeKey === SURFACE_THEMES.LIGHT) {
+  if (themeKey === 'modern-minimal') {
     return [
       ':root',
-      '.agv-app-container.agv-light',
       '.agv-app-container',
       '.agv-grid-root',
-      '.agv-grid-root.agv-light',
       ...baseSelectors,
-    ];
-  }
-
-  if (themeKey === SURFACE_THEMES.E_INK || themeKey === SURFACE_THEMES.EINK) {
-    return [
-      ...baseSelectors,
-      '.agv-app-container.theme-eink',
-      '.agv-grid-root.theme-eink',
-      'html.theme-eink',
     ];
   }
 
@@ -234,17 +231,14 @@ export function buildThemeSelectors(themeKey: string, themeClass?: string): stri
 }
 
 /**
- * Danh sách selector DOM được áp dụng biến CSS cho từng Theme
+ * Danh sách Theme Selectors cố định tối ưu hóa tra cứu O(1)
  */
-export const THEME_SELECTORS: Record<string, string[]> = {
-  [SURFACE_THEMES.LIGHT]: buildThemeSelectors(SURFACE_THEMES.LIGHT, 'agv-light'),
-  [SURFACE_THEMES.DARK]: buildThemeSelectors(SURFACE_THEMES.DARK, 'agv-dark'),
-  [SURFACE_THEMES.BEZIER_ARTHOUSE]: buildThemeSelectors(SURFACE_THEMES.BEZIER_ARTHOUSE, 'agv-bezier-arthouse'),
-  [SURFACE_THEMES.E_INK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
-  [SURFACE_THEMES.EINK]: buildThemeSelectors(SURFACE_THEMES.E_INK, 'agv-e-ink'),
-  [SURFACE_THEMES.TWEAKCN_DEMO]: buildThemeSelectors(SURFACE_THEMES.TWEAKCN_DEMO, 'agv-tweakcn-demo'),
-  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: buildThemeSelectors(SURFACE_THEMES.TWEAKCN_DEMO_DARK, 'agv-tweakcn-demo-dark'),
-};
+export const THEME_SELECTORS: Record<string, string[]> = Object.fromEntries(
+  Object.keys(TWEAKCN_THEME_PRESETS).map((key) => [
+    key,
+    buildThemeSelectors(key, `agv-theme-${key}`),
+  ])
+);
 
 /**
  * Render chuỗi CSS variables từ một bộ token màu

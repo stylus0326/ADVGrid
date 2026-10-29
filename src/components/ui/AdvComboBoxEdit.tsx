@@ -83,6 +83,16 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     return idx >= 0 ? idx : 0;
   }, [normalizedOptions, isControlled, value, internalVal]);
 
+  const selectedOption = useMemo(() => {
+    return normalizedOptions[selectedIndex] || null;
+  }, [normalizedOptions, selectedIndex]);
+
+  const displayVal = isUserTyping
+    ? internalVal
+    : selectedOption && (selectedOption.value === curVal || selectedOption.label === curVal)
+    ? selectedOption.label
+    : curVal;
+
   const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
 
   useEffect(() => {
@@ -256,7 +266,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
         type="text"
         disabled={disabled}
         readOnly={!allowCustomInput}
-        value={curVal}
+        value={displayVal}
         onChange={handleInputChange}
         onBlur={handleInputBlur}
         onKeyDown={handleKeyDown}

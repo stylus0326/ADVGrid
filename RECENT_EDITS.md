@@ -4,7 +4,26 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Khắc Phục Triệt Để Lỗi PostCSS `The border-border class does not exist` & Hỗ Trợ 100% Cú Pháp Raw Tweakcn (`vite.config.ts`, `src/index.css`, `code_index.js`)
+## 🕒 Lần 3 (Mới nhất): Tích Hợp Thư Mục 42 Themes Tweakcn Chuẩn, Điều Khiển Qua AdvComboBoxEdit & Nút Chuyển Đổi Ngày/Đêm (`src/themes/presets/*`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/App.tsx`, `src/components/ui/AdvComboBoxEdit.tsx`)
+- **Thời gian**: 2026-10-30 00:40
+- **Files thay đổi**:
+  - `src/themes/presets/` (4 files, 3819 dòng):
+    - Khởi tạo thư mục presets chứa toàn bộ 42 themes từ tweakcn.com (`types.ts`, `data.ts`, `converter.ts`, `index.ts`), mỗi theme hỗ trợ song song 2 trạng thái `light` và `dark`.
+    - Cung cấp hàm `convertPresetToGridTokens` và `generatePresetCssVariables` chuyển đổi tức thì từ cấu hình Tweakcn sang `GridThemeTokens` và biến CSS của hệ thống.
+  - Xóa bỏ 5 file theme cũ: `light.ts`, `dark.ts`, `bezierArthouse.ts`, `eink.ts`, `tweakcnDemo.ts`.
+  - `src/themes/common.ts` (348 dòng) & `src/themes/index.ts` (112 dòng):
+    - Đăng ký toàn bộ 42 themes vào `SURFACE_THEMES`, `REGISTERED_THEMES`, `THEME_CLASS_MAP` và `THEME_SELECTORS`.
+    - Bảo toàn tương thích ngược cho các hằng số theme cũ (`LIGHT`, `DARK`, `BEZIER_ARTHOUSE`, `E_INK`).
+  - `src/components/ui/AdvComboBoxEdit.tsx` (345 dòng):
+    - Cải tiến hiển thị label thân thiện của option đang chọn khi không gõ phím (`displayVal`), hỗ trợ gõ lọc tức thì trên cả mã và tên theme.
+  - `src/demo/PageToolbar.tsx` (571 dòng):
+    - Thay thế hàng nút theme cũ bằng cụm **ComboBox 42 Themes** (dùng `AdvComboBoxEdit`, width 175px, min-h 28px) và **Nút Ngày / Đêm** (`MorphIcon` Sun <-> Moon, min-h 28px, 100% theme CSS variables).
+  - `src/App.tsx` (2058 dòng):
+    - Quản lý 2 trạng thái song song `surfaceTheme` (42 themes) và `themeMode` (`light` / `dark`), tự động đồng bộ class `.dark`, `data-theme-mode` và nạp động CSS variables qua `generatePresetCssVariables` trong 0ms.
+
+---
+
+## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi PostCSS `The border-border class does not exist` & Hỗ Trợ 100% Cú Pháp Raw Tweakcn (`vite.config.ts`, `src/index.css`, `code_index.js`)
 - **Thời gian**: 2026-10-29 21:53
 - **Files thay đổi**:
   - `vite.config.ts` (54 dòng):
@@ -19,7 +38,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Đồng Bộ Triệt Để Bộ Tokens Theme Sáng (Light) & Bổ Sung Biến --radius Vào Render Tokens (`src/themes/light.ts`, `src/themes/common.ts`, `code_index.js`)
+## 🕒 Lần 1: Đồng Bộ Triệt Để Bộ Tokens Theme Sáng (Light) & Bổ Sung Biến --radius Vào Render Tokens (`src/themes/light.ts`, `src/themes/common.ts`, `code_index.js`)
 - **Thời gian**: 2026-10-29 21:32
 - **Files thay đổi**:
   - `src/themes/light.ts` (44 dòng):
@@ -28,20 +47,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Bổ sung `--radius: 0.5rem;` trực tiếp vào hàm `renderTokensCssBlock` đảm bảo mọi theme khi kích hoạt đều tự động xuất token bo góc đồng bộ chuẩn Shadcn.
   - `code_index.js` (1066 dòng):
     - Cập nhật số dòng `src/themes/` (735 dòng).
-
----
-
-## 🕒 Lần 1: Tích Hợp Theme Mới Tweakcn Hổ Phách & Tweakcn Tối Vào Hệ Thống Giao Diện Demo (`src/themes/tweakcnDemo.ts`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/components/ui/MorphIcons.tsx`)
-- **Thời gian**: 2026-10-29 21:12
-- **Files thay đổi**:
-  - `src/themes/tweakcnDemo.ts` (87 dòng):
-    - Khởi tạo bộ tokens `TWEAKCN_DEMO_LIGHT_THEME_TOKENS` và `TWEAKCN_DEMO_DARK_THEME_TOKENS` theo đúng bảng màu quang học OKLCH trích xuất từ tweakcn: Primary hổ phách `oklch(0.6397 0.1720 36.4421)`, Background sáng `oklch(0.9383 0.0042 236.4993)`, Background tối `oklch(0.2598 0.0306 262.6666)`, Card/Popover `oklch(1 0 0)` / `oklch(0.3106 0.0301 268.6365)`.
-  - `src/themes/common.ts` (352 dòng):
-    - Bổ sung `TWEAKCN_DEMO: 'tweakcn-demo'` và `TWEAKCN_DEMO_DARK: 'tweakcn-demo-dark'` vào `SURFACE_THEMES`.
-    - Đăng ký 2 mục theme mới vào `REGISTERED_THEMES` với `iconName: 'Sparkles'`, bổ sung vào `THEME_CLASS_MAP` và `THEME_SELECTORS`.
-  - `src/themes/index.ts` (109 dòng):
-    - Xuất khẩu toàn bộ từ `./tweakcnDemo` và đăng ký token vào `THEME_TOKENS` phục vụ sinh động biến CSS qua `generateThemeCssVariables()`.
-  - `src/components/ui/MorphIcons.tsx` (174 dòng):
-    - Tích hợp và xuất khẩu `SparklesIcon` từ `lucide` tương thích chuẩn tuple `IconNode` của bộ biến hình lò xo `morphicons`.
-  - `src/demo/PageToolbar.tsx` (575 dòng):
-    - Hỗ trợ icon `SparklesIcon` cho các nút theme mới trên thanh công cụ điều khiển giao diện, đảm bảo min-height 28px và tương thích 100% theme active styling.

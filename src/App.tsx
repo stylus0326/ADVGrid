@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useDeferredValue } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useDeferredValue, useEffect } from 'react';
 import { MorphCheckbox } from './components/ui/MorphIcons';
 import {
   VirtualizedGrid,
@@ -51,7 +51,7 @@ const DEFAULT_ROW_HEIGHT = 32;
 import { TwelveMonthChartCell } from './demo/TwelveMonthChartCell';
 import { PageToolbar } from './demo/PageToolbar';
 import { PageFooter } from './demo/PageFooter';
-import { generateThemeCssVariables, getThemeClass } from './themes';
+import { generateThemeCssVariables, getThemeClass, getPresetById, generatePresetCssVariables, DEFAULT_PRESET_ID } from './themes';
 import { QueryGroup, hasActiveQueryRules, evaluateQueryTreeNode } from './components/grid/floating';
 import { copyTextToClipboard, formatGridNumber } from './components/grid/gridUtils';
 
@@ -66,6 +66,7 @@ interface PersistedGridConfig {
   groupByColumnKey?: string | null;
   groupSortConfig?: GroupSortConfig | null;
   surfaceTheme?: SurfaceTheme;
+  themeMode?: 'light' | 'dark';
   rowSnapMode?: boolean;
 }
 
@@ -119,13 +120,39 @@ export function App() {
   }, []);
 
   const [surfaceTheme, setSurfaceTheme] = useState<SurfaceTheme>(() => {
-    return persisted?.surfaceTheme || SURFACE_THEMES.LIGHT;
+    return persisted?.surfaceTheme || DEFAULT_PRESET_ID;
+  });
+
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    return persisted?.themeMode || 'light';
   });
 
   const handleSurfaceThemeChange = useCallback((nextTheme: SurfaceTheme) => {
     setSurfaceTheme(nextTheme);
     savePersistedGridConfig({ surfaceTheme: nextTheme });
   }, []);
+
+  const handleToggleThemeMode = useCallback(() => {
+    setThemeMode((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      savePersistedGridConfig({ themeMode: next });
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (themeMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [themeMode]);
+
+  const activePresetCss = useMemo(() => {
+    const preset = getPresetById(surfaceTheme);
+    const styles = themeMode === 'dark' ? preset.styles.dark : preset.styles.light;
+    return generatePresetCssVariables(styles, ':root, .agv-app-container');
+  }, [surfaceTheme, themeMode]);
 
   const [editMode, setEditMode] = useState<GridEditMode>(GRID_EDIT_MODES.DOUBLE_CLICK);
   const [dataVersion, setDataVersion] = useState<number>(0);
@@ -1878,7 +1905,8 @@ export function App() {
   return (
     <div
       data-theme={surfaceTheme}
-      className={`agv-app-container ${getThemeClass(surfaceTheme)} w-screen h-screen flex flex-col overflow-hidden select-none`}
+      data-theme-mode={themeMode}
+      className={`agv-app-container ${getThemeClass(surfaceTheme)} ${themeMode === 'dark' ? 'dark' : ''} w-screen h-screen flex flex-col overflow-hidden select-none`}
       style={{
         backgroundColor: 'var(--agv-bg-root)',
         color: 'var(--agv-text-main)',
@@ -1893,6 +1921,7 @@ export function App() {
       }}
     >
       <style>{themeCss}</style>
+      <style id="agv-active-preset-vars">{activePresetCss}</style>
 
       {/* 1. Page Header Toolbar */}
       <PageToolbar
@@ -1923,6 +1952,8 @@ export function App() {
         onJumpToRowSubmit={handleJumpToRowSubmit}
         surfaceTheme={surfaceTheme}
         onThemeChange={handleSurfaceThemeChange}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
         autoScrolling={autoScrolling}
         onToggleAutoScroll={handleToggleAutoScroll}
       />

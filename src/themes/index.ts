@@ -7,62 +7,73 @@ import {
   buildThemeSelectors,
   renderTokensCssBlock,
 } from './common';
-import { LIGHT_THEME_TOKENS } from './light';
-import { DARK_THEME_TOKENS } from './dark';
-import { BEZIER_ARTHOUSE_THEME_TOKENS } from './bezierArthouse';
-import { EINK_PAPER_THEME_TOKENS } from './eink';
 import {
-  TWEAKCN_DEMO_LIGHT_THEME_TOKENS,
-  TWEAKCN_DEMO_DARK_THEME_TOKENS,
-} from './tweakcnDemo';
+  TWEAKCN_THEME_PRESETS,
+  getPresetById,
+  getPresetTokens,
+  DEFAULT_PRESET_ID,
+  getAllPresetOptions,
+  convertPresetToGridTokens,
+  generatePresetCssVariables,
+} from './presets';
 
 export * from './common';
-export * from './light';
-export * from './dark';
-export * from './bezierArthouse';
-export * from './eink';
-export * from './tweakcnDemo';
+export * from './presets';
 
 /**
- * Tập hợp toàn bộ bảng màu của các giao diện chính
+ * Các hằng số tương thích ngược xuất phát từ 42 presets mới
  */
-export const THEME_TOKENS: Record<string, GridThemeTokens> = {
-  [SURFACE_THEMES.LIGHT]: LIGHT_THEME_TOKENS,
-  [SURFACE_THEMES.DAYLIGHT]: LIGHT_THEME_TOKENS,
-  [SURFACE_THEMES.DARK]: DARK_THEME_TOKENS,
-  [SURFACE_THEMES.CALIBRATED_DARK]: DARK_THEME_TOKENS,
-  [SURFACE_THEMES.DEEP_DARK]: DARK_THEME_TOKENS,
-  [SURFACE_THEMES.BEZIER_ARTHOUSE]: BEZIER_ARTHOUSE_THEME_TOKENS,
-  [SURFACE_THEMES.E_INK]: EINK_PAPER_THEME_TOKENS,
-  [SURFACE_THEMES.EINK]: EINK_PAPER_THEME_TOKENS,
-  [SURFACE_THEMES.TWEAKCN_DEMO]: TWEAKCN_DEMO_LIGHT_THEME_TOKENS,
-  [SURFACE_THEMES.TWEAKCN_DEMO_DARK]: TWEAKCN_DEMO_DARK_THEME_TOKENS,
-};
+export const LIGHT_THEME_TOKENS: GridThemeTokens = getPresetTokens('modern-minimal', 'light');
+export const DARK_THEME_TOKENS: GridThemeTokens = getPresetTokens('darkmatter', 'dark');
+export const BEZIER_ARTHOUSE_THEME_TOKENS: GridThemeTokens = getPresetTokens('amber-minimal', 'light');
+export const EINK_PAPER_THEME_TOKENS: GridThemeTokens = getPresetTokens('vintage-paper', 'light');
+export const TWEAKCN_DEMO_LIGHT_THEME_TOKENS: GridThemeTokens = getPresetTokens('amber-minimal', 'light');
+export const TWEAKCN_DEMO_DARK_THEME_TOKENS: GridThemeTokens = getPresetTokens('amber-minimal', 'dark');
 
 /**
- * Lấy token màu theo theme, fallback về Light nếu không tìm thấy
+ * Tập hợp toàn bộ bảng màu của 42 giao diện Tweakcn (Light mode mặc định)
  */
-export function getThemeTokens(theme: GridTheme | string = SURFACE_THEMES.LIGHT): GridThemeTokens {
-  return THEME_TOKENS[theme as string] || THEME_TOKENS[SURFACE_THEMES.LIGHT];
+export const THEME_TOKENS: Record<string, GridThemeTokens> = Object.fromEntries(
+  Object.keys(TWEAKCN_THEME_PRESETS).map((key) => [
+    key,
+    getPresetTokens(key, 'light'),
+  ])
+);
+
+/**
+ * Lấy token màu theo theme và mode (mặc định light)
+ */
+export function getThemeTokens(
+  theme: GridTheme | string = DEFAULT_PRESET_ID,
+  mode: 'light' | 'dark' = 'light'
+): GridThemeTokens {
+  const isDark = mode === 'dark' || (typeof theme === 'string' && theme.endsWith('-dark'));
+  const cleanId = typeof theme === 'string' ? theme.replace(/-dark$/, '') : DEFAULT_PRESET_ID;
+  return getPresetTokens(cleanId, isDark ? 'dark' : 'light');
 }
 
 /**
- * Sinh mã CSS Variables tự động cho toàn bộ ứng dụng từ toàn bộ các theme đã đăng ký.
+ * Sinh mã CSS Variables tự động cho toàn bộ ứng dụng từ toàn bộ 42 theme đã đăng ký.
+ * Hỗ trợ cả 2 chế độ Sáng (Light) và Tối (Dark).
  */
-export function generateThemeCssVariables(
-  customTokens?: Record<string, GridThemeTokens>
-): string {
-  const mergedTokens: Record<string, GridThemeTokens | undefined> = {
-    ...THEME_TOKENS,
-    ...(customTokens || {}),
-  };
+export function generateThemeCssVariables(): string {
+  const cssBlocks = REGISTERED_THEMES.map((themeMeta) => {
+    const lightTokens = getPresetTokens(themeMeta.id, 'light');
+    const darkTokens = getPresetTokens(themeMeta.id, 'dark');
 
-  const activeThemeKeys = REGISTERED_THEMES.map((t) => t.id);
+    const lightSelectors = buildThemeSelectors(themeMeta.id, themeMeta.class);
+    const darkSelectors = [
+      `.dark .agv-app-container.${themeMeta.class}`,
+      `.dark .${themeMeta.class}`,
+      `[data-theme-mode="dark"] .${themeMeta.class}`,
+      `[data-theme-mode="dark"].${themeMeta.class}`,
+      `.agv-app-container.dark.${themeMeta.class}`,
+      `.agv-app-container.${themeMeta.class}.dark`,
+    ];
 
-  const cssBlocks = activeThemeKeys.map((themeKey) => {
-    const tokens = mergedTokens[themeKey] || mergedTokens.light || LIGHT_THEME_TOKENS;
-    const selectors = THEME_SELECTORS[themeKey] || buildThemeSelectors(themeKey);
-    return renderTokensCssBlock(tokens, selectors);
+    const lightCss = renderTokensCssBlock(lightTokens, lightSelectors);
+    const darkCss = renderTokensCssBlock(darkTokens, darkSelectors);
+    return `${lightCss}\n${darkCss}`;
   });
 
   const scrollbarCss = `
@@ -96,14 +107,5 @@ export function generateThemeCssVariables(
     }
   `;
 
-  const einkOptimizationCss = `
-    .agv-e-ink,
-    .theme-eink,
-    html.theme-eink {
-      -webkit-font-smoothing: subpixel-antialiased !important;
-      -moz-osx-font-smoothing: auto !important;
-    }
-  `;
-
-  return [...cssBlocks, scrollbarCss, einkOptimizationCss].join('\n');
+  return [...cssBlocks, scrollbarCss].join('\n');
 }

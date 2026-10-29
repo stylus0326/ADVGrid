@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AnimateUIPrimitivesDemoModal } from './AnimateUIPrimitivesDemoModal';
 import {
   Layers,
@@ -34,7 +34,8 @@ import {
   SORT_DIRECTIONS,
   MONTH_ANALYTICS_MODES,
 } from '../components/grid/types';
-import { REGISTERED_THEMES, normalizeThemeId } from '../themes';
+import { REGISTERED_THEMES, normalizeThemeId, getAllPresetOptions } from '../themes';
+import { AdvComboBoxEdit } from '../components/ui/AdvComboBoxEdit';
 
 export interface PageToolbarProps {
   monthAnalyticsMode: MonthAnalyticsMode;
@@ -64,6 +65,8 @@ export interface PageToolbarProps {
   onJumpToRowSubmit: () => void;
   surfaceTheme: SurfaceTheme;
   onThemeChange: (theme: SurfaceTheme) => void;
+  themeMode?: 'light' | 'dark';
+  onToggleThemeMode?: () => void;
   autoScrolling: boolean;
   onToggleAutoScroll: () => void;
 }
@@ -96,10 +99,14 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
   onJumpToRowSubmit,
   surfaceTheme,
   onThemeChange,
+  themeMode = 'light',
+  onToggleThemeMode,
   autoScrolling,
   onToggleAutoScroll,
 }) => {
   const [showPrimitivesDemo, setShowPrimitivesDemo] = useState(false);
+  const presetOptions = useMemo(() => getAllPresetOptions(), []);
+  const isDark = themeMode === 'dark';
 
   return (
     <header
@@ -473,64 +480,52 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
             })}
           </div>
 
-          {/* Surface Theme switcher */}
-          <div
-            className="flex items-center gap-1 rounded-lg border p-1"
-            style={{
-              backgroundColor: 'var(--agv-bg-root)',
-              borderColor: 'var(--agv-border-strong)',
-            }}
-          >
-            <span
-              className="text-[11px] px-1.5 font-semibold"
-              style={{ color: 'var(--agv-text-muted)' }}
+          {/* Surface Theme switcher: ComboBox 42 Themes + Nút Ngày / Đêm */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className="flex items-center gap-1 rounded-lg border p-1"
+              style={{
+                backgroundColor: 'var(--agv-bg-root)',
+                borderColor: 'var(--agv-border-strong)',
+              }}
             >
-              Theme:
-            </span>
-            {REGISTERED_THEMES.map((t) => {
-              const isActive = normalizeThemeId(surfaceTheme) === t.id;
+              <span
+                className="text-[11px] px-1.5 font-semibold shrink-0"
+                style={{ color: 'var(--agv-text-muted)' }}
+              >
+                Theme:
+              </span>
+              <div style={{ width: 175 }}>
+                <AdvComboBoxEdit
+                  value={surfaceTheme}
+                  onChange={(val) => onThemeChange(val as SurfaceTheme)}
+                  options={presetOptions}
+                  placeholder="Chọn theme..."
+                  size="sm"
+                  theme={surfaceTheme}
+                />
+              </div>
+            </div>
 
-              const IconComp =
-                t.iconName === 'Sun'
-                  ? Sun
-                  : t.iconName === 'Moon'
-                  ? Moon
-                  : t.iconName === 'Palette'
-                  ? Palette
-                  : t.iconName === 'Sparkles'
-                  ? SparklesIcon
-                  : BookOpen;
-
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => onThemeChange(t.id as SurfaceTheme)}
-                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer min-h-[28px] ${
-                    isActive ? '' : 'hover:opacity-75'
-                  }`}
-                  style={
-                    isActive
-                      ? {
-                          backgroundColor: 'var(--agv-accent)',
-                          color: 'var(--agv-accent-text, #ffffff)',
-                        }
-                      : {
-                          color: 'var(--agv-text-muted)',
-                          backgroundColor: 'transparent',
-                        }
-                  }
-                >
-                  <MorphIcon
-                    icon={IconComp}
-                    size={13}
-                    spring="snappy"
-                    className={isActive ? 'text-[var(--agv-accent-text,#ffffff)]' : t.iconColorClass}
-                  />
-                  <span>{t.name}</span>
-                </button>
-              );
-            })}
+            {/* Nút chuyển đổi Ngày / Đêm (Day/Night Toggle) */}
+            <button
+              type="button"
+              onClick={onToggleThemeMode}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer min-h-[28px] hover:opacity-85"
+              style={{
+                backgroundColor: 'var(--agv-bg-root)',
+                borderColor: 'var(--agv-border-strong)',
+                color: 'var(--agv-text-main)',
+              }}
+            >
+              <MorphIcon
+                icon={isDark ? Moon : Sun}
+                size={14}
+                spring="bouncy"
+                className={isDark ? 'text-[var(--agv-accent)]' : 'text-[var(--agv-warning,#eab308)]'}
+              />
+              <span>{isDark ? 'Đêm' : 'Ngày'}</span>
+            </button>
           </div>
         </div>
 

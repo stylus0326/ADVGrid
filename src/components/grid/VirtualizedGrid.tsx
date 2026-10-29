@@ -113,7 +113,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       overscanChunks = 3,
       antiGhostMode = true,
       surfaceTheme = SURFACE_THEMES.LIGHT,
-      rowSnapMode = true,
+      rowSnapMode: controlledRowSnapMode,
+      onRowSnapModeChange,
       rowsPerWheelStep = 3,
       autoScrolling = false,
       autoScrollSpeed = 32,
@@ -422,7 +423,32 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       densityMode: DENSITY_MODES.STANDARD,
       showSummaryRow: true,
       showPagerBar: true,
+      rowSnapMode: controlledRowSnapMode ?? true,
     }));
+
+    useEffect(() => {
+      if (controlledRowSnapMode === undefined) return;
+      setGridSettings((prev) =>
+        prev.rowSnapMode === controlledRowSnapMode
+          ? prev
+          : { ...prev, rowSnapMode: controlledRowSnapMode }
+      );
+    }, [controlledRowSnapMode]);
+
+    const handleUpdateGridSettings = useCallback(
+      (updater: (prev: GridSettingsState) => GridSettingsState) => {
+        setGridSettings((prev) => {
+          const next = updater(prev);
+          if (next.rowSnapMode !== prev.rowSnapMode && onRowSnapModeChange) {
+            onRowSnapModeChange(next.rowSnapMode);
+          }
+          return next;
+        });
+      },
+      [onRowSnapModeChange]
+    );
+
+    const rowSnapMode = gridSettings.rowSnapMode;
 
     const actualRowHeight = gridSettings.densityMode === DENSITY_MODES.COMPACT ? 28 : rowHeight;
 
@@ -454,6 +480,27 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       return map;
     }, [columns]);
 
+    // Đồng bộ thứ tự columnGroups và các cột con bên trong group theo đúng thứ tự mảng columns hiện tại
+    const effectiveColumnGroups = useMemo(() => {
+      if (!columnGroups || columnGroups.length === 0) return columnGroups;
+      const orderMap = new Map<string, number>();
+      columns.forEach((c, idx) => orderMap.set(c.key, idx));
+
+      const withSortedKeys = columnGroups.map((grp) => {
+        if (!grp.keys || grp.keys.length <= 1) return grp;
+        const sortedKeys = [...grp.keys].sort(
+          (a, b) => (orderMap.get(a) ?? 999999) - (orderMap.get(b) ?? 999999)
+        );
+        return { ...grp, keys: sortedKeys };
+      });
+
+      return [...withSortedKeys].sort((a, b) => {
+        const minA = Math.min(...a.keys.map((k) => orderMap.get(k) ?? 999999));
+        const minB = Math.min(...b.keys.map((k) => orderMap.get(k) ?? 999999));
+        return minA - minB;
+      });
+    }, [columnGroups, columns]);
+
     // Active column keys in order (reflecting hidden columns & settings for STT / Checkbox)
     const activeColKeys = useMemo(() => {
       const isAllowed = (k: string) => {
@@ -463,9 +510,9 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         return true;
       };
 
-      if (columnGroups && columnGroups.length > 0) {
+      if (effectiveColumnGroups && effectiveColumnGroups.length > 0) {
         const keys: string[] = [];
-        columnGroups.forEach((grp) => {
+        effectiveColumnGroups.forEach((grp) => {
           grp.keys.forEach((k) => {
             if (colMap[k] && !hiddenColKeys.has(k) && isAllowed(k)) keys.push(k);
           });
@@ -473,7 +520,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         return keys;
       }
       return effectiveColumns.filter((c) => isAllowed(c.key)).map((c) => c.key);
-    }, [columnGroups, colMap, effectiveColumns, hiddenColKeys, gridSettings.showRowNumber, gridSettings.showSelectionCol]);
+    }, [effectiveColumnGroups, colMap, effectiveColumns, hiddenColKeys, gridSettings.showRowNumber, gridSettings.showSelectionCol]);
 
     const visibleColKeys = useMemo(
       () => columns.filter((c) => !hiddenColKeys.has(c.key)).map((c) => c.key),
@@ -685,7 +732,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
       const midElements: MiddleElement[] = [];
 
-      if (!columnGroups || columnGroups.length === 0) {
+      if (!effectiveColumnGroups || effectiveColumnGroups.length === 0) {
         middleColumns.forEach((col) => {
           midElements.push({
             type: 'standalone',
@@ -696,7 +743,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         return midElements;
       }
 
-      columnGroups.forEach((grp) => {
+      effectiveColumnGroups.forEach((grp) => {
         if (grp.isStandalone) {
           const key = grp.keys[0];
           const pin = columnPins[key] || PIN_POSITIONS.NONE;
@@ -750,7 +797,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       });
 
       return midElements;
-    }, [columnGroups, middleColumns, columnPins, activeColKeys, colMap, centerDockStatus]);
+    }, [effectiveColumnGroups, middleColumns, columnPins, activeColKeys, colMap, centerDockStatus, hiddenColKeys]);
 
     // Column Resizing Hook
     const { handleMouseDownResize, resizingRef } = useColumnResize({
@@ -1354,6 +1401,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const windowAccumDistanceRef = useRef<number>(0);
     const windowStartTimeRef = useRef<number>(performance.now());
     const scrollStopTimeoutRef = useRef<number | null>(null);
+    const isScrollingAttrSetRef = useRef<boolean>(false);
     const currentVelocityRef = useRef<number>(0);
     const currentFpsRef = useRef<number>(60);
 
@@ -1580,11 +1628,19 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         rafId = requestAnimationFrame(step);
       };
 
+      if (scrollContainerRef.current && !isScrollingAttrSetRef.current) {
+        isScrollingAttrSetRef.current = true;
+        scrollContainerRef.current.setAttribute('data-agv-scrolling', 'true');
+      }
       rafId = requestAnimationFrame(step);
       return () => {
         cancelAnimationFrame(rafId);
         // Khi dừng auto-scroll, căn chỉnh snap dòng mượt mà và đưa vận tốc hiển thị về 0 px/s
         const el = scrollContainerRef.current;
+        if (el) {
+          el.removeAttribute('data-agv-scrolling');
+        }
+        isScrollingAttrSetRef.current = false;
         if (el && rowSnapMode && actualRowHeight > 0) {
           const snapped = Math.round(el.scrollTop / actualRowHeight) * actualRowHeight;
           if (Math.abs(snapped - el.scrollTop) > 0.5) {
@@ -1686,10 +1742,18 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         }
 
         if (!autoScrolling) {
+          if (!isScrollingAttrSetRef.current) {
+            isScrollingAttrSetRef.current = true;
+            target.setAttribute('data-agv-scrolling', 'true');
+          }
           if (scrollStopTimeoutRef.current) {
             window.clearTimeout(scrollStopTimeoutRef.current);
           }
           scrollStopTimeoutRef.current = window.setTimeout(() => {
+            if (isScrollingAttrSetRef.current) {
+              isScrollingAttrSetRef.current = false;
+              scrollContainerRef.current?.removeAttribute('data-agv-scrolling');
+            }
             currentVelocityRef.current = 0;
             windowAccumDistanceRef.current = 0;
             windowStartTimeRef.current = performance.now();
@@ -1871,7 +1935,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             WebkitOverflowScrolling: 'touch',
             backgroundColor: 'var(--agv-bg-root)',
           }}
-          className={`flex-1 overflow-auto relative ${theme.viewportBg}`}
+          className={`agv-scroll-viewport flex-1 overflow-auto relative ${theme.viewportBg}`}
         >
           {/* Sticky Header (1-tier 34px or 2-tier 64px) */}
           <GridHeader
@@ -2132,7 +2196,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             menu={activeContextMenu}
             surfaceTheme={surfaceTheme}
             columns={columns}
-            columnGroups={columnGroups}
+            columnGroups={effectiveColumnGroups}
             onClose={() => setActiveContextMenu(null)}
             onSetPin={handleSetPin}
             onAutoFitColumn={handleAutoFitColumn}
@@ -2212,7 +2276,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             hasColumnEmptyCells={effectiveHasColumnEmptyCells}
             getColumnDateBounds={effectiveGetColumnDateBounds}
             columns={columns}
-            columnGroups={columnGroups}
+            columnGroups={effectiveColumnGroups}
             visibleColKeys={visibleColKeys}
             onVisibleColKeysChange={handleVisibleColKeysChange}
             columnPins={columnPins}
@@ -2222,7 +2286,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             onAutoFitAllColumns={handleAutoFitAllColumns}
             onReorderColumns={onReorderColumns}
             settings={gridSettings}
-            onUpdateSettings={setGridSettings}
+            onUpdateSettings={handleUpdateGridSettings}
             onExportExcel={handleExportExcel}
             isExporting={controlledIsExporting}
             isFullscreen={isFullscreen}

@@ -89,6 +89,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
     itemHeight: number;
     totalCount: number;
     scrollEl: HTMLElement | null;
+    siblingMidpoints: Array<{ idx: number; midY: number }>;
   } | null>(null);
   const treeDidDragRecentlyRef = useRef(false);
 
@@ -104,12 +105,23 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
   // Xây dựng cây phân cấp đa tầng (orderedRawColumns) từ columnGroups và dataColumns
   const { orderedRawColumns, hasBands, columnBandPaths } = useMemo(() => {
     const colMap = new Map(dataColumns.map((c) => [c.key, c]));
+    const colOrderMap = new Map(dataColumns.map((c, idx) => [c.key, idx]));
     const tree: ColumnTreeNode[] = [];
     const bandPaths: Record<string, string> = {};
 
-    const nonSystemGroups = columnGroups.filter(
-      (g) => g.keys.some((k) => colMap.has(k))
-    );
+    const nonSystemGroups = columnGroups
+      .filter((g) => g.keys.some((k) => colMap.has(k)))
+      .map((g) => ({
+        ...g,
+        keys: [...g.keys].sort(
+          (a, b) => (colOrderMap.get(a) ?? 999999) - (colOrderMap.get(b) ?? 999999)
+        ),
+      }))
+      .sort((a, b) => {
+        const minA = Math.min(...a.keys.map((k) => colOrderMap.get(k) ?? 999999));
+        const minB = Math.min(...b.keys.map((k) => colOrderMap.get(k) ?? 999999));
+        return minA - minB;
+      });
 
     const hasRealBands = nonSystemGroups.some(
       (g) => !g.isStandalone && g.keys.length > 0
@@ -272,6 +284,24 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
     }));
   };
 
+  // Helper đo tọa độ tâm dọc của tất cả các phần tử anh em cùng cấp trước khi dịch chuyển
+  const measureSiblingMidpoints = (scrollEl: HTMLElement | null, parentKey: string) => {
+    if (!scrollEl) return [];
+    const scrollTop = scrollEl.scrollTop;
+    const nodes = scrollEl.querySelectorAll('[data-sibling-parent]');
+    const list: Array<{ idx: number; midY: number }> = [];
+    nodes.forEach((el) => {
+      if (el.getAttribute('data-sibling-parent') === parentKey) {
+        const idx = parseInt(el.getAttribute('data-sibling-idx') || '', 10);
+        if (!isNaN(idx)) {
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          list.push({ idx, midY: rect.top + scrollTop + rect.height / 2 });
+        }
+      }
+    });
+    return list.sort((a, b) => a.idx - b.idx);
+  };
+
   // 4. Hàm đệ quy render node trong Cây phân cấp đa tầng (Banded Tree)
   const renderTreeChooserNode = (
     node: ColumnTreeNode,
@@ -354,7 +384,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
 
                   const itemEl = e.currentTarget as HTMLElement;
                   const scrollEl = itemEl.closest('.agv-chooser-scroll') as HTMLElement;
-                  const itemHeight = Math.max(24, itemEl.offsetHeight || 26);
+                  const itemHeight = Math.max(24, (itemEl.offsetHeight || 26) + 2);
                   const startY = e.clientY;
                   const fromIdx = siblingIdx;
                   const currentKey = nodeId;
@@ -366,6 +396,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     if (!isDraggingStarted) {
                       if (Math.abs(deltaY) > 3) {
                         isDraggingStarted = true;
+                        const siblingMidpoints = measureSiblingMidpoints(scrollEl, parentKey);
                         treeDragRef.current = {
                           parentKey,
                           key: currentKey,
@@ -375,6 +406,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                           itemHeight,
                           totalCount,
                           scrollEl,
+                          siblingMidpoints,
                         };
                         document.body.style.cursor = 'grabbing';
                         document.body.style.userSelect = 'none';
@@ -393,17 +425,27 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     if (!treeDragRef.current) return;
                     const ref = treeDragRef.current;
                     const currentDeltaY = ev.clientY - ref.startY;
+                    const pointerY = ev.clientY + (ref.scrollEl ? ref.scrollEl.scrollTop : 0);
 
-                    const offsetIdx = Math.round(currentDeltaY / ref.itemHeight);
-                    let newToIdx = Math.max(0, Math.min(ref.totalCount - 1, ref.fromIdx + offsetIdx));
-
-                    const elemUnder = document.elementFromPoint(ev.clientX, ev.clientY);
-                    const hoveredEl = elemUnder?.closest('[data-sibling-parent]') as HTMLElement | null;
-                    if (hoveredEl && hoveredEl.getAttribute('data-sibling-parent') === ref.parentKey) {
-                      const hIdx = parseInt(hoveredEl.getAttribute('data-sibling-idx') || '', 10);
-                      if (!isNaN(hIdx) && hIdx >= 0 && hIdx < ref.totalCount) {
-                        newToIdx = hIdx;
+                    let newToIdx = ref.fromIdx;
+                    if (ref.siblingMidpoints.length > 0) {
+                      if (currentDeltaY > 0) {
+                        for (const s of ref.siblingMidpoints) {
+                          if (s.idx > ref.fromIdx && pointerY > s.midY) {
+                            newToIdx = s.idx;
+                          }
+                        }
+                      } else if (currentDeltaY < 0) {
+                        for (let i = ref.siblingMidpoints.length - 1; i >= 0; i--) {
+                          const s = ref.siblingMidpoints[i];
+                          if (s.idx < ref.fromIdx && pointerY < s.midY) {
+                            newToIdx = s.idx;
+                          }
+                        }
                       }
+                    } else {
+                      const offsetIdx = Math.round(currentDeltaY / ref.itemHeight);
+                      newToIdx = Math.max(0, Math.min(ref.totalCount - 1, ref.fromIdx + offsetIdx));
                     }
 
                     ref.toIdx = newToIdx;
@@ -559,9 +601,11 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     return;
                   }
 
-                  const itemEl = e.currentTarget as HTMLElement;
-                  const scrollEl = itemEl.closest('.agv-chooser-scroll') as HTMLElement;
-                  const itemHeight = Math.max(28, itemEl.offsetHeight || 30);
+                  const headerEl = e.currentTarget as HTMLElement;
+                  const bandGroupEl =
+                    (headerEl.closest('.agv-chooser-band-group') as HTMLElement) || headerEl;
+                  const scrollEl = headerEl.closest('.agv-chooser-scroll') as HTMLElement;
+                  const itemHeight = Math.max(28, (bandGroupEl.offsetHeight || 30) + 4);
                   const startY = e.clientY;
                   const fromIdx = siblingIdx;
                   const currentKey = nodeId;
@@ -573,6 +617,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     if (!isDraggingStarted) {
                       if (Math.abs(deltaY) > 4) {
                         isDraggingStarted = true;
+                        const siblingMidpoints = measureSiblingMidpoints(scrollEl, parentKey);
                         treeDragRef.current = {
                           parentKey,
                           key: currentKey,
@@ -582,6 +627,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                           itemHeight,
                           totalCount,
                           scrollEl,
+                          siblingMidpoints,
                         };
                         document.body.style.cursor = 'grabbing';
                         document.body.style.userSelect = 'none';
@@ -600,17 +646,27 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     if (!treeDragRef.current) return;
                     const ref = treeDragRef.current;
                     const currentDeltaY = moveEv.clientY - ref.startY;
+                    const pointerY = moveEv.clientY + (ref.scrollEl ? ref.scrollEl.scrollTop : 0);
 
-                    const offsetIdx = Math.round(currentDeltaY / ref.itemHeight);
-                    let newToIdx = Math.max(0, Math.min(ref.totalCount - 1, ref.fromIdx + offsetIdx));
-
-                    const elemUnder = document.elementFromPoint(moveEv.clientX, moveEv.clientY);
-                    const hoveredEl = elemUnder?.closest('[data-sibling-parent]') as HTMLElement | null;
-                    if (hoveredEl && hoveredEl.getAttribute('data-sibling-parent') === ref.parentKey) {
-                      const hIdx = parseInt(hoveredEl.getAttribute('data-sibling-idx') || '', 10);
-                      if (!isNaN(hIdx) && hIdx >= 0 && hIdx < ref.totalCount) {
-                        newToIdx = hIdx;
+                    let newToIdx = ref.fromIdx;
+                    if (ref.siblingMidpoints.length > 0) {
+                      if (currentDeltaY > 0) {
+                        for (const s of ref.siblingMidpoints) {
+                          if (s.idx > ref.fromIdx && pointerY > s.midY) {
+                            newToIdx = s.idx;
+                          }
+                        }
+                      } else if (currentDeltaY < 0) {
+                        for (let i = ref.siblingMidpoints.length - 1; i >= 0; i--) {
+                          const s = ref.siblingMidpoints[i];
+                          if (s.idx < ref.fromIdx && pointerY < s.midY) {
+                            newToIdx = s.idx;
+                          }
+                        }
                       }
+                    } else {
+                      const offsetIdx = Math.round(currentDeltaY / ref.itemHeight);
+                      newToIdx = Math.max(0, Math.min(ref.totalCount - 1, ref.fromIdx + offsetIdx));
                     }
 
                     ref.toIdx = newToIdx;

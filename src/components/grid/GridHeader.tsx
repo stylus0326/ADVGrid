@@ -93,6 +93,75 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
   // Drag and drop column reorder state
   const [dragOverColKey, setDragOverColKey] = React.useState<string | null>(null);
   const [draggingColKey, setDraggingColKey] = React.useState<string | null>(null);
+  const draggingColKeyRef = React.useRef<string | null>(null);
+
+  const createDragProps = (
+    targetKey: string,
+    disabled = false,
+    blockedSourceKeys?: Set<string>
+  ) => {
+    const canDrag = !disabled && Boolean(onReorderColumns);
+    return {
+      draggable: canDrag,
+      onDragStart: (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canDrag) {
+          e.preventDefault();
+          return;
+        }
+        e.stopPropagation();
+        draggingColKeyRef.current = targetKey;
+        e.dataTransfer.setData('text/plain', targetKey);
+        e.dataTransfer.effectAllowed = 'move';
+        requestAnimationFrame(() => {
+          setDraggingColKey(targetKey);
+        });
+      },
+      onDragEnd: () => {
+        draggingColKeyRef.current = null;
+        setDraggingColKey(null);
+        setDragOverColKey(null);
+      },
+      onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+        const activeKey = draggingColKeyRef.current || draggingColKey;
+        if (
+          canDrag &&
+          activeKey &&
+          activeKey !== targetKey &&
+          !blockedSourceKeys?.has(activeKey)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+          if (dragOverColKey !== targetKey) {
+            setDragOverColKey(targetKey);
+          }
+        }
+      },
+      onDragLeave: (e: React.DragEvent<HTMLDivElement>) => {
+        const related = e.relatedTarget as Node | null;
+        if (related && e.currentTarget.contains(related)) return;
+        if (dragOverColKey === targetKey) {
+          setDragOverColKey(null);
+        }
+      },
+      onDrop: (e: React.DragEvent<HTMLDivElement>) => {
+        if (canDrag) {
+          e.preventDefault();
+          e.stopPropagation();
+          const src =
+            e.dataTransfer.getData('text/plain') ||
+            draggingColKeyRef.current ||
+            draggingColKey;
+          if (src && src !== targetKey && !blockedSourceKeys?.has(src)) {
+            onReorderColumns?.(src, targetKey);
+          }
+        }
+        draggingColKeyRef.current = null;
+        setDragOverColKey(null);
+        setDraggingColKey(null);
+      },
+    };
+  };
 
   /**
    * Helper chuẩn hóa DRY cho nội dung ô header (tiêu đề, icon sort, nút checklist filter, thanh resize)
@@ -160,6 +229,11 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         {/* Thanh kéo độ rộng cột (col resize handle) */}
         {col.resizable !== false && !isSystemCol && (
           <div
+            draggable={false}
+            onDragStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onMouseDown={(e) => onMouseDownResize(col.key, e)}
             onClick={(e) => e.stopPropagation()}
             className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-[var(--agv-accent)]/40 active:bg-[var(--agv-accent)] transition-colors"
@@ -196,38 +270,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         return (
           <div
             key={`left_${col.key}`}
-            draggable={!isSystemCol && !!onReorderColumns}
-            onDragStart={(e) => {
-              if (isSystemCol) return;
-              e.dataTransfer.setData('text/plain', col.key);
-              e.dataTransfer.effectAllowed = 'move';
-              setDraggingColKey(col.key);
-            }}
-            onDragEnd={() => {
-              setDraggingColKey(null);
-              setDragOverColKey(null);
-            }}
-            onDragOver={(e) => {
-              if (onReorderColumns && !isSystemCol && draggingColKey && draggingColKey !== col.key) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                setDragOverColKey(col.key);
-              }
-            }}
-            onDragLeave={() => {
-              if (dragOverColKey === col.key) setDragOverColKey(null);
-            }}
-            onDrop={(e) => {
-              if (onReorderColumns && !isSystemCol) {
-                e.preventDefault();
-                const src = e.dataTransfer.getData('text/plain') || draggingColKey;
-                if (src && src !== col.key) {
-                  onReorderColumns(src, col.key);
-                }
-              }
-              setDragOverColKey(null);
-              setDraggingColKey(null);
-            }}
+            {...createDragProps(col.key, isSystemCol)}
             onClick={() => col.sortable !== false && onToggleSort(col.key)}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -260,7 +303,6 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         if (elem.type === 'standalone') {
           const col = elem.col;
           const width = colWidths[col.key] || col.defaultWidth;
-          const isSorted = sortConfig?.key === col.key;
           const isCenterPinned = columnPins[col.key] === PIN_POSITIONS.CENTER;
           const dock = isCenterPinned ? centerDockStatus[col.key] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
 
@@ -268,6 +310,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           const isDockedRight = dock === CENTER_DOCK_STATUSES.RIGHT;
           const isLeftDivider = col.key === lastEffectiveLeftColKey;
           const isRightDivider = col.key === firstEffectiveRightColKey;
+          const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
 
           const stickyHeaderStyle: React.CSSProperties = {
             width: `${width}px`,
@@ -289,44 +332,13 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             ? getRightPinnedDividerClass(surfaceTheme)
             : '';
 
-          const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
           const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
           const isDragOver = dragOverColKey === col.key;
 
           return (
             <div
               key={`mid_standalone_${col.key}`}
-              draggable={!!onReorderColumns}
-              onDragStart={(e) => {
-                e.dataTransfer.setData('text/plain', col.key);
-                e.dataTransfer.effectAllowed = 'move';
-                setDraggingColKey(col.key);
-              }}
-              onDragEnd={() => {
-                setDraggingColKey(null);
-                setDragOverColKey(null);
-              }}
-              onDragOver={(e) => {
-                if (onReorderColumns && draggingColKey && draggingColKey !== col.key) {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  setDragOverColKey(col.key);
-                }
-              }}
-              onDragLeave={() => {
-                if (dragOverColKey === col.key) setDragOverColKey(null);
-              }}
-              onDrop={(e) => {
-                if (onReorderColumns) {
-                  e.preventDefault();
-                  const src = e.dataTransfer.getData('text/plain') || draggingColKey;
-                  if (src && src !== col.key) {
-                    onReorderColumns(src, col.key);
-                  }
-                }
-                setDragOverColKey(null);
-                setDraggingColKey(null);
-              }}
+              {...createDragProps(col.key, isSystemCol)}
               onClick={() => col.sortable !== false && onToggleSort(col.key)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -352,6 +364,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             (sum, c) => sum + (colWidths[c.key] || c.defaultWidth),
             0
           );
+          const childKeySet = new Set(childCols.map((c) => c.key));
+          const isBandDragOver = dragOverColKey === group.id;
 
           return (
             <div
@@ -361,6 +375,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             >
               {/* Tầng 1: Tiêu đề nhóm */}
               <div
+                {...createDragProps(group.id, false, childKeySet)}
                 style={{
                   width: `${groupWidth}px`,
                   height: '32px',
@@ -371,7 +386,9 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                   e.preventDefault();
                   onBandContextMenu?.(group.id, childCols, e);
                 }}
-                className={`relative flex items-center justify-center text-center px-8 text-[10px] font-bold uppercase tracking-wider border-r border-b ${theme.tier1Border} ${theme.tier1Bg} shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] cursor-pointer`}
+                className={`relative flex items-center justify-center text-center px-8 text-[10px] font-bold uppercase tracking-wider border-r border-b ${theme.tier1Border} ${theme.tier1Bg} shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] cursor-pointer ${
+                  isBandDragOver ? 'ring-2 ring-inset ring-agv-accent' : ''
+                }`}
               >
                 {group.isToggleable && (
                   <button
@@ -433,10 +450,12 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                   const width = colWidths[col.key] || col.defaultWidth;
                   const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
                   const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
+                  const isChildDragOver = dragOverColKey === col.key;
 
                   return (
                     <div
                       key={col.key}
+                      {...createDragProps(col.key, isSystemCol, new Set([group.id]))}
                       onClick={() => col.sortable !== false && onToggleSort(col.key)}
                       onContextMenu={(e) => {
                         e.preventDefault();
@@ -451,7 +470,9 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                         backgroundColor: 'var(--agv-bg-header)',
                         color: 'var(--agv-text-header, var(--agv-text-main))',
                       }}
-                      className={`group/th flex items-center justify-center text-center px-1 text-[10px] font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors`}
+                      className={`group/th flex items-center justify-center text-center px-1 text-[10px] font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
+                        isChildDragOver ? 'ring-2 ring-inset ring-agv-accent' : ''
+                      }`}
                     >
                       {renderHeaderCellContent(col, true)}
                     </div>
@@ -477,37 +498,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         return (
           <div
             key={`right_${col.key}`}
-            draggable={!!onReorderColumns}
-            onDragStart={(e) => {
-              e.dataTransfer.setData('text/plain', col.key);
-              e.dataTransfer.effectAllowed = 'move';
-              setDraggingColKey(col.key);
-            }}
-            onDragEnd={() => {
-              setDraggingColKey(null);
-              setDragOverColKey(null);
-            }}
-            onDragOver={(e) => {
-              if (onReorderColumns && draggingColKey && draggingColKey !== col.key) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                setDragOverColKey(col.key);
-              }
-            }}
-            onDragLeave={() => {
-              if (dragOverColKey === col.key) setDragOverColKey(null);
-            }}
-            onDrop={(e) => {
-              if (onReorderColumns) {
-                e.preventDefault();
-                const src = e.dataTransfer.getData('text/plain') || draggingColKey;
-                if (src && src !== col.key) {
-                  onReorderColumns(src, col.key);
-                }
-              }
-              setDragOverColKey(null);
-              setDraggingColKey(null);
-            }}
+            {...createDragProps(col.key, isSystemCol)}
             onClick={() => col.sortable !== false && onToggleSort(col.key)}
             onContextMenu={(e) => {
               e.preventDefault();

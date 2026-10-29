@@ -541,11 +541,10 @@ export const GridRow = memo(
           style={{
             height: `${rowHeight}px`,
             width: `${totalRowWidth}px`,
-            backgroundColor: 'var(--agv-bg-card, rgba(0,0,0,0.03))',
             borderColor: 'var(--agv-border)',
             animationDelay: `${(rowIndex % 20) * 4}ms`,
           }}
-          className="agv-row-enter group flex items-center cursor-pointer select-none box-border min-h-[32px] max-h-[32px] font-semibold text-xs border-b border-[var(--agv-border)] transition-colors hover:bg-[var(--agv-bg-hover)]"
+          className="agv-group-row agv-row-enter flex items-center cursor-pointer select-none box-border min-h-[32px] max-h-[32px] font-semibold text-xs border-b border-[var(--agv-border)]"
         >
           {columns.map((col, cIdx) => {
             // Cột đầu tiên là STT (Bộ đếm nhóm [1], [2]...)
@@ -563,7 +562,7 @@ export const GridRow = memo(
                     maxWidth: `${sttWidth}px`,
                     height: `${rowHeight}px`,
                     boxSizing: 'border-box',
-                    backgroundColor: 'var(--agv-bg-card, var(--agv-bg-root))',
+                    backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
                   }}
                   className={`flex items-center justify-center font-bold text-xs shrink-0 select-none ${theme.borderBottom} ${theme.borderRight}`}
                 >
@@ -596,7 +595,7 @@ export const GridRow = memo(
                     maxWidth: `${titleWidth}px`,
                     height: `${rowHeight}px`,
                     boxSizing: 'border-box',
-                    backgroundColor: 'var(--agv-bg-card, var(--agv-bg-root))',
+                    backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
                   }}
                   className={`flex items-center px-3 gap-2 truncate shrink-0 ${theme.borderBottom} ${
                     hasDivider ? getPinnedDividerClass(surfaceTheme) : theme.borderRight
@@ -661,7 +660,7 @@ export const GridRow = memo(
                 key={col.key}
                 style={{
                   ...stickyStyle,
-                  backgroundColor: 'var(--agv-bg-card, var(--agv-bg-root))',
+                  backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
                 }}
                 className={`flex items-center px-2.5 text-xs tabular-nums shrink-0 truncate ${borderClasses} ${getAlignJustifyClass(
                   col.align
@@ -682,6 +681,7 @@ export const GridRow = memo(
     return (
       <div
         onClick={() => onSelectRow?.(rowIndex, row)}
+        data-row-parity={isEven ? 'even' : 'odd'}
         data-row-focused={isSelected ? 'true' : undefined}
         data-row-checked={isChecked ? 'true' : undefined}
         style={{
@@ -689,7 +689,7 @@ export const GridRow = memo(
           width: `${totalRowWidth}px`,
           animationDelay: `${(rowIndex % 20) * 4}ms`,
         }}
-        className={`agv-row-enter group flex items-center ${baseBg} ${theme.defaultTextColor} cursor-default select-none box-border min-h-[32px] max-h-[32px]`}
+        className={`agv-grid-row agv-row-enter flex items-center ${baseBg} ${theme.defaultTextColor} cursor-default select-none box-border min-h-[32px] max-h-[32px]`}
       >
         {columns.map((col) => {
           const width = colWidths[col.key] || col.defaultWidth;
@@ -745,11 +745,13 @@ export const GridRow = memo(
 
           const cellBgClasses = isEmptyCol
             ? 'bg-[var(--agv-bg-card,rgba(0,0,0,0.02))] opacity-60'
-            : isRowActive
-            ? `${theme.rowSelectedBg} ${theme.rowHoverBg}`
             : usesSharedHeaderBg
-            ? `${theme.sharedHeaderCellBg} ${theme.rowHoverBg}`
-            : `${isEven ? theme.rowEvenBg : theme.rowOddBg} ${theme.rowHoverBg}`;
+            ? theme.sharedHeaderCellBg
+            : isRowActive
+            ? theme.rowSelectedBg
+            : isEven
+            ? theme.rowEvenBg
+            : theme.rowOddBg;
 
           const isEditing = !isEmptyCol && editingCell?.rowIndex === rowIndex && editingCell?.colKey === col.key;
           const editable = !isEmptyCol && isCellEditable(col);

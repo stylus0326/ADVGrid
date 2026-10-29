@@ -166,7 +166,7 @@ body, button, input, select, textarea {
   background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
   border: 1px solid var(--agv-border-strong) !important;
   border-right: none !important;
-  box-shadow: 0 4px 16px var(--agv-pinned-shadow, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 4px 16px var(--agv-shadow-pinned);
   transition:
     background-color 0s,
     border-color 0s,
@@ -634,28 +634,86 @@ body, button, input, select, textarea {
 }
 
 /* ============================================================================
-   Phân Biệt Dòng Focus (isSelected) & Dòng Active/Checked (isChecked)
-   100% Flat background-color & color (0% border / 0% box-shadow phát sinh)
-   - Ô STT làm "Đầu kim Focus" (nền Accent chữ trắng) khi dòng được Focus
-   - Thân dòng phân tầng rõ giữa Focus, Checked và Vừa Focus + Checked
+   Phân Biệt Dòng Focus (isSelected), Dòng Active/Checked (isChecked) &
+   Hiệu Ứng Rê Chuột Toàn Dòng Hiệu Năng Cao (Zero-Reflow Row Hover)
+   - 100% Flat background-color & color thông qua kế thừa biến CSS cấp dòng
+     (--agv-row-data-bg, --agv-row-sticky-bg, --agv-group-row-bg)
+   - Không thay đổi kích thước hộp (0% layout reflow), không gắn :hover lên 23 ô con
+   - Tự động khóa tính toán :hover khi đang cuộn tốc độ cao ([data-agv-scrolling="true"])
+   - Ô STT làm "Đầu kim Focus" (nền Accent chữ trắng) khi dòng được Focus (Kiểu A)
    ============================================================================ */
-[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="stt"] {
+.agv-group-row {
+  --agv-group-row-bg: var(--agv-bg-card, var(--agv-bg-root));
+  background-color: var(--agv-group-row-bg);
+}
+
+.agv-grid-row[data-row-parity="even"] {
+  --agv-row-data-bg: var(--agv-bg-row);
+  --agv-row-sticky-bg: var(--agv-bg-header);
+}
+
+.agv-grid-row[data-row-parity="odd"] {
+  --agv-row-data-bg: var(--agv-bg-row-alt);
+  --agv-row-sticky-bg: var(--agv-bg-header);
+}
+
+.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) {
+  --agv-row-data-bg: var(--agv-bg-selected);
+  --agv-row-sticky-bg: var(--agv-bg-selected);
+}
+
+.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) > [data-cell-role="stt"] {
   background-color: var(--agv-bg-header);
 }
-[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="chk"],
-[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="data"] {
-  background-color: var(--agv-bg-selected);
+
+.agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]) {
+  --agv-row-data-bg: var(--agv-bg-focused);
+  --agv-row-sticky-bg: var(--agv-bg-focused);
 }
-[data-row-focused="true"] > [data-cell-role="stt"] {
+
+.agv-grid-row[data-row-focused="true"][data-row-checked="true"] {
+  --agv-row-data-bg: var(--agv-bg-checked-focused);
+  --agv-row-sticky-bg: var(--agv-bg-checked-focused);
+}
+
+/* Hiệu ứng rê chuột phủ màu nhẹ toàn dòng (chỉ kích hoạt khi bảng không đang cuộn tốc độ cao) */
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-group-row:hover {
+  --agv-group-row-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row:not([data-row-focused="true"]):not([data-row-checked="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover > [data-cell-role="stt"] {
+  background-color: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+  --agv-row-sticky-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"][data-row-checked="true"]:hover {
+  --agv-row-data-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+  --agv-row-sticky-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+}
+
+/* Ô STT làm "Đầu kim Focus" luôn giữ nền Accent chữ trắng kể cả khi rê chuột */
+.agv-grid-row[data-row-focused="true"] > [data-cell-role="stt"] {
   background-color: var(--agv-accent) !important;
   color: var(--agv-accent-text, #ffffff) !important;
   --agv-stt-cell-text: var(--agv-accent-text, #ffffff);
 }
-[data-row-focused="true"]:not([data-row-checked="true"]):not(:hover) > [data-cell-role="chk"],
-[data-row-focused="true"]:not([data-row-checked="true"]):not(:hover) > [data-cell-role="data"] {
-  background-color: var(--agv-bg-focused);
+
+/* Đảm bảo các phần tử draggable="true" (Header cột/nhóm) luôn kéo thả được trong vùng select-none */
+[draggable="true"] {
+  -webkit-user-drag: element;
 }
-[data-row-focused="true"][data-row-checked="true"]:not(:hover) > [data-cell-role="chk"],
-[data-row-focused="true"][data-row-checked="true"]:not(:hover) > [data-cell-role="data"] {
-  background-color: var(--agv-bg-checked-focused);
-}
+

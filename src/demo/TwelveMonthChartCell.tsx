@@ -2,7 +2,8 @@ import React, { useState, useEffect, useId, useMemo, useRef, memo } from 'react'
 import { createPortal } from 'react-dom';
 import { SurfaceTheme } from '../components/grid/types';
 import { formatGridNumber } from '../components/grid/gridUtils';
-import { THEME_CLASS_MAP, normalizeThemeId } from '../themes';
+import { getThemeClass } from '../themes';
+import { getPortalThemeVars } from '../components/ui/enterpriseEditorUtils';
 
 export interface TwelveMonthChartProps {
   values: number[];
@@ -170,18 +171,18 @@ export const TwelveMonthChartCell = memo(
     const isHoveredMin = hoveredIdx !== null && maxVal > minVal && (hoveredIdx === minIdx || hoveredVal === minVal);
 
     const valColor = isHoveredMax
-      ? 'var(--agv-trend-up, #4ade80)'
+      ? 'var(--agv-trend-up)'
       : isHoveredMin
-      ? 'var(--agv-trend-down, #f87171)'
+      ? 'var(--agv-trend-down)'
       : 'var(--agv-text-main)';
 
     const activeColor = isHoveredMax
-      ? 'var(--agv-trend-up, #4ade80)'
+      ? 'var(--agv-trend-up)'
       : isHoveredMin
-      ? 'var(--agv-trend-down, #f87171)'
+      ? 'var(--agv-trend-down)'
       : isAboveAvg
-      ? 'var(--agv-trend-up, #4ade80)'
-      : 'var(--agv-trend-down, #f87171)';
+      ? 'var(--agv-trend-up)'
+      : 'var(--agv-trend-down)';
 
     return (
       <div
@@ -286,9 +287,10 @@ export const TwelveMonthChartCell = memo(
         {/* Animate UI Spring Tooltip Portal */}
         {hoveredIdx !== null && anchorCoords && typeof document !== 'undefined' && createPortal(
           <div
-            className={`fixed pointer-events-none z-[999999] ${THEME_CLASS_MAP[normalizeThemeId(surfaceTheme)] || 'agv-light'}`}
+            className={`fixed pointer-events-none z-[999999] ${getThemeClass(surfaceTheme)}`}
             data-theme={surfaceTheme}
             style={{
+              ...getPortalThemeVars(surfaceTheme),
               left: `${anchorCoords && typeof window !== 'undefined' ? Math.max(80, Math.min(window.innerWidth - 80, anchorCoords.x)) : (anchorCoords?.x ?? 0)}px`,
               top: (anchorCoords.y < 65) ? `${anchorCoords.y + 12}px` : `${anchorCoords.y - 8}px`,
               transition: 'left 120ms cubic-bezier(0.2, 0.9, 0.3, 1), top 120ms cubic-bezier(0.2, 0.9, 0.3, 1)',
@@ -299,9 +301,9 @@ export const TwelveMonthChartCell = memo(
                 (anchorCoords.y < 65) ? 'agv-tooltip-spring-down' : 'agv-tooltip-spring-up'
               }`}
               style={{
-                backgroundColor: 'var(--agv-bg-panel, #ffffff)',
-                color: 'var(--agv-text-main, #0f172a)',
-                border: '1px solid var(--agv-border, rgba(0,0,0,0.14))',
+                backgroundColor: 'var(--agv-bg-popup)',
+                color: 'var(--agv-text-main)',
+                border: '1px solid var(--agv-border-popup)',
                 boxShadow: '0 8px 24px -4px rgba(0,0,0,0.22), 0 2px 6px -1px rgba(0,0,0,0.1)',
               }}
             >
@@ -318,15 +320,15 @@ export const TwelveMonthChartCell = memo(
                   {anchorCoords.y < 65 ? (
                     <path
                       d="M 0 5 L 5 0 L 10 5"
-                      fill="var(--agv-bg-panel, #ffffff)"
-                      stroke="var(--agv-border, rgba(0,0,0,0.15))"
+                      fill="var(--agv-bg-popup)"
+                      stroke="var(--agv-border-popup)"
                       strokeWidth="1"
                     />
                   ) : (
                     <path
                       d="M 0 0 L 5 5 L 10 0"
-                      fill="var(--agv-bg-panel, #ffffff)"
-                      stroke="var(--agv-border, rgba(0,0,0,0.15))"
+                      fill="var(--agv-bg-popup)"
+                      stroke="var(--agv-border-popup)"
                       strokeWidth="1"
                     />
                   )}

@@ -1,3 +1,10 @@
+import {
+  LIGHT_THEME_TOKENS,
+  DARK_THEME_TOKENS,
+  BEZIER_ARTHOUSE_THEME_TOKENS,
+  EINK_PAPER_THEME_TOKENS,
+} from '../../../themes';
+
 const FALLBACK_STYLE_ID = 'agv-datepicker-core-styles';
 
 function ensureDatePickerStyles() {
@@ -19,66 +26,66 @@ function ensureDatePickerStyles() {
     .agv-light,
     [data-theme="light"],
     [data-theme="daylight"] {
-      --agv-bg-popup: #ffffff;
-      --agv-bg-subtle: #f8fafc;
-      --agv-bg-item-hover: #f1f5f9;
-      --agv-border: #e2e8f0;
-      --agv-text-main: #0f172a;
-      --agv-text-muted: #475569;
-      --agv-text-subtle: #64748b;
-      --agv-accent: #2563eb;
-      --agv-accent-soft: rgba(37, 99, 235, 0.16);
-      --agv-accent-text: #ffffff;
-      --agv-weekend: #dc2626;
+      --agv-bg-popup: ${LIGHT_THEME_TOKENS.bgPopup};
+      --agv-bg-subtle: ${LIGHT_THEME_TOKENS.bgRowAlt};
+      --agv-bg-item-hover: ${LIGHT_THEME_TOKENS.bgItemHover};
+      --agv-border: ${LIGHT_THEME_TOKENS.border};
+      --agv-text-main: ${LIGHT_THEME_TOKENS.textMain};
+      --agv-text-muted: ${LIGHT_THEME_TOKENS.textMuted};
+      --agv-text-subtle: ${LIGHT_THEME_TOKENS.textSubtle};
+      --agv-accent: ${LIGHT_THEME_TOKENS.accent};
+      --agv-accent-soft: color-mix(in srgb, ${LIGHT_THEME_TOKENS.accent} 16%, transparent);
+      --agv-accent-text: ${LIGHT_THEME_TOKENS.accentText};
+      --agv-weekend: ${LIGHT_THEME_TOKENS.danger};
     }
     .agv-theme-dark,
     .agv-dark,
     [data-theme="dark"],
     [data-theme="calibrated-dark"],
     [data-theme="deep-dark"] {
-      --agv-bg-popup: #1e293b;
-      --agv-bg-subtle: #0f172a;
-      --agv-bg-item-hover: #334155;
-      --agv-border: #334155;
-      --agv-text-main: #f8fafc;
-      --agv-text-muted: #cbd5e1;
-      --agv-text-subtle: #94a3b8;
-      --agv-accent: #38bdf8;
-      --agv-accent-soft: rgba(56, 189, 248, 0.22);
-      --agv-accent-text: #ffffff;
-      --agv-weekend: #f87171;
+      --agv-bg-popup: ${DARK_THEME_TOKENS.bgPopup};
+      --agv-bg-subtle: ${DARK_THEME_TOKENS.bgRowAlt};
+      --agv-bg-item-hover: ${DARK_THEME_TOKENS.bgItemHover};
+      --agv-border: ${DARK_THEME_TOKENS.border};
+      --agv-text-main: ${DARK_THEME_TOKENS.textMain};
+      --agv-text-muted: ${DARK_THEME_TOKENS.textMuted};
+      --agv-text-subtle: ${DARK_THEME_TOKENS.textSubtle};
+      --agv-accent: ${DARK_THEME_TOKENS.accent};
+      --agv-accent-soft: color-mix(in srgb, ${DARK_THEME_TOKENS.accent} 22%, transparent);
+      --agv-accent-text: ${DARK_THEME_TOKENS.accentText};
+      --agv-weekend: ${DARK_THEME_TOKENS.danger};
     }
     .agv-theme-bezier,
     .agv-bezier-arthouse,
     [data-theme="bezier-arthouse"] {
-      --agv-bg-popup: #454545;
-      --agv-bg-subtle: #383838;
-      --agv-bg-item-hover: #575757;
-      --agv-border: #666666;
-      --agv-text-main: #F0F0F0;
-      --agv-text-muted: #878787;
-      --agv-text-subtle: #666666;
-      --agv-accent: #f39512;
-      --agv-accent-soft: rgba(243, 149, 18, 0.25);
-      --agv-accent-text: #ffffff;
-      --agv-weekend: #e06c75;
+      --agv-bg-popup: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgPopup};
+      --agv-bg-subtle: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgRowAlt};
+      --agv-bg-item-hover: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgItemHover};
+      --agv-border: ${BEZIER_ARTHOUSE_THEME_TOKENS.borderStrong};
+      --agv-text-main: ${BEZIER_ARTHOUSE_THEME_TOKENS.textMain};
+      --agv-text-muted: ${BEZIER_ARTHOUSE_THEME_TOKENS.textMuted};
+      --agv-text-subtle: ${BEZIER_ARTHOUSE_THEME_TOKENS.textSubtle};
+      --agv-accent: ${BEZIER_ARTHOUSE_THEME_TOKENS.accent};
+      --agv-accent-soft: color-mix(in srgb, ${BEZIER_ARTHOUSE_THEME_TOKENS.accent} 25%, transparent);
+      --agv-accent-text: ${BEZIER_ARTHOUSE_THEME_TOKENS.accentText};
+      --agv-weekend: ${BEZIER_ARTHOUSE_THEME_TOKENS.danger};
     }
     .agv-theme-eink,
     .agv-e-ink,
     .theme-eink,
     [data-theme="e-ink"],
     [data-theme="eink"] {
-      --agv-bg-popup: #FAF7F0;
-      --agv-bg-subtle: #F7F5EE;
-      --agv-bg-item-hover: #E5DFCE;
-      --agv-border: #D3CBBA;
-      --agv-text-main: #2B2927;
-      --agv-text-muted: #6B655B;
-      --agv-text-subtle: #8A8477;
-      --agv-accent: #15803d;
-      --agv-accent-soft: rgba(21, 128, 61, 0.18);
-      --agv-accent-text: #ffffff;
-      --agv-weekend: #b91c1c;
+      --agv-bg-popup: ${EINK_PAPER_THEME_TOKENS.bgPopup};
+      --agv-bg-subtle: ${EINK_PAPER_THEME_TOKENS.bgRowAlt};
+      --agv-bg-item-hover: ${EINK_PAPER_THEME_TOKENS.bgItemHover};
+      --agv-border: ${EINK_PAPER_THEME_TOKENS.border};
+      --agv-text-main: ${EINK_PAPER_THEME_TOKENS.textMain};
+      --agv-text-muted: ${EINK_PAPER_THEME_TOKENS.textMuted};
+      --agv-text-subtle: ${EINK_PAPER_THEME_TOKENS.textSubtle};
+      --agv-accent: ${EINK_PAPER_THEME_TOKENS.accent};
+      --agv-accent-soft: color-mix(in srgb, ${EINK_PAPER_THEME_TOKENS.accent} 18%, transparent);
+      --agv-accent-text: ${EINK_PAPER_THEME_TOKENS.accentText};
+      --agv-weekend: ${EINK_PAPER_THEME_TOKENS.danger};
     }
     .agv-datepicker-container,
     .agv-daterange-picker-wrap,

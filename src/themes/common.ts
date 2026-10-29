@@ -238,17 +238,24 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-bg-row: ${tokens.bgRow};
     --agv-bg-row-alt: ${tokens.bgRowAlt};
     --agv-bg-hover: ${tokens.bgHover};
+    --agv-bg-row-hover: color-mix(in srgb, ${tokens.accent} 6%, ${tokens.bgHover});
     --agv-bg-selected: ${tokens.bgSelected};
+    --agv-bg-selected-hover: color-mix(in srgb, ${tokens.accent} 16%, ${tokens.bgHover});
     --agv-bg-focused: color-mix(in srgb, ${tokens.accent} 11%, ${tokens.bgRoot});
+    --agv-bg-focused-hover: color-mix(in srgb, ${tokens.accent} 15%, ${tokens.bgRoot});
     --agv-bg-checked-focused: color-mix(in srgb, ${tokens.accent} 24%, ${tokens.bgRoot});
+    --agv-bg-checked-focused-hover: color-mix(in srgb, ${tokens.accent} 28%, ${tokens.bgRoot});
     --agv-bg-popup: ${tokens.bgPopup};
+    --agv-bg-panel: ${tokens.bgPopup};
     --agv-bg-surface: ${tokens.bgPopup};
+    --agv-bg-subtle: ${tokens.bgRowAlt};
     --agv-bg-card: ${tokens.bgRowAlt};
     --agv-bg-item-hover: ${tokens.bgItemHover};
     --agv-bg-item-active: ${tokens.bgItemActive};
     --agv-bg-control: ${tokens.bgControl};
     --agv-bg-control-hover: ${tokens.bgControlHover};
     --agv-border: ${tokens.border};
+    --agv-border-subtle: ${tokens.border};
     --agv-border-strong: ${tokens.borderStrong};
     --agv-border-popup: ${tokens.borderPopup};
     --agv-text-main: ${tokens.textMain};
@@ -257,6 +264,7 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-text-subtle: ${tokens.textSubtle};
     --agv-text-active: ${tokens.accent};
     --agv-accent: ${tokens.accent};
+    --agv-accent-soft: color-mix(in srgb, ${tokens.accent} 18%, transparent);
     --agv-accent-hover: ${tokens.accent};
     --agv-accent-hover-border: ${tokens.accentHoverBorder || `color-mix(in srgb, ${tokens.accent} 55%, ${tokens.borderStrong})`};
     --agv-accent-text: ${tokens.accentText};
@@ -268,6 +276,7 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-danger: ${tokens.danger};
     --agv-danger-bg: ${tokens.dangerBg};
     --agv-danger-hover: ${tokens.dangerHover};
+    --agv-weekend: ${tokens.danger};
     --agv-warning: ${tokens.warning};
     --agv-warning-bg: ${tokens.warningBg};
     --agv-success: ${tokens.success};
@@ -276,6 +285,7 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-trend-up: ${tokens.trendUp};
     --agv-trend-down: ${tokens.trendDown};
     --agv-shadow-pinned: ${tokens.pinnedShadow};
+    --agv-pinned-shadow: ${tokens.pinnedShadow};
     --agv-backdrop-bg: ${tokens.backdropBg};
 
     /* Biến đặc tả Specification Variables */

@@ -65,6 +65,7 @@ export interface GridSettingsState {
   densityMode: DensityMode;
   showSummaryRow: boolean;
   showPagerBar: boolean;
+  rowSnapMode: boolean;
 }
 
 export interface GridFloatingToolbarProps<T = any> {

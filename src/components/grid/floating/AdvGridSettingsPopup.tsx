@@ -90,6 +90,24 @@ export const AdvGridSettingsPopup = React.memo(function AdvGridSettingsPopup({
           Dòng chọn trang
         </span>
       </div>
+
+      <div className="agv-menu-divider my-1 border-b border-[var(--agv-border)]" />
+
+      {/* Nhóm 3: Chế độ cuộn */}
+      <div
+        onClick={() =>
+          onUpdateSettings((prev) => ({
+            ...prev,
+            rowSnapMode: !prev.rowSnapMode,
+          }))
+        }
+        className="group flex min-h-[28px] cursor-pointer select-none items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-[var(--agv-bg-item-hover)]"
+      >
+        <MorphCheckbox checked={settings.rowSnapMode} size={15} className="pointer-events-none shrink-0" />
+        <span className="whitespace-nowrap text-xs font-medium text-[var(--agv-text-main)]">
+          Cuộn khớp dòng
+        </span>
+      </div>
     </div>
   );
 });

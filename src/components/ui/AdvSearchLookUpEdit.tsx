@@ -570,7 +570,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
 
                   {/* Hàng 2: Hàng lọc từng cột (Filter Row) */}
                   {isFilterRowVisible && (
-                    <tr className="bg-[var(--agv-bg-root)] border-t border-[var(--agv-border-subtle)]">
+                    <tr className="bg-[var(--agv-bg-root)] border-t border-[var(--agv-border)]">
                       {multiSelect && <th className="px-1 py-1 text-center bg-[var(--agv-bg-header)]" />}
                       {columns.map((col) => {
                         const colKeyStr = String(col.key);
@@ -640,7 +640,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
                     </tr>
                   )}
                 </thead>
-                <tbody className="divide-y divide-[var(--agv-border-subtle)]">
+                <tbody className="divide-y divide-[var(--agv-border)]">
                   {filteredData.length === 0 ? (
                     <tr>
                       <td

@@ -16,6 +16,9 @@ export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUS
     '--agv-bg-hover': tokens.bgHover,
     '--agv-bg-selected': tokens.bgSelected,
     '--agv-bg-popup': tokens.bgPopup,
+    '--agv-bg-panel': tokens.bgPopup,
+    '--agv-bg-surface': tokens.bgPopup,
+    '--agv-bg-subtle': tokens.bgRowAlt,
     '--agv-bg-item-hover': tokens.bgItemHover,
     '--agv-bg-item-active': tokens.bgItemActive,
     '--agv-bg-control': tokens.bgControl,
@@ -30,6 +33,7 @@ export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUS
     '--agv-text-subtle': tokens.textSubtle,
     '--agv-text-active': tokens.accent,
     '--agv-accent': tokens.accent,
+    '--agv-accent-soft': `color-mix(in srgb, ${tokens.accent} 18%, transparent)`,
     '--agv-accent-hover': tokens.accent,
     '--agv-accent-hover-border': tokens.accentHoverBorder || `color-mix(in srgb, ${tokens.accent} 55%, ${tokens.borderStrong})`,
     '--agv-accent-text': tokens.accentText,
@@ -38,6 +42,10 @@ export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUS
     '--agv-btn-default-border': tokens.btnDefaultBorder,
     '--agv-btn-default-text': tokens.btnDefaultText,
     '--agv-btn-default-hover': tokens.btnDefaultHover,
+    '--agv-trend-up': tokens.trendUp,
+    '--agv-trend-down': tokens.trendDown,
+    '--agv-danger': tokens.danger,
+    '--agv-weekend': tokens.danger,
   } as React.CSSProperties;
 }
 

@@ -51,7 +51,7 @@ const DEFAULT_ROW_HEIGHT = 32;
 import { TwelveMonthChartCell } from './demo/TwelveMonthChartCell';
 import { PageToolbar } from './demo/PageToolbar';
 import { PageFooter } from './demo/PageFooter';
-import { generateThemeCssVariables } from './themes';
+import { generateThemeCssVariables, getThemeClass } from './themes';
 import { QueryGroup, hasActiveQueryRules, evaluateQueryTreeNode } from './components/grid/floating';
 import { copyTextToClipboard, formatGridNumber } from './components/grid/gridUtils';
 
@@ -66,6 +66,7 @@ interface PersistedGridConfig {
   groupByColumnKey?: string | null;
   groupSortConfig?: GroupSortConfig | null;
   surfaceTheme?: SurfaceTheme;
+  rowSnapMode?: boolean;
 }
 
 function loadPersistedGridConfig(): PersistedGridConfig | null {
@@ -104,10 +105,18 @@ export function App() {
   const [overscanChunks] = useState<number>(3);
   const [rowHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
   const [antiGhostMode] = useState<boolean>(true);
-  const [rowSnapMode] = useState<boolean>(true);
   const [rowsPerWheelStep] = useState<number>(3);
   // Persisted state from localStorage
   const persisted = useMemo(() => loadPersistedGridConfig(), []);
+
+  const [rowSnapMode, setRowSnapMode] = useState<boolean>(() => {
+    return persisted?.rowSnapMode !== undefined ? persisted.rowSnapMode : true;
+  });
+
+  const handleRowSnapModeChange = useCallback((enabled: boolean) => {
+    setRowSnapMode(enabled);
+    savePersistedGridConfig({ rowSnapMode: enabled });
+  }, []);
 
   const [surfaceTheme, setSurfaceTheme] = useState<SurfaceTheme>(() => {
     return persisted?.surfaceTheme || SURFACE_THEMES.LIGHT;
@@ -155,10 +164,13 @@ export function App() {
 
   // 1. Column Order State (Persisted)
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    const allKeys = INITIAL_COLUMNS.map((c) => c.key);
     if (persisted?.columnOrder && Array.isArray(persisted.columnOrder) && persisted.columnOrder.length > 0) {
-      return persisted.columnOrder;
+      const validPersisted = persisted.columnOrder.filter((k) => allKeys.includes(k));
+      const missingKeys = allKeys.filter((k) => !validPersisted.includes(k));
+      return [...validPersisted, ...missingKeys];
     }
-    return INITIAL_COLUMNS.map((c) => c.key);
+    return allKeys;
   });
 
   // 2. Column Pins State (Persisted)
@@ -260,26 +272,41 @@ export function App() {
     return res;
   }, [columnOrder, monthAnalyticsMode]);
 
-  // Dynamic Column Groups derived from monthAnalyticsMode
+  // Dynamic Column Groups derived from monthAnalyticsMode & columnOrder
   const dynamicColumnGroups = useMemo((): BaseGroupDef[] => {
-    return BASE_GROUPS_DEF.map((grp) => {
+    const orderMap = new Map<string, number>();
+    columnOrder.forEach((k, idx) => orderMap.set(k, idx));
+
+    const groupsWithSortedKeys = BASE_GROUPS_DEF.map((grp) => {
+      let baseKeys = grp.keys;
       if (grp.id === 'grp_analytics') {
-        return {
-          ...grp,
-          isCollapsed: monthAnalyticsMode === MONTH_ANALYTICS_MODES.TWO_COLS,
-          keys:
-            monthAnalyticsMode === MONTH_ANALYTICS_MODES.THIRTEEN_COLS
-              ? [
-                  'col_m1', 'col_m2', 'col_m3', 'col_m4', 'col_m5', 'col_m6',
-                  'col_m7', 'col_m8', 'col_m9', 'col_m10', 'col_m11', 'col_m12',
-                  'col_formula',
-                ]
-              : ['col_chart', 'col_formula'],
-        };
+        baseKeys =
+          monthAnalyticsMode === MONTH_ANALYTICS_MODES.THIRTEEN_COLS
+            ? [
+                'col_m1', 'col_m2', 'col_m3', 'col_m4', 'col_m5', 'col_m6',
+                'col_m7', 'col_m8', 'col_m9', 'col_m10', 'col_m11', 'col_m12',
+                'col_formula',
+              ]
+            : ['col_chart', 'col_formula'];
       }
-      return grp;
+      const sortedKeys = [...baseKeys].sort(
+        (a, b) => (orderMap.get(a) ?? 999999) - (orderMap.get(b) ?? 999999)
+      );
+      return {
+        ...grp,
+        ...(grp.id === 'grp_analytics'
+          ? { isCollapsed: monthAnalyticsMode === MONTH_ANALYTICS_MODES.TWO_COLS }
+          : {}),
+        keys: sortedKeys,
+      };
     });
-  }, [monthAnalyticsMode]);
+
+    return groupsWithSortedKeys.sort((a, b) => {
+      const minA = Math.min(...a.keys.map((k) => orderMap.get(k) ?? 999999));
+      const minB = Math.min(...b.keys.map((k) => orderMap.get(k) ?? 999999));
+      return minA - minB;
+    });
+  }, [monthAnalyticsMode, columnOrder]);
 
   const handleToggleGroup = useCallback((groupId: string) => {
     if (groupId === 'grp_analytics') {
@@ -372,17 +399,114 @@ export function App() {
     setMetrics(nextMetrics);
   }, []);
 
-  // Column reordering handler
+  // Column reordering handler (hỗ trợ kéo thả cột đơn, cột con trong nhóm 2 tầng, và cả nhóm cột Band/Atomic)
   const handleReorderColumns = useCallback((sourceKey: string, targetKey: string) => {
+    if (!sourceKey || !targetKey || sourceKey === targetKey) return;
+
+    const getGroupMemberKeys = (grp: BaseGroupDef): string[] => {
+      if (grp.id === 'grp_analytics') {
+        return [
+          'col_m1', 'col_m2', 'col_m3', 'col_m4', 'col_m5', 'col_m6',
+          'col_m7', 'col_m8', 'col_m9', 'col_m10', 'col_m11', 'col_m12',
+          'col_chart', 'col_formula',
+        ];
+      }
+      return grp.keys;
+    };
+
+    const resolveGroupInfo = (keyOrId: string) => {
+      const byId = BASE_GROUPS_DEF.find((g) => g.id === keyOrId);
+      if (byId) {
+        return {
+          groupId: byId.id,
+          isWholeGroup: true,
+          memberKeys: getGroupMemberKeys(byId),
+        };
+      }
+      const byMember = BASE_GROUPS_DEF.find((g) => getGroupMemberKeys(g).includes(keyOrId));
+      if (byMember) {
+        return {
+          groupId: byMember.id,
+          isWholeGroup: false,
+          memberKeys: getGroupMemberKeys(byMember),
+        };
+      }
+      return {
+        groupId: keyOrId,
+        isWholeGroup: false,
+        memberKeys: [keyOrId],
+      };
+    };
+
+    const srcInfo = resolveGroupInfo(sourceKey);
+    const tgtInfo = resolveGroupInfo(targetKey);
+
+    // Nếu kéo thả nhóm cha đè lên chính cột con của nó (hoặc ngược lại) thì bỏ qua
+    if (srcInfo.groupId === tgtInfo.groupId && (srcInfo.isWholeGroup || tgtInfo.isWholeGroup)) {
+      return;
+    }
+
     setColumnOrder((prevOrder) => {
-      const fromIdx = prevOrder.indexOf(sourceKey);
-      const toIdx = prevOrder.indexOf(targetKey);
-      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return prevOrder;
-      const next = [...prevOrder];
-      const [moved] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, moved);
-      savePersistedGridConfig({ columnOrder: next });
-      return next;
+      // Trường hợp 1: Kéo thả 2 cột con nằm trong cùng 1 nhóm Band
+      if (srcInfo.groupId === tgtInfo.groupId) {
+        const fromIdx = prevOrder.indexOf(sourceKey);
+        const toIdx = prevOrder.indexOf(targetKey);
+        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return prevOrder;
+        const next = [...prevOrder];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        savePersistedGridConfig({ columnOrder: next });
+        return next;
+      }
+
+      // Trường hợp 2: Kéo thả giữa các cột độc lập hoặc các nhóm Band cấp 1
+      const srcSet = new Set(srcInfo.memberKeys);
+      const tgtSet = new Set(tgtInfo.memberKeys);
+      const srcBlock = prevOrder.filter((k) => srcSet.has(k));
+      const tgtBlock = prevOrder.filter((k) => tgtSet.has(k));
+      if (srcBlock.length === 0 || tgtBlock.length === 0) return prevOrder;
+
+      const srcFirstIdx = prevOrder.indexOf(srcBlock[0]);
+      const tgtFirstIdx = prevOrder.indexOf(tgtBlock[0]);
+      if (srcFirstIdx < 0 || tgtFirstIdx < 0 || srcFirstIdx === tgtFirstIdx) return prevOrder;
+
+      const remaining = prevOrder.filter((k) => !srcSet.has(k));
+      if (srcFirstIdx < tgtFirstIdx) {
+        const lastTgtKey = tgtBlock[tgtBlock.length - 1];
+        const insertAfterIdx = remaining.indexOf(lastTgtKey);
+        if (insertAfterIdx < 0) return prevOrder;
+        remaining.splice(insertAfterIdx + 1, 0, ...srcBlock);
+      } else {
+        const firstTgtKey = tgtBlock[0];
+        const insertBeforeIdx = remaining.indexOf(firstTgtKey);
+        if (insertBeforeIdx < 0) return prevOrder;
+        remaining.splice(insertBeforeIdx, 0, ...srcBlock);
+      }
+
+      savePersistedGridConfig({ columnOrder: remaining });
+      return remaining;
+    });
+
+    // Đồng bộ vùng ghim (Left / Middle / Right) nếu kéo cột sang vùng ghim khác trên Header / Chooser
+    setColumnPins((prevPins) => {
+      const getPinZone = (pin?: PinPosition): PinPosition => {
+        if (pin === PIN_POSITIONS.LEFT) return PIN_POSITIONS.LEFT;
+        if (pin === PIN_POSITIONS.RIGHT) return PIN_POSITIONS.RIGHT;
+        return PIN_POSITIONS.NONE;
+      };
+      const srcRepKey = !srcInfo.isWholeGroup ? sourceKey : srcInfo.memberKeys[0];
+      const tgtRepKey = !tgtInfo.isWholeGroup ? targetKey : tgtInfo.memberKeys[0];
+      const srcZone = getPinZone(prevPins[srcRepKey]);
+      const tgtZone = getPinZone(prevPins[tgtRepKey]);
+      if (srcZone === tgtZone) return prevPins;
+
+      const nextPins = { ...prevPins };
+      const keysToUpdate = srcInfo.groupId === tgtInfo.groupId ? [sourceKey] : srcInfo.memberKeys;
+      keysToUpdate.forEach((k) => {
+        nextPins[k] = tgtZone;
+      });
+      savePersistedGridConfig({ columnPins: nextPins });
+      return nextPins;
     });
   }, []);
 
@@ -517,6 +641,7 @@ export function App() {
     setGroupByColumnKey(null);
     setGroupSortConfig(null);
     setExpandedGroupPaths(new Set());
+    setRowSnapMode(true);
   }, []);
 
   // Quick filter by cell value
@@ -1752,7 +1877,8 @@ export function App() {
 
   return (
     <div
-      className="w-screen h-screen flex flex-col overflow-hidden select-none"
+      data-theme={surfaceTheme}
+      className={`agv-app-container ${getThemeClass(surfaceTheme)} w-screen h-screen flex flex-col overflow-hidden select-none`}
       style={{
         backgroundColor: 'var(--agv-bg-root)',
         color: 'var(--agv-text-main)',
@@ -1848,6 +1974,7 @@ export function App() {
           antiGhostMode={antiGhostMode}
           surfaceTheme={surfaceTheme}
           rowSnapMode={rowSnapMode}
+          onRowSnapModeChange={handleRowSnapModeChange}
           rowsPerWheelStep={rowsPerWheelStep}
           autoScrolling={autoScrolling}
           autoScrollSpeed={autoScrollSpeed}

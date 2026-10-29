@@ -367,8 +367,8 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
               <span
                 className="px-1.5 py-0.2 rounded-full text-[10px] font-bold"
                 style={{
-                  backgroundColor: showFilterRow ? '#ffffff' : 'var(--agv-accent)',
-                  color: showFilterRow ? 'var(--agv-accent)' : '#ffffff',
+                  backgroundColor: showFilterRow ? 'var(--agv-accent-text)' : 'var(--agv-accent)',
+                  color: showFilterRow ? 'var(--agv-accent)' : 'var(--agv-accent-text)',
                 }}
               >
                 {activeColumnFilterCount}

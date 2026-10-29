@@ -314,6 +314,7 @@ export interface VirtualizedGridProps<T = any> {
 
   // Scroll Behaviors
   rowSnapMode?: boolean;
+  onRowSnapModeChange?: (enabled: boolean) => void;
   rowsPerWheelStep?: number;
   autoScrolling?: boolean;
   autoScrollSpeed?: number;

@@ -540,7 +540,8 @@ export const GridRow = memo(
           }}
           style={{
             height: `${rowHeight}px`,
-            width: `${totalRowWidth}px`,
+            width: `var(--agv-total-grid-w, ${totalRowWidth}px)`,
+            minWidth: `var(--agv-total-grid-w, ${totalRowWidth}px)`,
             borderColor: 'var(--agv-border)',
             animationDelay: `${(rowIndex % 20) * 4}ms`,
           }}
@@ -557,9 +558,9 @@ export const GridRow = memo(
                     position: isPinned ? 'sticky' : undefined,
                     left: 0,
                     zIndex: isPinned ? 23 : undefined,
-                    width: `${sttWidth}px`,
-                    minWidth: `${sttWidth}px`,
-                    maxWidth: `${sttWidth}px`,
+                    width: `var(--agv-col-w-${sttKey}, ${sttWidth}px)`,
+                    minWidth: `var(--agv-col-w-${sttKey}, ${sttWidth}px)`,
+                    maxWidth: `var(--agv-col-w-${sttKey}, ${sttWidth}px)`,
                     height: `${rowHeight}px`,
                     boxSizing: 'border-box',
                     backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
@@ -582,17 +583,20 @@ export const GridRow = memo(
             if (cIdx === titleStartIdx) {
               const isPinned = pinnedLeftWidth > 0;
               const hasDivider = (titleWidth + (hasSttCol ? sttWidth : 0)) === pinnedLeftWidth;
-              const titleLeftPos = hasSttCol ? sttWidth : 0;
+              const titleCols = columns.slice(titleStartIdx, titleStartIdx + titleColSpan);
+              const titleWidthCalc = `calc(${titleCols.map((c) => `var(--agv-col-w-${c.key}, ${colWidths[c.key] || c.defaultWidth}px)`).join(' + ')})`;
+              const titleLeftCalc = hasSttCol ? `var(--agv-col-w-${sttKey}, ${sttWidth}px)` : '0px';
+
               return (
                 <div
                   key="group_title_cell"
                   style={{
                     position: isPinned ? 'sticky' : undefined,
-                    left: isPinned ? `${titleLeftPos}px` : undefined,
+                    left: isPinned ? titleLeftCalc : undefined,
                     zIndex: isPinned ? 22 : undefined,
-                    width: `${titleWidth}px`,
-                    minWidth: `${titleWidth}px`,
-                    maxWidth: `${titleWidth}px`,
+                    width: titleWidthCalc,
+                    minWidth: titleWidthCalc,
+                    maxWidth: titleWidthCalc,
                     height: `${rowHeight}px`,
                     boxSizing: 'border-box',
                     backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
@@ -633,19 +637,19 @@ export const GridRow = memo(
             const isRightDivider = col.key === firstEffectiveRightColKey;
 
             const stickyStyle: React.CSSProperties = {
-              width: `${width}px`,
-              minWidth: `${width}px`,
-              maxWidth: `${width}px`,
+              width: `var(--agv-col-w-${col.key}, ${width}px)`,
+              minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+              maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
               height: `${rowHeight}px`,
               boxSizing: 'border-box',
               ...(isPinnedLeft
-                ? { position: 'sticky', left: `${leftOffsets[col.key]}px`, zIndex: 20 }
+                ? { position: 'sticky', left: `var(--agv-left-offset-${col.key}, ${leftOffsets[col.key]}px)`, zIndex: 20 }
                 : isDockedLeft
-                ? { position: 'sticky', left: `${centerLeftOffsets[col.key]}px`, zIndex: 20 }
+                ? { position: 'sticky', left: `var(--agv-center-left-offset-${col.key}, ${centerLeftOffsets[col.key]}px)`, zIndex: 20 }
                 : isPinnedRight
-                ? { position: 'sticky', right: `${rightOffsets[col.key]}px`, zIndex: 20 }
+                ? { position: 'sticky', right: `var(--agv-right-offset-${col.key}, ${rightOffsets[col.key]}px)`, zIndex: 20 }
                 : isDockedRight
-                ? { position: 'sticky', right: `${centerRightOffsets[col.key]}px`, zIndex: 20 }
+                ? { position: 'sticky', right: `var(--agv-center-right-offset-${col.key}, ${centerRightOffsets[col.key]}px)`, zIndex: 20 }
                 : {}),
             };
 
@@ -686,7 +690,8 @@ export const GridRow = memo(
         data-row-checked={isChecked ? 'true' : undefined}
         style={{
           height: `${rowHeight}px`,
-          width: `${totalRowWidth}px`,
+          width: `var(--agv-total-grid-w, ${totalRowWidth}px)`,
+          minWidth: `var(--agv-total-grid-w, ${totalRowWidth}px)`,
           animationDelay: `${(rowIndex % 20) * 4}ms`,
         }}
         className={`agv-grid-row agv-row-enter flex items-center ${baseBg} ${theme.defaultTextColor} cursor-default select-none box-border min-h-[32px] max-h-[32px]`}
@@ -724,16 +729,18 @@ export const GridRow = memo(
             isChkCol;
 
           const stickyStyle: React.CSSProperties = {
-            width: `${width}px`,
+            width: `var(--agv-col-w-${col.key}, ${width}px)`,
+            minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+            maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
             height: `${rowHeight}px`,
             ...(isPinnedLeft
-              ? { position: 'sticky', left: `${leftOffsets[col.key]}px`, zIndex: 20 }
+              ? { position: 'sticky', left: `var(--agv-left-offset-${col.key}, ${leftOffsets[col.key]}px)`, zIndex: 20 }
               : isDockedLeft
-              ? { position: 'sticky', left: `${centerLeftOffsets[col.key]}px`, zIndex: 20 }
+              ? { position: 'sticky', left: `var(--agv-center-left-offset-${col.key}, ${centerLeftOffsets[col.key]}px)`, zIndex: 20 }
               : isPinnedRight
-              ? { position: 'sticky', right: `${rightOffsets[col.key]}px`, zIndex: 20 }
+              ? { position: 'sticky', right: `var(--agv-right-offset-${col.key}, ${rightOffsets[col.key]}px)`, zIndex: 20 }
               : isDockedRight
-              ? { position: 'sticky', right: `${centerRightOffsets[col.key]}px`, zIndex: 20 }
+              ? { position: 'sticky', right: `var(--agv-center-right-offset-${col.key}, ${centerRightOffsets[col.key]}px)`, zIndex: 20 }
               : {}),
           };
 

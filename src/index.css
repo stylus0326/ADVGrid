@@ -717,3 +717,15 @@ body, button, input, select, textarea {
   -webkit-user-drag: element;
 }
 
+/* Khóa cursor: col-resize, user-select: none trên body và tắt draggable khi đang nhấn giữ vạch resize */
+body.agv-resizing-column,
+body.agv-resizing-column * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.agv-resizing-column [draggable="true"] {
+  -webkit-user-drag: none !important;
+}
+

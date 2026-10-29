@@ -16,6 +16,8 @@ export interface PageFooterProps {
   expandedGroupCount?: number;
   displayedRowCount?: number;
   checkedRowCount?: number;
+  isFilterCheckedOnly?: boolean;
+  onToggleFilterCheckedOnly?: () => void;
 }
 
 export const PageFooter: React.FC<PageFooterProps> = ({
@@ -33,10 +35,12 @@ export const PageFooter: React.FC<PageFooterProps> = ({
   expandedGroupCount = 0,
   displayedRowCount,
   checkedRowCount = 0,
+  isFilterCheckedOnly = false,
+  onToggleFilterCheckedOnly,
 }) => {
   return (
     <footer
-      className="border-t px-4 py-2 text-[11px] flex flex-wrap items-center justify-between gap-2 shrink-0 select-none transition-colors"
+      className="border-t px-4 py-1.5 text-[11px] flex flex-wrap items-center justify-between gap-2 shrink-0 select-none transition-colors"
       style={{
         backgroundColor: 'var(--agv-bg-header)',
         borderColor: 'var(--agv-border)',
@@ -86,12 +90,35 @@ export const PageFooter: React.FC<PageFooterProps> = ({
             </strong>
           </span>
         )}
-        <span>
-          Đã chọn:{' '}
-          <strong style={{ color: 'var(--agv-text-main)' }}>
-            {checkedRowCount.toLocaleString('vi-VN')} dòng
-          </strong>
-        </span>
+        {checkedRowCount > 0 && onToggleFilterCheckedOnly ? (
+          <button
+            type="button"
+            onClick={onToggleFilterCheckedOnly}
+            className={`min-h-[28px] h-7 px-2 rounded flex items-center gap-1 transition cursor-pointer select-none ${
+              isFilterCheckedOnly
+                ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-bold'
+                : 'bg-transparent text-[var(--agv-text-muted)] hover:bg-[var(--agv-bg-item-hover)]'
+            }`}
+          >
+            <span>Đã chọn:</span>
+            <strong
+              style={{
+                color: isFilterCheckedOnly
+                  ? 'var(--agv-accent-text, #ffffff)'
+                  : 'var(--agv-text-main)',
+              }}
+            >
+              {checkedRowCount.toLocaleString('vi-VN')} dòng
+            </strong>
+          </button>
+        ) : (
+          <span>
+            Đã chọn:{' '}
+            <strong style={{ color: 'var(--agv-text-main)' }}>
+              {checkedRowCount.toLocaleString('vi-VN')} dòng
+            </strong>
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <span>

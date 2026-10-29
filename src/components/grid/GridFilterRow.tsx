@@ -68,17 +68,21 @@ export interface GridFilterRowProps<T = any> {
   getColumnDateBounds?: (colKey: string) => { min: string; max: string };
   headerTopOffset?: number;
   columnSums?: Record<string, number>;
+  hasCheckedRows?: boolean;
   emptyColKeys?: Set<string>;
   groupByColumnKey?: string | null;
   quickFilterText?: string;
   sortConfig?: SortConfig | null;
   groupSortConfig?: GroupSortConfig | null;
   appliedQueryTree?: any;
+  pinnedRows?: Array<{ rowKey: string | number; rowIndex: number; row: any }>;
   onUngroup?: () => void;
   onSortChange?: (sort: SortConfig | null) => void;
   onToggleGroupSort?: (colKey: string) => void;
   onQuickFilterTextChange?: (text: string) => void;
   onApplyQueryTree?: (tree: any) => void;
+  onUnpinRow?: (rowKey: string | number) => void;
+  onClearPinnedRows?: () => void;
 }
 
 /**
@@ -349,7 +353,8 @@ export const SmartNumberFilterInput: React.FC<{
   onClear?: () => void;
   placeholder?: string;
   hasValue?: boolean;
-}> = ({ value, onChange, onFocus, onBlur, onClear, placeholder, hasValue }) => {
+  isHighlightPlaceholder?: boolean;
+}> = ({ value, onChange, onFocus, onBlur, onClear, placeholder, hasValue, isHighlightPlaceholder }) => {
   const [localVal, setLocalVal] = useState(value || '');
 
   useEffect(() => {
@@ -399,9 +404,11 @@ export const SmartNumberFilterInput: React.FC<{
         onKeyDown={handleNumericKeyDown}
         placeholder={placeholder}
         {...NO_AUTOFILL_PROPS}
-        className={`w-full h-full bg-transparent px-1 text-[11px] outline-none border-none placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 tabular-nums disabled:cursor-not-allowed ${
-          hasValue ? 'pr-5' : 'pr-1'
-        }`}
+        className={`w-full h-full bg-transparent px-1 text-[11px] outline-none border-none tabular-nums disabled:cursor-not-allowed ${
+          isHighlightPlaceholder
+            ? 'placeholder:text-[var(--agv-accent)] placeholder:opacity-100 placeholder:font-semibold'
+            : 'placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60'
+        } ${hasValue ? 'pr-5' : 'pr-1'}`}
         style={{
           color: 'var(--agv-text-main)',
           minHeight: '28px',
@@ -442,17 +449,21 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
   getColumnDateBounds,
   headerTopOffset = 64,
   columnSums = {},
+  hasCheckedRows = false,
   emptyColKeys,
   groupByColumnKey,
   quickFilterText,
   sortConfig,
   groupSortConfig,
   appliedQueryTree,
+  pinnedRows = [],
   onUngroup,
   onSortChange,
   onToggleGroupSort,
   onQuickFilterTextChange,
   onApplyQueryTree,
+  onUnpinRow,
+  onClearPinnedRows,
 }) => {
   // Quản lý popup tập hợp tiêu chí đang áp dụng (STT cell)
   const [isSummaryPopupOpen, setIsSummaryPopupOpen] = useState(false);
@@ -485,6 +496,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
     if (sortConfig && sortConfig.key) count += 1;
     if (groupSortConfig && groupSortConfig.colKey) count += 1;
     if (appliedQueryTree && hasActiveQueryRules(appliedQueryTree)) count += 1;
+    if (pinnedRows && pinnedRows.length > 0) count += pinnedRows.length;
     return count;
   }, [
     activeFilterCount,
@@ -493,6 +505,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
     sortConfig,
     groupSortConfig,
     appliedQueryTree,
+    pinnedRows,
   ]);
 
   // Quản lý popup chọn toán tử đang mở
@@ -1112,6 +1125,9 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
                         onClear={() => handleClearColFilter(col.key)}
                         placeholder={placeholderText}
                         hasValue={hasActiveVal}
+                        isHighlightPlaceholder={Boolean(
+                          hasCheckedRows && columnSums && columnSums[col.key] !== undefined && !isNoInputOp
+                        )}
                       />
                     )
                   ) : (
@@ -1250,6 +1266,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
           sortConfig={sortConfig}
           groupSortConfig={groupSortConfig}
           appliedQueryTree={appliedQueryTree}
+          pinnedRows={pinnedRows}
           onClearRowFilter={(colKey) => handleClearColFilter(colKey)}
           onClearChecklistFilter={(colKey) => {
             const current = columnFilters[colKey];
@@ -1264,7 +1281,9 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = ({
           onClearSortRow={() => onSortChange?.(null)}
           onClearSortGroup={() => onToggleGroupSort?.('')}
           onClearQueryTree={() => onApplyQueryTree?.(null)}
+          onUnpinRow={onUnpinRow}
           onClearAll={() => {
+            onClearPinnedRows?.();
             if (onClearAllCriteria) {
               onClearAllCriteria();
             } else {

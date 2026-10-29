@@ -43,6 +43,7 @@ import {
   getRowValueForSortGeneric,
   getColumnDateBoundsFromGetter,
   isNoInputFilterOp,
+  createEqualsFilter,
 } from './components/grid/gridUtils';
 
 const DEFAULT_CHUNK_SIZE = 20;
@@ -513,20 +514,143 @@ export function App() {
     }
   }, []);
 
-  // Toggle check row
+  const lastCheckedRowRef = useRef<{ displayIdx: number; origIdx: number } | null>(null);
+  const activeRowIndicesRef = useRef<number[] | null>(null);
+
+  // Toggle check row (hỗ trợ Shift + Click chọn/bỏ chọn dải dòng liên tiếp theo thứ tự đang hiển thị)
   const handleToggleCheck = useCallback(
     (rowIndex: number, row: any, e: React.MouseEvent) => {
       e.stopPropagation();
       const origIdx = row?.originalIndex !== undefined ? row.originalIndex : rowIndex;
+      const dispIdx = typeof row?.rowIndex === 'number' && row.rowIndex >= 0 ? row.rowIndex : rowIndex;
+
       setCheckedRowIndices((prev) => {
         const next = new Set(prev);
-        if (next.has(origIdx)) next.delete(origIdx);
-        else next.add(origIdx);
+        const shouldCheck = !next.has(origIdx);
+
+        if (e?.shiftKey && lastCheckedRowRef.current !== null) {
+          const prevInfo = lastCheckedRowRef.current;
+          const gModel = groupedDisplayModelRef.current;
+
+          if (gModel && gModel.length > 0) {
+            const curD =
+              dispIdx >= 0 &&
+              gModel[dispIdx] &&
+              !gModel[dispIdx]._isGroupRow &&
+              gModel[dispIdx].originalIndex === origIdx
+                ? dispIdx
+                : gModel.findIndex((it) => it && !it._isGroupRow && it.originalIndex === origIdx);
+            const prevD =
+              prevInfo.displayIdx >= 0 &&
+              gModel[prevInfo.displayIdx] &&
+              !gModel[prevInfo.displayIdx]._isGroupRow &&
+              gModel[prevInfo.displayIdx].originalIndex === prevInfo.origIdx
+                ? prevInfo.displayIdx
+                : gModel.findIndex((it) => it && !it._isGroupRow && it.originalIndex === prevInfo.origIdx);
+
+            if (curD >= 0 && prevD >= 0) {
+              const start = Math.min(prevD, curD);
+              const end = Math.max(prevD, curD);
+              for (let i = start; i <= end; i++) {
+                const it = gModel[i];
+                if (it && !it._isGroupRow) {
+                  const rOrig = it.originalIndex !== undefined ? it.originalIndex : it;
+                  if (shouldCheck) next.add(rOrig);
+                  else next.delete(rOrig);
+                }
+              }
+            } else {
+              if (shouldCheck) next.add(origIdx);
+              else next.delete(origIdx);
+            }
+          } else {
+            const activeArr = activeRowIndicesRef.current;
+            if (activeArr) {
+              const curD =
+                dispIdx >= 0 && activeArr[dispIdx] === origIdx
+                  ? dispIdx
+                  : activeArr.indexOf(origIdx);
+              const prevD =
+                prevInfo.displayIdx >= 0 && activeArr[prevInfo.displayIdx] === prevInfo.origIdx
+                  ? prevInfo.displayIdx
+                  : activeArr.indexOf(prevInfo.origIdx);
+
+              if (curD >= 0 && prevD >= 0) {
+                const start = Math.min(prevD, curD);
+                const end = Math.max(prevD, curD);
+                for (let i = start; i <= end; i++) {
+                  const rOrig = activeArr[i];
+                  if (shouldCheck) next.add(rOrig);
+                  else next.delete(rOrig);
+                }
+              } else {
+                if (shouldCheck) next.add(origIdx);
+                else next.delete(origIdx);
+              }
+            } else {
+              const start = Math.min(prevInfo.origIdx, origIdx);
+              const end = Math.max(prevInfo.origIdx, origIdx);
+              for (let r = start; r <= end; r++) {
+                if (shouldCheck) next.add(r);
+                else next.delete(r);
+              }
+            }
+          }
+        } else {
+          if (shouldCheck) next.add(origIdx);
+          else next.delete(origIdx);
+        }
+
+        if (next.size === 0) {
+          setColumnFilters((prevFilters) => {
+            if (prevFilters['col_chk']?.val === CHECK_FILTER_STATES.CHECKED) {
+              const nextFilters = { ...prevFilters };
+              delete nextFilters['col_chk'];
+              return nextFilters;
+            }
+            return prevFilters;
+          });
+        }
         return next;
       });
+
+      lastCheckedRowRef.current = {
+        displayIdx: dispIdx >= 0 ? dispIdx : origIdx,
+        origIdx,
+      };
     },
     []
   );
+
+  // Bỏ chọn tất cả dòng (từ menu chuột phải dòng)
+  const handleClearCheckedRows = useCallback(() => {
+    lastCheckedRowRef.current = null;
+    setCheckedRowIndices(new Set());
+    setColumnFilters((prevFilters) => {
+      if (prevFilters['col_chk']?.val === CHECK_FILTER_STATES.CHECKED) {
+        const nextFilters = { ...prevFilters };
+        delete nextFilters['col_chk'];
+        return nextFilters;
+      }
+      return prevFilters;
+    });
+  }, []);
+
+  // Toggle "Chỉ hiện các dòng đang chọn" từ PageFooter
+  const handleToggleFilterCheckedOnly = useCallback(() => {
+    if (checkedRowIndices.size === 0) return;
+    setColumnFilters((prev) => {
+      if (prev['col_chk']?.val === CHECK_FILTER_STATES.CHECKED) {
+        const next = { ...prev };
+        delete next['col_chk'];
+        return next;
+      }
+      return {
+        ...prev,
+        col_chk: createEqualsFilter(CHECK_FILTER_STATES.CHECKED),
+      };
+    });
+  }, [checkedRowIndices.size]);
 
   // Select row
   const handleSelectRow = useCallback(
@@ -941,6 +1065,7 @@ export function App() {
   }, [filteredRowIndices, sortConfig, totalRowCount, colMap, checkedRowIndices, chunkSize, apiData, formulaMode]);
 
   const activeRowIndices = displayRowIndices || filteredRowIndices;
+  activeRowIndicesRef.current = activeRowIndices;
   const totalFilteredRows = activeRowIndices ? activeRowIndices.length : totalRowCount;
 
   // Danh sách các cột số trong apiData phục vụ tính tổng cực tốc O(N)
@@ -1040,7 +1165,10 @@ export function App() {
   // TẦNG 2: Sắp xếp các nhóm & Chiếu mô hình hiển thị phẳng ảo hóa
   const groupedDisplayModel = useMemo(() => {
     const { groupEntries, colTitle } = baseGroupData;
-    if (!groupEntries || !groupByColumnKey) return null;
+    if (!groupEntries || !groupByColumnKey) {
+      groupedDisplayModelRef.current = null;
+      return null;
+    }
 
     let sortedEntries = [...groupEntries];
     if (groupSortConfig && groupSortConfig.colKey) {
@@ -1556,6 +1684,7 @@ export function App() {
           onSelectRow={handleSelectRow}
           checkedRowIndices={checkedRowIndices}
           onToggleCheck={handleToggleCheck}
+          onClearCheckedRows={handleClearCheckedRows}
           getRowId={(row) => ((row as any)?._isGroupRow ? (row as any).path : (row.originalIndex ?? row.id))}
           renderCell={renderCell}
           chunkSize={chunkSize}
@@ -1605,6 +1734,8 @@ export function App() {
         expandedGroupCount={expandedGroupPaths.size}
         displayedRowCount={groupedDisplayModel ? groupedDisplayModel.length : undefined}
         checkedRowCount={checkedRowIndices.size}
+        isFilterCheckedOnly={columnFilters['col_chk']?.val === CHECK_FILTER_STATES.CHECKED}
+        onToggleFilterCheckedOnly={handleToggleFilterCheckedOnly}
       />
     </div>
   );

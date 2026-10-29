@@ -272,6 +272,7 @@ export interface VirtualizedGridProps<T = any> {
   onSelectRow?: (rowIndex: number, row: T) => void;
   checkedRowIndices?: Set<number | string>;
   onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+  onClearCheckedRows?: () => void;
 
   // Inline Filter Row
   showFilterRow?: boolean;

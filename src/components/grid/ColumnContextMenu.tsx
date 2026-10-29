@@ -86,6 +86,8 @@ export interface ColumnContextMenuProps {
   pinnedRowCount?: number;
   onTogglePinRow?: () => void;
   onClearPinnedRows?: () => void;
+  checkedRowCount?: number;
+  onClearCheckedRows?: () => void;
   columns?: ColumnDef[];
   columnGroups?: BaseGroupDef[];
   // Grouping
@@ -129,6 +131,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   pinnedRowCount = 0,
   onTogglePinRow,
   onClearPinnedRows,
+  checkedRowCount = 0,
+  onClearCheckedRows,
   columns = [],
   columnGroups = [],
   groupByColumnKey,
@@ -1075,34 +1079,51 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
           </button>
         )}
 
-        {/* Ghim dòng lên đầu / Bỏ ghim dòng */}
-        {onTogglePinRow && !row?._isGroupRow && (
+        {/* Ghim dòng lên đầu / Bỏ ghim dòng & Bỏ chọn tất cả dòng */}
+        {((onTogglePinRow && !row?._isGroupRow) || (checkedRowCount > 0 && onClearCheckedRows)) && (
           <>
             <div className="my-1 border-b border-[var(--agv-border)]" />
-            <button
-              type="button"
-              onClick={() => {
-                onTogglePinRow();
-                onClose();
-              }}
-              className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)] ${
-                isRowPinned ? 'text-agv-accent font-semibold' : ''
-              }`}
-              style={isRowPinned ? undefined : { color: 'var(--agv-text-main)' }}
-            >
-              <span>{isRowPinned ? 'Bỏ ghim dòng' : 'Ghim dòng lên đầu'}</span>
-            </button>
-            {pinnedRowCount > 0 && onClearPinnedRows && (
+            {onTogglePinRow && !row?._isGroupRow && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTogglePinRow();
+                    onClose();
+                  }}
+                  className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)] ${
+                    isRowPinned ? 'text-agv-accent font-semibold' : ''
+                  }`}
+                  style={isRowPinned ? undefined : { color: 'var(--agv-text-main)' }}
+                >
+                  <span>{isRowPinned ? 'Bỏ ghim dòng' : 'Ghim dòng lên đầu'}</span>
+                </button>
+                {pinnedRowCount > 0 && onClearPinnedRows && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClearPinnedRows();
+                      onClose();
+                    }}
+                    className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+                    style={{ color: 'var(--agv-text-main)' }}
+                  >
+                    <span>Bỏ ghim tất cả dòng ({pinnedRowCount})</span>
+                  </button>
+                )}
+              </>
+            )}
+            {checkedRowCount > 0 && onClearCheckedRows && (
               <button
                 type="button"
                 onClick={() => {
-                  onClearPinnedRows();
+                  onClearCheckedRows();
                   onClose();
                 }}
                 className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
                 style={{ color: 'var(--agv-text-main)' }}
               >
-                <span>Bỏ ghim tất cả dòng ({pinnedRowCount})</span>
+                <span>Bỏ chọn tất cả dòng ({checkedRowCount.toLocaleString('vi-VN')})</span>
               </button>
             )}
           </>

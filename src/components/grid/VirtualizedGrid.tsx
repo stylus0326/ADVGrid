@@ -97,6 +97,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onSelectRow,
       checkedRowIndices,
       onToggleCheck,
+      onClearCheckedRows,
       renderCell,
       chunkSize = DEFAULT_CHUNK_SIZE,
       rowHeight = DEFAULT_ROW_HEIGHT,
@@ -990,6 +991,10 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       });
     }, [activeContextMenu, getRowKey]);
 
+    const handleUnpinRow = useCallback((rowKey: string | number) => {
+      setPinnedRows((prev) => prev.filter((p) => p.rowKey !== rowKey));
+    }, []);
+
     const handleClearPinnedRows = useCallback(() => {
       setPinnedRows([]);
     }, []);
@@ -1789,17 +1794,21 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
               getColumnDateBounds={effectiveGetColumnDateBounds}
               headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
               columnSums={columnSums}
+              hasCheckedRows={Boolean(checkedRowIndices && checkedRowIndices.size > 0)}
               emptyColKeys={emptyColKeys}
               groupByColumnKey={groupByColumnKey}
               quickFilterText={controlledQuickFilterText}
               sortConfig={sortConfig}
               groupSortConfig={groupSortConfig}
               appliedQueryTree={controlledAppliedQueryTree}
+              pinnedRows={pinnedRows}
               onUngroup={onUngroup}
               onSortChange={onSortChange}
               onToggleGroupSort={onToggleGroupSort}
               onQuickFilterTextChange={controlledOnQuickFilterTextChange}
               onApplyQueryTree={controlledOnApplyQueryTree}
+              onUnpinRow={handleUnpinRow}
+              onClearPinnedRows={handleClearPinnedRows}
             />
           )}
 
@@ -2011,6 +2020,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             pinnedRowCount={pinnedRows.length}
             onTogglePinRow={handleTogglePinContextMenuRow}
             onClearPinnedRows={handleClearPinnedRows}
+            checkedRowCount={checkedRowIndices ? checkedRowIndices.size : 0}
+            onClearCheckedRows={onClearCheckedRows}
             groupByColumnKey={groupByColumnKey}
             onToggleGroupByColumn={onToggleGroupByColumn}
             onCollapseAllGroups={onCollapseAllGroups}

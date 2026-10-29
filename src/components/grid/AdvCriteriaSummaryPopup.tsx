@@ -32,6 +32,7 @@ export interface AdvCriteriaSummaryPopupProps {
   sortConfig?: SortConfig | null;
   groupSortConfig?: GroupSortConfig | null;
   appliedQueryTree?: any;
+  pinnedRows?: Array<{ rowKey: string | number; rowIndex: number; row: any }>;
   onClearRowFilter?: (colKey: string) => void;
   onClearChecklistFilter?: (colKey: string) => void;
   onClearGroup?: () => void;
@@ -39,6 +40,7 @@ export interface AdvCriteriaSummaryPopupProps {
   onClearSortRow?: () => void;
   onClearSortGroup?: () => void;
   onClearQueryTree?: () => void;
+  onUnpinRow?: (rowKey: string | number) => void;
   onClearAll?: () => void;
 }
 
@@ -54,6 +56,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
   sortConfig,
   groupSortConfig,
   appliedQueryTree,
+  pinnedRows = [],
   onClearRowFilter,
   onClearChecklistFilter,
   onClearGroup,
@@ -61,6 +64,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
   onClearSortRow,
   onClearSortGroup,
   onClearQueryTree,
+  onUnpinRow,
   onClearAll,
 }) => {
   const popupRef = useRef<HTMLDivElement>(null);
@@ -237,6 +241,39 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
     return generateNaturalLanguage(appliedQueryTree, columns);
   }, [appliedQueryTree, columns]);
 
+  // 8. Dòng đang ghim
+  const pinnedRowItems = useMemo(() => {
+    if (!pinnedRows || pinnedRows.length === 0) return [];
+    const displayCols = columns.filter(
+      (c) =>
+        !c.isRowNumber &&
+        !c.isSelection &&
+        c.dataType !== DATA_TYPES.SYSTEM &&
+        !c.isChart
+    );
+    return pinnedRows.map((p) => {
+      const origIdx =
+        typeof p.row?.originalIndex === 'number' ? p.row.originalIndex : p.rowIndex;
+      const stt = origIdx + 1;
+      let valText = '';
+      for (const col of displayCols) {
+        const raw = p.row?.[col.key];
+        if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+          valText = String(raw).trim();
+          break;
+        }
+      }
+      if (!valText) {
+        valText = `${stt}`;
+      }
+      return {
+        rowKey: p.rowKey,
+        label: `Dòng #${stt}`,
+        valueText: valText,
+      };
+    });
+  }, [pinnedRows, columns]);
+
   // Tổng số tiêu chí đang active
   const totalActive = useMemo(() => {
     return (
@@ -246,9 +283,19 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
       (searchText ? 1 : 0) +
       (sortRowInfo ? 1 : 0) +
       (sortGroupInfo ? 1 : 0) +
-      (queryTreeText ? 1 : 0)
+      (queryTreeText ? 1 : 0) +
+      pinnedRowItems.length
     );
-  }, [groupText, rowFilterItems, checklistItems, searchText, sortRowInfo, sortGroupInfo, queryTreeText]);
+  }, [
+    groupText,
+    rowFilterItems,
+    checklistItems,
+    searchText,
+    sortRowInfo,
+    sortGroupInfo,
+    queryTreeText,
+    pinnedRowItems,
+  ]);
 
   if (!isOpen || !anchorRect) return null;
 
@@ -499,6 +546,37 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                       <X size={11} strokeWidth={2.5} />
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 8. Dòng đang ghim (Chỉ hiện khi có) */}
+            {pinnedRowItems.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="font-bold text-[11px] text-[var(--agv-text-muted)] uppercase tracking-wide">
+                  DÒNG ĐANG GHIM ({pinnedRowItems.length})
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {pinnedRowItems.map((item) => (
+                    <div
+                      key={String(item.rowKey)}
+                      className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden"
+                    >
+                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
+                        {item.label}
+                      </span>
+                      <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)] max-w-[180px] truncate">
+                        {item.valueText}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUnpinRow?.(item.rowKey)}
+                        className="min-h-[28px] min-w-[28px] h-7 w-7 flex items-center justify-center text-xs text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] hover:bg-[var(--agv-danger-bg,rgba(239,68,68,0.1))] transition cursor-pointer select-none border-l border-[var(--agv-border)]"
+                      >
+                        <X size={11} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

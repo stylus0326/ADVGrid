@@ -96,11 +96,13 @@ export const GridChunkBlock = memo(
 
     return (
       <div
+        data-agv-fullwidth="true"
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: `${totalGridWidth}px`,
+          width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
           height: `${chunkHeight}px`,
           transform: `translate3d(0px, ${topOffset}px, 0px)`,
           willChange: antiGhostMode ? 'transform' : undefined,

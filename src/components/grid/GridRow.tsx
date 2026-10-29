@@ -589,9 +589,14 @@ export const GridRow = memo(
               const isPinned = pinnedLeftWidth > 0;
               const hasDivider = (titleWidth + (hasSttCol ? sttWidth : 0)) === pinnedLeftWidth;
               const titleLeftPos = hasSttCol ? sttWidth : 0;
+              const spannedColKeys = columns
+                .slice(titleStartIdx, titleStartIdx + titleColSpan)
+                .map((c) => c.key)
+                .join(',');
               return (
                 <div
                   key="group_title_cell"
+                  data-group-span-keys={spannedColKeys}
                   style={{
                     position: isPinned ? 'sticky' : undefined,
                     left: isPinned ? `${titleLeftPos}px` : undefined,
@@ -664,6 +669,7 @@ export const GridRow = memo(
             return (
               <div
                 key={col.key}
+                data-col-key={col.key}
                 style={{
                   ...stickyStyle,
                   backgroundColor: 'var(--agv-group-row-bg, var(--agv-bg-card, var(--agv-bg-root)))',
@@ -932,6 +938,7 @@ export const GridRow = memo(
           return (
             <div
               key={col.key}
+              data-col-key={col.key}
               data-cell-role={isEmptyCol ? undefined : cellRole}
               style={stickyStyle}
               onClick={(e) => {

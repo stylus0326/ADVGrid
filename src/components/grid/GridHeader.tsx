@@ -100,11 +100,20 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
     disabled = false,
     blockedSourceKeys?: Set<string>
   ) => {
-    const canDrag = !disabled && Boolean(onReorderColumns);
+    const isResizingActive =
+      typeof document !== 'undefined' &&
+      (document.documentElement.getAttribute('data-agv-resizing') === 'true' ||
+        document.body.classList.contains('agv-resizing-column'));
+    const canDrag = !disabled && Boolean(onReorderColumns) && !isResizingActive;
     return {
       draggable: canDrag,
       onDragStart: (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDrag) {
+        if (
+          !canDrag ||
+          (typeof document !== 'undefined' &&
+            (document.documentElement.getAttribute('data-agv-resizing') === 'true' ||
+              document.body.classList.contains('agv-resizing-column')))
+        ) {
           e.preventDefault();
           return;
         }
@@ -226,18 +235,26 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           </div>
         )}
 
-        {/* Thanh kéo độ rộng cột (col resize handle) */}
+        {/* Thanh kéo độ rộng cột (col resize handle) - vùng bắt chuột 9px cân tâm viền phải */}
         {col.resizable !== false && !isSystemCol && (
           <div
+            data-col-resize-handle={col.key}
             draggable={false}
             onDragStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
             }}
-            onMouseDown={(e) => onMouseDownResize(col.key, e)}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute -right-[3px] top-0 bottom-0 w-[7px] cursor-col-resize z-50 hover:bg-[var(--agv-accent)]/40 active:bg-[var(--agv-accent)] transition-colors"
-          />
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onMouseDownResize(col.key, e);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            className="agv-col-resize-handle absolute -right-[4px] top-0 bottom-0 w-[9px] cursor-col-resize z-50 flex items-center justify-center group/resize"
+          >
+            <span className="w-[2px] h-full transition-colors group-hover/resize:bg-[var(--agv-accent)] group-active/resize:bg-[var(--agv-accent)]" />
+          </div>
         )}
       </>
     );
@@ -245,8 +262,11 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
 
   return (
     <div
+      data-agv-header-root="true"
+      data-agv-fullwidth="true"
       style={{
-        width: `${totalGridWidth}px`,
+        width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+        minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
         transform: 'translateZ(0)',
         height: headerHStr,
         backgroundColor: 'var(--agv-bg-header)',
@@ -270,6 +290,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         return (
           <div
             key={`left_${col.key}`}
+            data-col-key={col.key}
             {...createDragProps(col.key, isSystemCol)}
             onClick={() => col.sortable !== false && onToggleSort(col.key)}
             onContextMenu={(e) => {
@@ -280,10 +301,12 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               }
             }}
             style={{
-              width: `${width}px`,
+              width: `var(--agv-col-w-${col.key}, ${width}px)`,
+              minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+              maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
               height: headerHStr,
               position: 'sticky',
-              left: `${leftOffsets[col.key]}px`,
+              left: `var(--agv-left-offset-${col.key}, ${leftOffsets[col.key]}px)`,
               backgroundColor: 'var(--agv-bg-header)',
               color: 'var(--agv-text-header, var(--agv-text-main))',
             }}
@@ -313,14 +336,16 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
 
           const stickyHeaderStyle: React.CSSProperties = {
-            width: `${width}px`,
+            width: `var(--agv-col-w-${col.key}, ${width}px)`,
+            minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+            maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
             height: headerHStr,
             backgroundColor: 'var(--agv-bg-header)',
             color: 'var(--agv-text-header, var(--agv-text-main))',
             ...(isDockedLeft
-              ? { position: 'sticky', left: `${centerLeftOffsets[col.key]}px`, zIndex: 40 }
+              ? { position: 'sticky', left: `var(--agv-center-left-offset-${col.key}, ${centerLeftOffsets[col.key]}px)`, zIndex: 40 }
               : isDockedRight
-              ? { position: 'sticky', right: `${centerRightOffsets[col.key]}px`, zIndex: 40 }
+              ? { position: 'sticky', right: `var(--agv-center-right-offset-${col.key}, ${centerRightOffsets[col.key]}px)`, zIndex: 40 }
               : {}),
           };
 
@@ -338,6 +363,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           return (
             <div
               key={`mid_standalone_${col.key}`}
+              data-col-key={col.key}
               {...createDragProps(col.key, isSystemCol)}
               onClick={() => col.sortable !== false && onToggleSort(col.key)}
               onContextMenu={(e) => {
@@ -367,17 +393,21 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           const childKeySet = new Set(childCols.map((c) => c.key));
           const isBandDragOver = dragOverColKey === group.id;
 
+          const groupWidthCalc = `calc(${childCols.map((c) => `var(--agv-col-w-${c.key}, ${colWidths[c.key] || c.defaultWidth}px)`).join(' + ')})`;
+
           return (
             <div
               key={elem.segmentKey}
-              style={{ width: `${groupWidth}px`, height: '64px' }}
+              data-band-key={group.id}
+              style={{ width: groupWidthCalc, minWidth: groupWidthCalc, height: '64px' }}
               className="flex flex-col shrink-0 relative z-10 select-none box-border h-[64px] min-h-[64px] max-h-[64px]"
             >
               {/* Tầng 1: Tiêu đề nhóm */}
               <div
                 {...createDragProps(group.id, false, childKeySet)}
                 style={{
-                  width: `${groupWidth}px`,
+                  width: groupWidthCalc,
+                  minWidth: groupWidthCalc,
                   height: '32px',
                   backgroundColor: 'var(--agv-bg-header)',
                   color: 'var(--agv-text-header, var(--agv-text-main))',
@@ -443,7 +473,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
 
               {/* Tầng 2: Cột con */}
               <div
-                style={{ width: `${groupWidth}px`, height: '32px' }}
+                style={{ width: groupWidthCalc, minWidth: groupWidthCalc, height: '32px' }}
                 className="flex items-center shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px]"
               >
                 {childCols.map((col) => {
@@ -455,6 +485,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                   return (
                     <div
                       key={col.key}
+                      data-col-key={col.key}
+                      data-tier2-col-key={col.key}
                       {...createDragProps(col.key, isSystemCol, new Set([group.id]))}
                       onClick={() => col.sortable !== false && onToggleSort(col.key)}
                       onContextMenu={(e) => {
@@ -465,7 +497,9 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                         }
                       }}
                       style={{
-                        width: `${width}px`,
+                        width: `var(--agv-col-w-${col.key}, ${width}px)`,
+                        minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+                        maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
                         height: '32px',
                         backgroundColor: 'var(--agv-bg-header)',
                         color: 'var(--agv-text-header, var(--agv-text-main))',
@@ -498,6 +532,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         return (
           <div
             key={`right_${col.key}`}
+            data-col-key={col.key}
             {...createDragProps(col.key, isSystemCol)}
             onClick={() => col.sortable !== false && onToggleSort(col.key)}
             onContextMenu={(e) => {
@@ -508,10 +543,12 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               }
             }}
             style={{
-              width: `${width}px`,
+              width: `var(--agv-col-w-${col.key}, ${width}px)`,
+              minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+              maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
               height: headerHStr,
               position: 'sticky',
-              right: `${rightOffsets[col.key]}px`,
+              right: `var(--agv-right-offset-${col.key}, ${rightOffsets[col.key]}px)`,
               backgroundColor: 'var(--agv-bg-header)',
               color: 'var(--agv-text-header, var(--agv-text-main))',
             }}

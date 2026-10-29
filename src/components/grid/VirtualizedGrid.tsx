@@ -801,6 +801,38 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       return midElements;
     }, [effectiveColumnGroups, middleColumns, columnPins, activeColKeys, colMap, centerDockStatus, hiddenColKeys]);
 
+    // CSS Variables for Live Column Widths & Offsets (Zero React re-render during drag resize)
+    const gridColVars = useMemo<React.CSSProperties>(() => {
+      const vars: Record<string, string> = {};
+      flatColumns.forEach((col) => {
+        const w = colWidths[col.key] || col.defaultWidth;
+        vars[`--agv-col-w-${col.key}`] = `${w}px`;
+      });
+      vars['--agv-total-grid-w'] = `${totalGridWidth}px`;
+      leftColumns.forEach((col) => {
+        vars[`--agv-left-offset-${col.key}`] = `${leftOffsets[col.key]}px`;
+      });
+      rightColumns.forEach((col) => {
+        vars[`--agv-right-offset-${col.key}`] = `${rightOffsets[col.key]}px`;
+      });
+      centerPinnedColKeys.forEach((key) => {
+        vars[`--agv-center-left-offset-${key}`] = `${centerLeftOffsets[key]}px`;
+        vars[`--agv-center-right-offset-${key}`] = `${centerRightOffsets[key]}px`;
+      });
+      return vars as unknown as React.CSSProperties;
+    }, [
+      flatColumns,
+      colWidths,
+      totalGridWidth,
+      leftColumns,
+      leftOffsets,
+      rightColumns,
+      rightOffsets,
+      centerPinnedColKeys,
+      centerLeftOffsets,
+      centerRightOffsets,
+    ]);
+
     // Column Resizing Hook
     const { handleMouseDownResize, resizingRef } = useColumnResize({
       colMap,
@@ -2072,7 +2104,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         ref={containerRef}
         data-theme={surfaceTheme}
         className={`relative flex-1 flex flex-col min-h-0 overflow-hidden agv-grid-root ${isFullscreen ? 'agv-grid-fullscreen' : ''} ${getThemeClass(surfaceTheme)} ${className}`}
-        style={style}
+        style={{ ...gridColVars, ...style }}
         onContextMenu={(e) => {
           // Vô hiệu hóa chuột phải mặc định của trình duyệt trong Grid
           e.preventDefault();
@@ -2168,13 +2200,15 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {/* Sticky Pinned Rows (Ghim dòng cố định trên đầu bảng) */}
           {pinnedRows.length > 0 && (
             <div
+              data-agv-fullwidth="true"
               style={{
                 position: 'sticky',
                 top: `${
                   (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
                   (showFilterRow ? 34 : 0)
                 }px`,
-                width: `${totalGridWidth}px`,
+                width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+                minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 zIndex: 19,
                 backgroundColor: 'var(--agv-bg-root)',
               }}
@@ -2244,6 +2278,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {/* Sticky Group Header (Dính tiêu đề nhóm trên đỉnh khi cuộn dọc) */}
           {stickyGroupRow && (stickyGroupRow as any)._isGroupRow && stickyGroupRowIndex !== null && (
             <div
+              data-agv-fullwidth="true"
               style={{
                 position: 'sticky',
                 top: `${
@@ -2251,7 +2286,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                   (showFilterRow ? 34 : 0) +
                   pinnedRows.length * actualRowHeight
                 }px`,
-                width: `${totalGridWidth}px`,
+                width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+                minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 height: 0,
                 overflow: 'visible',
                 zIndex: 18,
@@ -2295,9 +2331,11 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {/* Virtualized Rows Canvas */}
           <div
             className="agv-rows-canvas"
+            data-agv-fullwidth="true"
             style={{
               height: `${totalContentHeight}px`,
-              width: `${totalGridWidth}px`,
+              width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+              minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
               position: 'relative',
             }}
           >

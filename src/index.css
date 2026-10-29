@@ -728,3 +728,59 @@ body, button, input, select, textarea {
   -webkit-user-drag: element;
 }
 
+
+/* Khóa cursor: col-resize, user-select: none trên body và tắt draggable khi đang nhấn giữ vạch resize */
+body.agv-resizing-column,
+body.agv-resizing-column * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.agv-resizing-column .agv-grid-root * {
+  pointer-events: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+body.agv-resizing-column [draggable="true"] {
+  -webkit-user-drag: none !important;
+}
+
+/* Cô lập hoàn toàn thanh kéo độ rộng cột khỏi sự kiện drag của ô Header cha để chuột kéo mượt 120fps */
+.agv-col-resize-handle {
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+  touch-action: none;
+}
+
+/* Khóa con trỏ chuột toàn cục và tắt hiệu ứng hover phụ khi đang kéo giãn độ rộng cột */
+html[data-agv-resizing="true"],
+html[data-agv-resizing="true"] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+html[data-agv-resizing="true"] [draggable="true"] {
+  -webkit-user-drag: none !important;
+}
+
+.agv-col-resize-handle[data-resizing-active="true"] > span {
+  background-color: var(--agv-accent) !important;
+}
+
+/* Cô lập phạm vi layout của từng dòng dữ liệu / dòng nhóm giúp giảm tối đa chi phí reflow khi kéo giãn độ rộng cột */
+.agv-grid-row,
+.agv-group-row {
+  contain: layout style;
+}
+
+/* Khóa hit-testing & transition phụ trên thân bảng khi đang kéo giãn độ rộng cột để chuột di chuyển 120fps mượt tuyệt đối */
+html[data-agv-resizing="true"] .agv-scroll-viewport {
+  pointer-events: none !important;
+}
+
+html[data-agv-resizing="true"] .agv-scroll-viewport * {
+  transition: none !important;
+}
+

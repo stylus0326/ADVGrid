@@ -4,7 +4,18 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Tối Ưu Hóa Chuyển Dòng Chọn O(1) (`selectedDisplayIndexHintRef` & Range-Aware Chunk Memo), Kéo Giãn Cột `requestAnimationFrame` & Bảo Toàn `React.memo` Cho `GridFloatingToolbar`
+## 🕒 Lần 3 (Mới nhất): Bổ Sung Hiệu Ứng Xuất Hiện Tinh Tế Cho Dòng Ảo Hóa Mới (`agv-row-enter`)
+- **Thời gian**: 2026-10-29 01:12
+- **Files thay đổi**:
+  - `src/index.css` (636 dòng):
+    - Bổ sung `@keyframes agv-row-enter` và class `.agv-row-enter` (Dòng 620 - 634): Hiệu ứng lướt nhẹ `opacity: 0.72 -> 1` và `translateY(3px) -> none` trong `140ms cubic-bezier(0.16, 1, 0.3, 1)` (không giữ `transform` sau khi kết thúc để bảo toàn 100% `position: sticky` của các cột ghim).
+  - `src/components/grid/GridRow.tsx` (998 dòng):
+    - Gắn class `agv-row-enter` kèm độ trễ phân tầng nhẹ theo vị trí dòng trong chunk (`animationDelay: ${(rowIndex % 20) * 4}ms`) cho cả dòng tiêu đề nhóm và dòng dữ liệu chuẩn (Dòng 546 - 548, 686 - 688).
+  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng cho `GridRow.tsx` và `index.css`.
+
+---
+
+## 🕒 Lần 2: Tối Ưu Hóa Chuyển Dòng Chọn O(1) (`selectedDisplayIndexHintRef` & Range-Aware Chunk Memo), Kéo Giãn Cột `requestAnimationFrame` & Bảo Toàn `React.memo` Cho `GridFloatingToolbar`
 - **Thời gian**: 2026-10-29 01:06
 - **Files thay đổi**:
   - `src/components/grid/GridChunkBlock.tsx` (244 dòng):
@@ -19,23 +30,9 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
+## 🕒 Lần 1: Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
 - **Thời gian**: 2026-10-29 00:49
 - **Files thay đổi**:
   - `src/components/grid/VirtualizedGrid.tsx` (2204 dòng):
     - Bổ sung `windowAccumDistanceRef` và `windowStartTimeRef` (Dòng 1347 - 1348, 1618 - 1692): Tích lũy tổng quãng đường cuộn `dy` trên toàn bộ cửa sổ 120ms (`windowAccumDistanceRef.current / measureDt * 1000`) thay vì chỉ lấy `dy / dt` của 1 frame 16ms cuối cùng; giữ ổn định tốc độ chuẩn `autoScrollSpeed * 60` (`1,920 px/s`) khi đang chạy `autoScrolling` và tự động đưa vận tốc hiển thị về `0 px/s` ngay khi tắt `autoScrolling` (Dòng 1554 - 1568).
   - `code_index.js`: Cập nhật đồng bộ số dòng `VirtualizedGrid.tsx`.
-
----
-
-## 🕒 Lần 1: Khắc Phục Triệt Để Hiện Tượng Khựng Khi Test Cuộn Cao Tốc (`chunkRowsCacheRef`, `WeakMap` 12 Tháng & `React.memo` Toàn Diện)
-- **Thời gian**: 2026-10-29 00:41
-- **Files thay đổi**:
-  - `src/components/grid/VirtualizedGrid.tsx` (2152 dòng):
-    - **Cache mảng dòng theo Chunk (`chunkRowsCacheRef`)** (Dòng 1679 - 1725): Giữ nguyên 100% tham chiếu mảng `chunkRows` và từng object `row` cho các chunk đã nằm trên màn hình khi cuộn sang chunk mới.
-    - **Tối ưu vòng lặp `autoScrolling` & `handleScroll`** (Dòng 73 - 85, 1514 - 1656): Cuộn mượt theo thời gian thực `dt` 60–144Hz, dùng `totalContentHeight` thay vì đọc `el.scrollHeight` gây Forced Synchronous Reflow; cache kết quả `isAnyPopupActive()` trong 64ms; bọc `React.memo` cho `VirtualizedGrid`.
-  - `src/App.tsx` (1801 dòng):
-    - **Cache thống kê 12 tháng bằng `WeakMap` (`monthStatsCacheRef`)** (Dòng 1407 - 1480) và **cố định `handleGetRowId` bằng `useCallback`** (Dòng 1585 - 1588, 1738).
-  - `src/components/grid/GridHeader.tsx` (538 dòng) & `src/components/grid/GridFilterRow.tsx` (1298 dòng):
-    - Bọc `React.memo` cho `GridHeader` và `GridFilterRow`.
-  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.

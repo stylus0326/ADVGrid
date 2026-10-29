@@ -616,3 +616,20 @@ body, button, input, select, textarea {
   animation: agv-tooltip-spring-down 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   will-change: transform, opacity;
 }
+
+/* Subtle Virtualized Row Entry Animation */
+@keyframes agv-row-enter {
+  0% {
+    opacity: 0.72;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.agv-row-enter {
+  animation: agv-row-enter 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+

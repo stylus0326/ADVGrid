@@ -543,8 +543,9 @@ export const GridRow = memo(
             width: `${totalRowWidth}px`,
             backgroundColor: 'var(--agv-bg-card, rgba(0,0,0,0.03))',
             borderColor: 'var(--agv-border)',
+            animationDelay: `${(rowIndex % 20) * 4}ms`,
           }}
-          className="group flex items-center cursor-pointer select-none box-border min-h-[32px] max-h-[32px] font-semibold text-xs border-b border-[var(--agv-border)] transition-colors hover:bg-[var(--agv-bg-hover)]"
+          className="agv-row-enter group flex items-center cursor-pointer select-none box-border min-h-[32px] max-h-[32px] font-semibold text-xs border-b border-[var(--agv-border)] transition-colors hover:bg-[var(--agv-bg-hover)]"
         >
           {columns.map((col, cIdx) => {
             // Cột đầu tiên là STT (Bộ đếm nhóm [1], [2]...)
@@ -684,8 +685,9 @@ export const GridRow = memo(
         style={{
           height: `${rowHeight}px`,
           width: `${totalRowWidth}px`,
+          animationDelay: `${(rowIndex % 20) * 4}ms`,
         }}
-        className={`group flex items-center ${baseBg} ${theme.defaultTextColor} cursor-default select-none box-border min-h-[32px] max-h-[32px]`}
+        className={`agv-row-enter group flex items-center ${baseBg} ${theme.defaultTextColor} cursor-default select-none box-border min-h-[32px] max-h-[32px]`}
       >
         {columns.map((col) => {
           const width = colWidths[col.key] || col.defaultWidth;

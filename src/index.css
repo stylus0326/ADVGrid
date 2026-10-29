@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -57,29 +55,6 @@
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
-
-  /* Cầu nối biến hệ thống AGV đồng bộ 100% với biến chuẩn tweakcn */
-  --agv-accent: var(--primary);
-  --agv-accent-text: var(--primary-foreground);
-  --agv-accent-hover: var(--primary);
-  --agv-bg-root: var(--background);
-  --agv-text-main: var(--foreground);
-  --agv-border: var(--border);
-  --agv-border-strong: var(--border);
-  --agv-bg-header: var(--card);
-  --agv-bg-row: var(--background);
-  --agv-bg-row-alt: var(--card);
-  --agv-bg-hover: var(--muted);
-  --agv-bg-selected: var(--secondary);
-  --agv-bg-popup: var(--popover);
-  --agv-bg-control: var(--card);
-  --agv-bg-control-hover: var(--accent);
-  --agv-bg-item-hover: var(--accent);
-  --agv-bg-item-active: var(--secondary);
-  --agv-text-header: var(--card-foreground);
-  --agv-text-muted: var(--muted-foreground);
-  --agv-text-subtle: var(--muted-foreground);
-  --agv-text-active: var(--primary);
 }
 
 .dark {
@@ -133,29 +108,6 @@
   --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
   --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
-
-  /* Cầu nối biến hệ thống AGV cho Dark mode */
-  --agv-accent: var(--primary);
-  --agv-accent-text: var(--primary-foreground);
-  --agv-accent-hover: var(--primary);
-  --agv-bg-root: var(--background);
-  --agv-text-main: var(--foreground);
-  --agv-border: var(--border);
-  --agv-border-strong: var(--border);
-  --agv-bg-header: var(--card);
-  --agv-bg-row: var(--background);
-  --agv-bg-row-alt: var(--card);
-  --agv-bg-hover: var(--muted);
-  --agv-bg-selected: var(--secondary);
-  --agv-bg-popup: var(--popover);
-  --agv-bg-control: var(--card);
-  --agv-bg-control-hover: var(--accent);
-  --agv-bg-item-hover: var(--accent);
-  --agv-bg-item-active: var(--secondary);
-  --agv-text-header: var(--card-foreground);
-  --agv-text-muted: var(--muted-foreground);
-  --agv-text-subtle: var(--muted-foreground);
-  --agv-text-active: var(--primary);
 }
 
 @theme inline {
@@ -213,13 +165,60 @@
 
 @layer base {
   * {
-    border-color: var(--border);
-    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+    @apply border-border outline-ring/50;
   }
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
   }
+}
+
+/* Cầu nối hai chiều: Tự động ánh xạ các biến chuẩn Tweakcn sang hệ thống Grid Engine */
+:root {
+  --agv-accent: var(--primary);
+  --agv-accent-text: var(--primary-foreground);
+  --agv-accent-hover: var(--primary);
+  --agv-bg-root: var(--background);
+  --agv-text-main: var(--foreground);
+  --agv-border: var(--border);
+  --agv-border-strong: var(--border);
+  --agv-bg-header: var(--card);
+  --agv-bg-row: var(--background);
+  --agv-bg-row-alt: var(--card);
+  --agv-bg-hover: var(--muted);
+  --agv-bg-selected: var(--secondary);
+  --agv-bg-popup: var(--popover);
+  --agv-bg-control: var(--card);
+  --agv-bg-control-hover: var(--accent);
+  --agv-bg-item-hover: var(--accent);
+  --agv-bg-item-active: var(--secondary);
+  --agv-text-header: var(--card-foreground);
+  --agv-text-muted: var(--muted-foreground);
+  --agv-text-subtle: var(--muted-foreground);
+  --agv-text-active: var(--primary);
+}
+
+.dark {
+  --agv-accent: var(--primary);
+  --agv-accent-text: var(--primary-foreground);
+  --agv-accent-hover: var(--primary);
+  --agv-bg-root: var(--background);
+  --agv-text-main: var(--foreground);
+  --agv-border: var(--border);
+  --agv-border-strong: var(--border);
+  --agv-bg-header: var(--card);
+  --agv-bg-row: var(--background);
+  --agv-bg-row-alt: var(--card);
+  --agv-bg-hover: var(--muted);
+  --agv-bg-selected: var(--secondary);
+  --agv-bg-popup: var(--popover);
+  --agv-bg-control: var(--card);
+  --agv-bg-control-hover: var(--accent);
+  --agv-bg-item-hover: var(--accent);
+  --agv-bg-item-active: var(--secondary);
+  --agv-text-header: var(--card-foreground);
+  --agv-text-muted: var(--muted-foreground);
+  --agv-text-subtle: var(--muted-foreground);
+  --agv-text-active: var(--primary);
 }
 
 

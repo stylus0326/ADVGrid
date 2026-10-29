@@ -4,7 +4,22 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Đồng Bộ Triệt Để Bộ Tokens Theme Sáng (Light) & Bổ Sung Biến --radius Vào Render Tokens (`src/themes/light.ts`, `src/themes/common.ts`, `code_index.js`)
+## 🕒 Lần 3 (Mới nhất): Khắc Phục Triệt Để Lỗi PostCSS `The border-border class does not exist` & Hỗ Trợ 100% Cú Pháp Raw Tweakcn (`vite.config.ts`, `src/index.css`, `code_index.js`)
+- **Thời gian**: 2026-10-29 21:53
+- **Files thay đổi**:
+  - `vite.config.ts` (54 dòng):
+    - Tích hợp Vite Plugin `tweakcnV4CompatPlugin` chạy ở giai đoạn `enforce: 'pre'`. Chặn và chuyển đổi trực tiếp trên stream bộ nhớ: `@import "tailwindcss";` -> `@tailwind base/components/utilities`, loại bỏ `@custom-variant dark`, chuyển `@apply border-border outline-ring/50;` và `@apply bg-background text-foreground;` thành các thuộc tính CSS tương ứng.
+    - Loại bỏ hoàn toàn lỗi PostCSS `The border-border class does not exist` và `Unknown word "use strict"` mà không cần bất kỳ file shim hay cấu hình phức tạp nào.
+  - `src/index.css` (1001 dòng):
+    - Bảo toàn 100% định dạng raw CSS xuất từ tweakcn.com (`@import "tailwindcss";`, `@custom-variant dark (&:is(.dark *));`, `:root`, `.dark`, `@theme inline`, `@layer base { * { @apply border-border outline-ring/50; } body { @apply bg-background text-foreground; } }`).
+    - Người dùng có thể copy/paste trực tiếp từ tweakcn.com vào `src/index.css` mà không cần chỉnh sửa tay bất kỳ dòng nào.
+  - `code_index.js` (1087 dòng):
+    - Bổ sung mã lỗi chẩn đoán `ERR_TWEAKCN_V4_BORDER_BORDER` hỗ trợ tra cứu tự động qua `node code_index.js --error "border-border"`.
+    - Cập nhật số dòng `src/index.css` (1001 dòng) và bổ sung `vite.config.ts` (54 dòng).
+
+---
+
+## 🕒 Lần 2: Đồng Bộ Triệt Để Bộ Tokens Theme Sáng (Light) & Bổ Sung Biến --radius Vào Render Tokens (`src/themes/light.ts`, `src/themes/common.ts`, `code_index.js`)
 - **Thời gian**: 2026-10-29 21:32
 - **Files thay đổi**:
   - `src/themes/light.ts` (44 dòng):
@@ -16,7 +31,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Tích Hợp Theme Mới Tweakcn Hổ Phách & Tweakcn Tối Vào Hệ Thống Giao Diện Demo (`src/themes/tweakcnDemo.ts`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/components/ui/MorphIcons.tsx`)
+## 🕒 Lần 1: Tích Hợp Theme Mới Tweakcn Hổ Phách & Tweakcn Tối Vào Hệ Thống Giao Diện Demo (`src/themes/tweakcnDemo.ts`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/components/ui/MorphIcons.tsx`)
 - **Thời gian**: 2026-10-29 21:12
 - **Files thay đổi**:
   - `src/themes/tweakcnDemo.ts` (87 dòng):
@@ -30,24 +45,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Tích hợp và xuất khẩu `SparklesIcon` từ `lucide` tương thích chuẩn tuple `IconNode` của bộ biến hình lò xo `morphicons`.
   - `src/demo/PageToolbar.tsx` (575 dòng):
     - Hỗ trợ icon `SparklesIcon` cho các nút theme mới trên thanh công cụ điều khiển giao diện, đảm bảo min-height 28px và tương thích 100% theme active styling.
-
----
-
-## 🕒 Lần 1: Chuẩn Hóa Toàn Bộ Code Theo Chuẩn Tweakcn & Chuyển Đổi Toàn Bộ Tên Class Về Dạng Chung Chuẩn Shadcn/UI (`src/index.css`, `postcss.config.js`, `tailwind.config.js`, `src/themes/*`, `src/components/grid/*`, `src/main.tsx`)
-- **Thời gian**: 2026-10-29 20:34
-- **Files thay đổi**:
-  - `src/index.css` (1002 dòng):
-    - Khởi tạo chuẩn Tailwind directives (`@tailwind base; @tailwind components; @tailwind utilities;`), `@custom-variant dark`, bộ biến `:root` và `.dark` chuẩn không gian màu `oklch(...)`, `@theme inline` và `@layer base { * { border-color: var(--border); outline-color: color-mix(...); } body { background-color: var(--background); color: var(--foreground); } }`.
-    - Tích hợp cầu nối CSS variables hai chiều đồng bộ giữa các token chuẩn Shadcn (`--primary`, `--background`, `--border`...) và các biến nội bộ `--agv-*`.
-    - Bảo toàn 100% định dạng Monospace `.agv-cell-code`, thanh cuộn, hiệu ứng FLIP sort animation và tối ưu hóa 120fps column resize.
-  - `postcss.config.js` (6 dòng) & `vite.config.ts` (6 dòng):
-    - Đưa `postcss.config.js` và `vite.config.ts` về cấu hình tinh giản, thuần chuẩn Vite và Tailwind v3 mà không dùng shim tạm bợ.
-    - Khắc phục triệt để và dứt điểm lỗi `The border-border class does not exist` trên cả Vite dev server (HMR) lẫn production build.
-  - `tailwind.config.js` (106 dòng):
-    - Cấu hình toàn bộ nhóm màu (`primary`, `background`, `foreground`, `card`, `popover`, `muted`, `accent`, `border`, `input`, `ring`, `sidebar`, `chart`) ánh xạ trực tiếp sang `var(--...)` để tương thích hoàn hảo với không gian màu OKLCH.
-  - `src/themes/light.ts`, `src/themes/dark.ts`, `src/themes/bezierArthouse.ts`, `src/themes/eink.ts` & `src/themes/common.ts`:
-    - Chuẩn hóa 4 theme hệ thống sang bảng màu quang học `oklch(...)`, đồng bộ các token chuẩn Shadcn trong `renderTokensCssBlock`.
-  - 10 components giao diện Grid (`AdvCheckbox.tsx`, `AdvChecklistFilterPopup.tsx`, `AdvCriteriaSummaryPopup.tsx`, `AdvMultiFilterPopup.tsx`, `ColumnContextMenu.tsx`, `AdvColumnChooserModal.tsx`, `AdvGridQueryBuilderModal.tsx`, `GridFilterRow.tsx`, `GridHeader.tsx`, `GridRow.tsx`):
-    - Chuyển đổi 100% các class tự tạo sang các tên class dạng chung chuẩn Shadcn/Tweakcn (`bg-primary`, `text-primary`, `border-primary`, `ring-ring`, `text-primary-foreground`, `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`).
-  - `src/main.tsx` (59 dòng):
-    - Cập nhật bộ lắng nghe sự kiện `TWEAKCN_THEME_UPDATE` đồng bộ tức thì cả hệ biến Shadcn lẫn hệ biến AGV Engine khi người dùng chỉnh sửa giao diện trực tiếp trên tweakcn.com.

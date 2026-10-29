@@ -106,7 +106,8 @@ export const CODE_DICTIONARY = {
       'src/components/grid/smartNumberUtils.ts': { lines: 240, role: 'Bộ công cụ số thông minh: formatNumberWithCommas, parseSmartNumericRange, expandAllShortcuts, handleNumericKeyDown chặn chữ cái rác, đồng bộ 100% chuẩn phân cách hàng nghìn dấu chấm và thập phân dấu phẩy Việt Nam' },
       'src/demo/TwelveMonthChartCell.tsx': { lines: 358, role: 'Biểu đồ Sparkline 12 tháng: Sóng Catmull-Rom spline, cache DOMRect qua svgRectRef và chặn re-render thừa qua hoveredIdxRef khi rê chuột trong cùng tháng, tích hợp Animate UI Tooltip (Base UI + Motion style) qua Portal đồng bộ 100% biến màu theme (var(--agv-bg-popup), var(--agv-border-popup), getThemeClass & getPortalThemeVars) với Spring Physics keyframes agv-tooltip-spring-up/down, lướt trượt mượt mà (smooth sliding glide 120ms) khi di chuyển giữa các tháng, tự động đổi màu số liệu theo đốm cực đại (var(--agv-trend-up)) và cực tiểu (var(--agv-trend-down)) với viền var(--agv-bg-surface) trên đường line, SVG tooltip arrow, tự động lật ngược nếu gần mép trên (y < 65), kẹp biên an toàn, định dạng số formatGridNumber, tự đóng khi cuộn' },
       'src/themes/': { lines: 735, role: 'Design Tokens: SURFACE_THEMES, 6 themes (light, dark, bezierArthouse, eink, tweakcnDemo light hổ phách & dark tối), khai báo đầy đủ --agv-bg-row-hover, --agv-bg-selected-hover, --agv-bg-focused, --agv-bg-focused-hover, --agv-bg-checked-focused, --agv-bg-checked-focused-hover, --agv-bg-panel, --agv-bg-surface, --agv-bg-subtle, --agv-bg-card, --agv-border-subtle, --agv-pinned-shadow, --agv-accent-soft, --agv-weekend, --agv-info trong common.ts, scrollbar tokens, generateThemeCssVariables helper, 100% biến màu CSS var(--agv-*)' },
-      'src/index.css': { lines: 1002, role: 'Global styles chuẩn tweakcn & shadcn/ui với không gian màu OKLCH, font hệ thống (--font-sans), font đơn cách .agv-cell-code (JetBrains Mono, letter-spacing 0.08em, font-weight 600, uppercase), synchronized scrollbar, tích hợp Spring Directional Popups keyframes (down, up, left, zoom), Animate UI Tooltip keyframes agv-tooltip-spring-up/down, Subtle Virtualized Row Entry Animation (.agv-row-enter), quy tắc tạm mở contain: layout style trên .agv-chunk-block khi chạy FLIP Sort Animation (.agv-scroll-viewport[data-agv-sorting="true"]), [draggable="true"] (-webkit-user-drag: element) & cơ chế phân biệt dòng Focus / Chọn Kiểu A kết hợp Zero-Reflow Row Hover cấp dòng (.agv-grid-row / .agv-group-row) và tự động khóa :hover khi cuộn nhanh (.agv-scroll-viewport:not([data-agv-scrolling="true"]))' },
+      'src/index.css': { lines: 1001, role: 'Global styles chuẩn tweakcn & shadcn/ui với không gian màu OKLCH, font hệ thống (--font-sans), font đơn cách .agv-cell-code (JetBrains Mono, letter-spacing 0.08em, font-weight 600, uppercase), synchronized scrollbar, tích hợp Spring Directional Popups keyframes (down, up, left, zoom), Animate UI Tooltip keyframes agv-tooltip-spring-up/down, Subtle Virtualized Row Entry Animation (.agv-row-enter), quy tắc tạm mở contain: layout style trên .agv-chunk-block khi chạy FLIP Sort Animation (.agv-scroll-viewport[data-agv-sorting="true"]), [draggable="true"] (-webkit-user-drag: element) & cơ chế phân biệt dòng Focus / Chọn Kiểu A kết hợp Zero-Reflow Row Hover cấp dòng (.agv-grid-row / .agv-group-row) và tự động khóa :hover khi cuộn nhanh (.agv-scroll-viewport:not([data-agv-scrolling="true"]))' },
+      'vite.config.ts': { lines: 54, role: 'Cấu hình Vite tích hợp tweakcnV4CompatPlugin: pre-transform cú pháp CSS xuất trực tiếp từ tweakcn.com (@import "tailwindcss", @custom-variant, @theme inline, @apply border-border outline-ring/50) tương thích hoàn hảo với Tailwind v3 mà không phát sinh bất kỳ lỗi nào' },
       'AGENTS.md': { lines: 26, role: 'Ponytail Senior Dev Guidelines, Recent Edits & Dictionary First & 14 Core Rules (bao gồm Strict Mockup Fidelity & Popup Scroll Lock)' }
     }
   },
@@ -334,6 +335,26 @@ export const CODE_DICTIONARY = {
         '3. Trong `handleSelectOp` của GridFilterRow, fallback theo `getDefaultOpForCol(colKey)` để đảm bảo đúng loại dữ liệu.'
       ],
       ruleReference: 'Quy tắc "Ưu tiên kiểm tra RECENT_EDITS.md & code_index.js"'
+    },
+    {
+      code: 'ERR_TWEAKCN_V4_BORDER_BORDER',
+      title: 'Lỗi PostCSS border-border khi dán code CSS nguyên bản từ tweakcn.com (The border-border class does not exist)',
+      symptom: 'Khi dán CSS raw từ tweakcn.com (@import "tailwindcss"; @custom-variant dark; @theme inline; @apply border-border outline-ring/50;) vào src/index.css, Vite dev server hoặc build báo lỗi: The border-border class does not exist.',
+      keywords: ['border-border', 'tweakcn', 'outline-ring', 'tailwindcss', 'shadcn', 'v4', 'postcss'],
+      location: {
+        file: 'vite.config.ts & src/index.css',
+        startLine: 1,
+        endLine: 54,
+        anchorFunction: 'tweakcnV4CompatPlugin'
+      },
+      rootCause: 'Cú pháp của tweakcn.com xuất theo chuẩn Tailwind CSS v4. Khi chạy trên môi trường Tailwind CSS v3, @import "tailwindcss" cố gắng load file JS của tailwindcss gây lỗi "Unknown word use strict", và @apply border-border trong @layer base không tìm thấy class tiện ích do layer base được nạp trước layer utilities.',
+      solution: [
+        '1. Sử dụng plugin pre-transform tweakcnV4CompatPlugin trong vite.config.ts để chặn và chuyển đổi trước khi Vite CSS pipeline xử lý.',
+        '2. Tự động chuyển @import "tailwindcss"; thành @tailwind base/components/utilities.',
+        '3. Chuyển đổi @apply border-border outline-ring/50; và @apply bg-background text-foreground; thành các thuộc tính CSS chuẩn tương ứng.',
+        '4. Giữ nguyên 100% cú pháp gốc xuất từ tweakcn.com trong src/index.css để người dùng có thể copy/paste trực tiếp mà không cần sửa tay.'
+      ],
+      ruleReference: 'Quy tắc "Tuân thủ triệt để chủ đề chung" & "Ưu tiên tái sử dụng và cải tiến control có sẵn"'
     }
   ],
 

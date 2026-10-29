@@ -51,6 +51,7 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const isJustOpenedRef = useRef(false);
 
   const [coords, setCoords] = useState<{
     top: number;
@@ -81,9 +82,10 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   const openDropdown = useCallback(() => {
     if (disabled) return;
     updateCoords();
-    setIsOpen(true);
     const idx = normalizedOptions.findIndex((o) => o.value === curVal);
     setHighlightedIndex(idx >= 0 ? idx : 0);
+    isJustOpenedRef.current = true;
+    setIsOpen(true);
   }, [disabled, updateCoords, normalizedOptions, curVal]);
 
   const closeDropdown = useCallback(() => {
@@ -102,19 +104,33 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   useLayoutEffect(() => {
     if (!isOpen || !popupRef.current) return;
     const container = popupRef.current;
-    const activeEl =
-      (container.querySelector('[data-selected="true"]') as HTMLElement) ||
-      (container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement);
+    const idx = normalizedOptions.findIndex((o) => o.value === curVal);
+    const targetIdx = idx >= 0 ? idx : 0;
 
-    if (activeEl) {
-      const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
-      container.scrollTop = Math.max(0, targetScroll);
-    }
-  }, [isOpen]);
+    const doScroll = () => {
+      if (!popupRef.current) return;
+      const activeEl =
+        (container.querySelector('[data-selected="true"]') as HTMLElement) ||
+        (container.querySelector(`[data-item-index="${targetIdx}"]`) as HTMLElement);
+
+      if (activeEl) {
+        const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
+        container.scrollTop = Math.max(0, targetScroll);
+      }
+    };
+
+    doScroll();
+    const rafId = requestAnimationFrame(doScroll);
+    return () => cancelAnimationFrame(rafId);
+  }, [isOpen, curVal, normalizedOptions]);
 
   // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
   useEffect(() => {
     if (!isOpen || !popupRef.current || highlightedIndex < 0) return;
+    if (isJustOpenedRef.current) {
+      isJustOpenedRef.current = false;
+      return;
+    }
     const container = popupRef.current;
     const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
     if (el) {

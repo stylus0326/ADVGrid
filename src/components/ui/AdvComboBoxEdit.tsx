@@ -72,6 +72,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const isJustOpenedRef = useRef(false);
 
   const normalizedOptions = useMemo<AdvComboBoxEditOption[]>(() => {
     return options.map((opt) => (typeof opt === 'string' ? { value: opt, label: opt } : opt));
@@ -95,6 +96,13 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
 
   const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
 
+  const syncHighlightedToSelected = useCallback(() => {
+    const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
+    const targetIdx = idx >= 0 ? idx : 0;
+    setHighlightedIndex(targetIdx);
+    return targetIdx;
+  }, [normalizedOptions, curVal]);
+
   useEffect(() => {
     if (isControlled && value !== undefined && !isUserTyping) {
       setInternalVal(value);
@@ -103,28 +111,41 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
 
   useEffect(() => {
     if (isOpen && !isUserTyping) {
-      const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
-      setHighlightedIndex(idx >= 0 ? idx : 0);
+      syncHighlightedToSelected();
     }
-  }, [isOpen, curVal, normalizedOptions, isUserTyping]);
+  }, [isOpen, syncHighlightedToSelected, isUserTyping]);
 
   // Tự động cuộn đến vị trí mục đã chọn sẵn khi mở dropdown
   useLayoutEffect(() => {
     if (!isOpen || !dropdownRef.current) return;
     const container = dropdownRef.current;
-    const activeEl =
-      (container.querySelector('[data-selected="true"]') as HTMLElement) ||
-      (container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement);
+    const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
+    const targetIdx = idx >= 0 ? idx : 0;
 
-    if (activeEl) {
-      const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
-      container.scrollTop = Math.max(0, targetScroll);
-    }
-  }, [isOpen]);
+    const doScroll = () => {
+      if (!dropdownRef.current) return;
+      const targetEl =
+        (container.querySelector('[data-selected="true"]') as HTMLElement) ||
+        (container.querySelector(`[data-item-index="${targetIdx}"]`) as HTMLElement);
+
+      if (targetEl) {
+        const targetScroll = targetEl.offsetTop - container.clientHeight / 2 + targetEl.offsetHeight / 2;
+        container.scrollTop = Math.max(0, targetScroll);
+      }
+    };
+
+    doScroll();
+    const rafId = requestAnimationFrame(doScroll);
+    return () => cancelAnimationFrame(rafId);
+  }, [isOpen, curVal, normalizedOptions]);
 
   // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
   useEffect(() => {
     if (!isOpen || !dropdownRef.current || highlightedIndex < 0) return;
+    if (isJustOpenedRef.current) {
+      isJustOpenedRef.current = false;
+      return;
+    }
     const container = dropdownRef.current;
     const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
     if (el) {
@@ -203,6 +224,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     setHighlightedIndex(0);
     if (!isOpen) {
       updateCoords();
+      isJustOpenedRef.current = true;
       setIsOpen(true);
     }
   };
@@ -222,8 +244,9 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
       if (!isOpen) {
         updateCoords();
         setIsUserTyping(false);
+        syncHighlightedToSelected();
+        isJustOpenedRef.current = true;
         setIsOpen(true);
-        setHighlightedIndex(0);
       } else if (filteredOptions.length > 0) {
         setHighlightedIndex((prev) => (prev + 1) % filteredOptions.length);
       }
@@ -274,6 +297,8 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     if (!isOpen) {
       updateCoords();
       setIsUserTyping(false);
+      syncHighlightedToSelected();
+      isJustOpenedRef.current = true;
       setIsOpen(true);
     }
     inputRef.current?.focus({ preventScroll: true });

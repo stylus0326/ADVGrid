@@ -292,17 +292,20 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       return res;
     }, [rawColWidths, autoSttWidth, columns]);
 
+    const colWidthsRef = useRef(colWidths);
+    colWidthsRef.current = colWidths;
+
     const setColWidth = useCallback(
       (key: string, width: number) => {
         const targetCol = colMap[key];
         if (!targetCol || targetCol.resizable === false || targetCol.dataType === DATA_TYPES.SYSTEM || targetCol.isRowNumber || isSelectionColumn(targetCol)) return;
         if (onColWidthsChange) {
-          onColWidthsChange({ ...colWidths, [key]: width });
+          onColWidthsChange({ ...colWidthsRef.current, [key]: width });
         } else {
           setInternalWidths((prev) => ({ ...prev, [key]: width }));
         }
       },
-      [colWidths, onColWidthsChange, colMap]
+      [onColWidthsChange, colMap]
     );
 
     const setMultipleColWidths = useCallback(
@@ -317,12 +320,12 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         }
         if (Object.keys(filteredUpdates).length === 0) return;
         if (onColWidthsChange) {
-          onColWidthsChange({ ...colWidths, ...filteredUpdates });
+          onColWidthsChange({ ...colWidthsRef.current, ...filteredUpdates });
         } else {
           setInternalWidths((prev) => ({ ...prev, ...filteredUpdates }));
         }
       },
-      [colWidths, onColWidthsChange, colMap]
+      [onColWidthsChange, colMap]
     );
 
     // Column pins state (controlled or uncontrolled)
@@ -1431,10 +1434,44 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       };
     }, [activeContextMenu, activeEditingCell]);
 
-    // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space)
+    // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space) - Giữ cố định listener qua Ref khi nhấn giữ phím liên tục
+    const keyNavStateRef = useRef({
+      activeContextMenu,
+      activeEditingCell,
+      totalRows,
+      selectedRowIndex,
+      onSelectRow,
+      onToggleCheck,
+      getRowItem,
+      viewportHeight,
+      actualRowHeight,
+      customHeaderHeight,
+      middleElements,
+      showFilterRow,
+      pinnedRowsLength: pinnedRows.length,
+      stickyGroupRow,
+    });
+    keyNavStateRef.current = {
+      activeContextMenu,
+      activeEditingCell,
+      totalRows,
+      selectedRowIndex,
+      onSelectRow,
+      onToggleCheck,
+      getRowItem,
+      viewportHeight,
+      actualRowHeight,
+      customHeaderHeight,
+      middleElements,
+      showFilterRow,
+      pinnedRowsLength: pinnedRows.length,
+      stickyGroupRow,
+    };
+
     useEffect(() => {
       const handleKeyDownNav = (e: KeyboardEvent) => {
-        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) return;
+        const st = keyNavStateRef.current;
+        if (st.activeContextMenu || st.activeEditingCell || isAnyPopupActive()) return;
         const target = e.target as HTMLElement | null;
         if (
           target &&
@@ -1445,7 +1482,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         ) {
           return;
         }
-        if (totalRows <= 0) return;
+        if (st.totalRows <= 0) return;
 
         if (
           e.key === 'ArrowDown' ||
@@ -1453,31 +1490,42 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           e.key === 'PageDown' ||
           e.key === 'PageUp'
         ) {
-          if (!onSelectRow) return;
+          if (!st.onSelectRow) return;
           e.preventDefault();
-          const pageStep = Math.max(1, Math.floor((viewportHeight || 400) / actualRowHeight) - 1);
+          const pageStep = Math.max(
+            1,
+            Math.floor((st.viewportHeight || 400) / st.actualRowHeight) - 1
+          );
           const curIdx: number =
-            typeof selectedRowIndex === 'number' && selectedRowIndex >= 0 ? selectedRowIndex : 0;
+            typeof st.selectedRowIndex === 'number' && st.selectedRowIndex >= 0
+              ? st.selectedRowIndex
+              : 0;
           let nextIdx: number = curIdx;
-          if (e.key === 'ArrowDown') nextIdx = Math.min(totalRows - 1, curIdx + 1);
+          if (e.key === 'ArrowDown') nextIdx = Math.min(st.totalRows - 1, curIdx + 1);
           else if (e.key === 'ArrowUp') nextIdx = Math.max(0, curIdx - 1);
-          else if (e.key === 'PageDown') nextIdx = Math.min(totalRows - 1, curIdx + pageStep);
+          else if (e.key === 'PageDown') nextIdx = Math.min(st.totalRows - 1, curIdx + pageStep);
           else if (e.key === 'PageUp') nextIdx = Math.max(0, curIdx - pageStep);
 
-          const nextRow = getRowItem(nextIdx);
-          onSelectRow(nextIdx, nextRow);
+          if (nextIdx === curIdx) return;
+
+          const nextRow = st.getRowItem(nextIdx);
+          st.onSelectRow(nextIdx, nextRow);
 
           const el = scrollContainerRef.current;
           if (el) {
-            const rowTop = nextIdx * actualRowHeight;
-            const rowBottom = rowTop + actualRowHeight;
+            const rowTop = nextIdx * st.actualRowHeight;
+            const rowBottom = rowTop + st.actualRowHeight;
             const viewTop = el.scrollTop;
             const stickyHeaderHeight =
-              (customHeaderHeight ?? (middleElements.some((m) => m.type === 'group') ? 64 : 34)) +
-              (showFilterRow ? 34 : 0) +
-              pinnedRows.length * actualRowHeight +
-              (stickyGroupRow ? actualRowHeight : 0);
-            const visibleDataHeight = Math.max(actualRowHeight, el.clientHeight - stickyHeaderHeight);
+              (st.customHeaderHeight ??
+                (st.middleElements.some((m) => m.type === 'group') ? 64 : 34)) +
+              (st.showFilterRow ? 34 : 0) +
+              st.pinnedRowsLength * st.actualRowHeight +
+              (st.stickyGroupRow ? st.actualRowHeight : 0);
+            const visibleDataHeight = Math.max(
+              st.actualRowHeight,
+              el.clientHeight - stickyHeaderHeight
+            );
             if (rowTop < viewTop) {
               el.scrollTop = rowTop;
             } else if (rowBottom > viewTop + visibleDataHeight) {
@@ -1486,37 +1534,21 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           }
         } else if (
           e.key === ' ' &&
-          typeof selectedRowIndex === 'number' &&
-          selectedRowIndex >= 0 &&
-          onToggleCheck
+          typeof st.selectedRowIndex === 'number' &&
+          st.selectedRowIndex >= 0 &&
+          st.onToggleCheck
         ) {
-          const curRow = getRowItem(selectedRowIndex) as any;
+          const curRow = st.getRowItem(st.selectedRowIndex) as any;
           if (curRow && !curRow._isGroupRow) {
             e.preventDefault();
-            onToggleCheck(selectedRowIndex, curRow, e as unknown as React.MouseEvent);
+            st.onToggleCheck(st.selectedRowIndex, curRow, e as unknown as React.MouseEvent);
           }
         }
       };
 
       window.addEventListener('keydown', handleKeyDownNav);
       return () => window.removeEventListener('keydown', handleKeyDownNav);
-    }, [
-      activeContextMenu,
-      activeEditingCell,
-      totalRows,
-      selectedRowIndex,
-      onSelectRow,
-      onToggleCheck,
-      getRowItem,
-      getRowId,
-      viewportHeight,
-      actualRowHeight,
-      customHeaderHeight,
-      middleElements,
-      showFilterRow,
-      pinnedRows.length,
-      stickyGroupRow,
-    ]);
+    }, []);
 
     // Auto scrolling test mode (Tối ưu dt mượt 60-144Hz, không đọc scrollHeight gây Forced Reflow)
     useEffect(() => {

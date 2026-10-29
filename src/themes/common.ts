@@ -239,6 +239,8 @@ export function renderTokensCssBlock(tokens: GridThemeTokens, selectors: string[
     --agv-bg-row-alt: ${tokens.bgRowAlt};
     --agv-bg-hover: ${tokens.bgHover};
     --agv-bg-selected: ${tokens.bgSelected};
+    --agv-bg-focused: color-mix(in srgb, ${tokens.accent} 11%, ${tokens.bgRoot});
+    --agv-bg-checked-focused: color-mix(in srgb, ${tokens.accent} 24%, ${tokens.bgRoot});
     --agv-bg-popup: ${tokens.bgPopup};
     --agv-bg-surface: ${tokens.bgPopup};
     --agv-bg-card: ${tokens.bgRowAlt};

@@ -633,3 +633,29 @@ body, button, input, select, textarea {
   animation: agv-row-enter 140ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ============================================================================
+   Phân Biệt Dòng Focus (isSelected) & Dòng Active/Checked (isChecked)
+   100% Flat background-color & color (0% border / 0% box-shadow phát sinh)
+   - Ô STT làm "Đầu kim Focus" (nền Accent chữ trắng) khi dòng được Focus
+   - Thân dòng phân tầng rõ giữa Focus, Checked và Vừa Focus + Checked
+   ============================================================================ */
+[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="stt"] {
+  background-color: var(--agv-bg-header);
+}
+[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="chk"],
+[data-row-checked="true"]:not([data-row-focused="true"]):not(:hover) > [data-cell-role="data"] {
+  background-color: var(--agv-bg-selected);
+}
+[data-row-focused="true"] > [data-cell-role="stt"] {
+  background-color: var(--agv-accent) !important;
+  color: var(--agv-accent-text, #ffffff) !important;
+  --agv-stt-cell-text: var(--agv-accent-text, #ffffff);
+}
+[data-row-focused="true"]:not([data-row-checked="true"]):not(:hover) > [data-cell-role="chk"],
+[data-row-focused="true"]:not([data-row-checked="true"]):not(:hover) > [data-cell-role="data"] {
+  background-color: var(--agv-bg-focused);
+}
+[data-row-focused="true"][data-row-checked="true"]:not(:hover) > [data-cell-role="chk"],
+[data-row-focused="true"][data-row-checked="true"]:not(:hover) > [data-cell-role="data"] {
+  background-color: var(--agv-bg-checked-focused);
+}

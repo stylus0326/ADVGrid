@@ -20,7 +20,7 @@ export interface PageFooterProps {
   onToggleFilterCheckedOnly?: () => void;
 }
 
-export const PageFooter: React.FC<PageFooterProps> = ({
+export const PageFooter: React.FC<PageFooterProps> = React.memo(({
   totalRows,
   columnCount,
   leftPinnedCount,
@@ -127,4 +127,4 @@ export const PageFooter: React.FC<PageFooterProps> = ({
       </div>
     </footer>
   );
-};
+});

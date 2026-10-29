@@ -13,6 +13,8 @@ export function useColumnResize<T>({
   setColWidth,
 }: UseColumnResizeParams<T>) {
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+  const colWidthsRef = useRef(colWidths);
+  colWidthsRef.current = colWidths;
 
   const handleMouseDownResize = useCallback(
     (key: string, e: React.MouseEvent) => {
@@ -31,7 +33,7 @@ export function useColumnResize<T>({
       resizingRef.current = {
         key,
         startX: e.clientX,
-        startWidth: colWidths[key] || 100,
+        startWidth: colWidthsRef.current[key] || 100,
       };
 
       let rafId: number | null = null;
@@ -69,7 +71,7 @@ export function useColumnResize<T>({
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     },
-    [colWidths, setColWidth, colMap]
+    [setColWidth, colMap]
   );
 
   return {

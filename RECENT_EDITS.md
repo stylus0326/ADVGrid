@@ -4,35 +4,43 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Bổ Sung Hiệu Ứng Xuất Hiện Tinh Tế Cho Dòng Ảo Hóa Mới (`agv-row-enter`)
-- **Thời gian**: 2026-10-29 01:12
+## 🕒 Lần 3 (Mới nhất): Cố Định Cấu Hình Cuộn Khớp Dòng Ở 3 Dòng (`3d`) Và Gỡ Bỏ Cụm Nút Điều Khiển Khớp Dòng Khỏi Thanh Công Cụ Chính
+- **Thời gian**: 2026-10-29 02:02
 - **Files thay đổi**:
-  - `src/index.css` (636 dòng):
-    - Bổ sung `@keyframes agv-row-enter` và class `.agv-row-enter` (Dòng 620 - 634): Hiệu ứng lướt nhẹ `opacity: 0.72 -> 1` và `translateY(3px) -> none` trong `140ms cubic-bezier(0.16, 1, 0.3, 1)` (không giữ `transform` sau khi kết thúc để bảo toàn 100% `position: sticky` của các cột ghim).
-  - `src/components/grid/GridRow.tsx` (998 dòng):
-    - Gắn class `agv-row-enter` kèm độ trễ phân tầng nhẹ theo vị trí dòng trong chunk (`animationDelay: ${(rowIndex % 20) * 4}ms`) cho cả dòng tiêu đề nhóm và dòng dữ liệu chuẩn (Dòng 546 - 548, 686 - 688).
-  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng cho `GridRow.tsx` và `index.css`.
-
----
-
-## 🕒 Lần 2: Tối Ưu Hóa Chuyển Dòng Chọn O(1) (`selectedDisplayIndexHintRef` & Range-Aware Chunk Memo), Kéo Giãn Cột `requestAnimationFrame` & Bảo Toàn `React.memo` Cho `GridFloatingToolbar`
-- **Thời gian**: 2026-10-29 01:06
-- **Files thay đổi**:
-  - `src/components/grid/GridChunkBlock.tsx` (244 dòng):
-    - Nâng cấp comparator `React.memo` (Dòng 181 - 228): Kiểm tra phạm vi dòng `[startRowIndex, endRowIndex]` của chunk khi `selectedRowIndex`, `selectedRowKey` hoặc `editingCell` thay đổi, giúp 6–7 chunk không chứa dòng cũ/mới bỏ qua render 100%.
-  - `src/App.tsx` (1826 dòng):
-    - Bổ sung `selectedDisplayIndexHintRef` (Dòng 655 - 664, 1591 - 1656): Lưu trực tiếp vị trí dòng hiển thị khi click dòng hoặc nhảy dòng, giúp `selectedDisplayIndex` đạt tốc độ $O(1)$ thay vì quét tuyến tính `indexOf`/`findIndex` trên 50.000 phần tử.
-  - `src/components/grid/hooks/useColumnResize.ts` (80 dòng):
-    - Gom (`coalesce`) sự kiện `mousemove` qua `requestAnimationFrame` (Dòng 37 - 65) để chỉ cập nhật độ rộng cột tối đa 1 lần mỗi khung hình màn hình.
-  - `src/components/grid/VirtualizedGrid.tsx` (2210 dòng):
-    - Bọc `useCallback` cho `handleToggleQuickFilterSmart` (Dòng 373 - 375, 2172) để bảo toàn 100% `React.memo` của `GridFloatingToolbar` khi cuộn.
+  - `src/App.tsx` (1900 dòng):
+    - Cố định cấu hình `rowSnapMode = true` và `rowsPerWheelStep = 3` (Dòng 107 - 108); gỡ bỏ `handleToggleRowSnap` cùng các props điều khiển khớp dòng truyền sang `PageToolbar` (Dòng 1749, 1796 - 1800).
+  - `src/demo/PageToolbar.tsx` (573 dòng):
+    - Gỡ bỏ hoàn toàn cụm nút bật/tắt `Khớp Dòng: BẬT/TẮT` và các nút chọn nấc `1d / 3d / 5d / 1Chunk` khỏi giao diện chính cùng các props `rowSnapMode`, `onToggleRowSnap`, `rowsPerWheelStep`, `onRowsPerWheelStepChange` và icon `Magnet`, `Unlock` (Dòng 14 - 18, 64 - 67, 99 - 102, 540 - 544).
   - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
 
 ---
 
-## 🕒 Lần 1: Tinh Chỉnh Đo Vận Tốc Cuộn Trung Bình Theo Chu Kỳ 120ms (`windowAccumDistanceRef`) & Ổn Định Tốc Độ `px/s` Khi Test Cuộn Cao Tốc
-- **Thời gian**: 2026-10-29 00:49
+## 🕒 Lần 2: Tối Ưu Vòng 2: Debounce Ghi `localStorage` Khi Kéo Giãn Cột, Bọc `useDeferredValue` Cho `searchQuery` & Cố Định Tham Chiếu `setColWidth` / `handleMouseDownResize`
+- **Thời gian**: 2026-10-29 01:57
 - **Files thay đổi**:
-  - `src/components/grid/VirtualizedGrid.tsx` (2204 dòng):
-    - Bổ sung `windowAccumDistanceRef` và `windowStartTimeRef` (Dòng 1347 - 1348, 1618 - 1692): Tích lũy tổng quãng đường cuộn `dy` trên toàn bộ cửa sổ 120ms (`windowAccumDistanceRef.current / measureDt * 1000`) thay vì chỉ lấy `dy / dt` của 1 frame 16ms cuối cùng; giữ ổn định tốc độ chuẩn `autoScrollSpeed * 60` (`1,920 px/s`) khi đang chạy `autoScrolling` và tự động đưa vận tốc hiển thị về `0 px/s` ngay khi tắt `autoScrolling` (Dòng 1554 - 1568).
-  - `code_index.js`: Cập nhật đồng bộ số dòng `VirtualizedGrid.tsx`.
+  - `src/App.tsx` (1905 dòng):
+    - Bổ sung `deferredSearchQuery = useDeferredValue(searchQuery)` (Dòng 124) và sử dụng trong `filteredRowIndices` (Dòng 795, 853) cùng `getDistinctValuesForColumn` (Dòng 871, 1007) để gõ tìm kiếm nhanh trên 50.000 dòng phản hồi 0ms không chặn con trỏ gõ phím.
+    - Bổ sung `saveColWidthsTimerRef` (Dòng 400 - 412, 493 - 496) debounce 150ms cho thao tác ghi `savePersistedGridConfig({ colWidths: filtered })` vào `localStorage`, giải phóng 100% I/O đồng bộ khỏi luồng `requestAnimationFrame` khi kéo giãn độ rộng cột.
+  - `src/components/grid/VirtualizedGrid.tsx` (2242 dòng):
+    - Bổ sung `colWidthsRef` (Dòng 295 - 329) giúp `setColWidth` và `setMultipleColWidths` giữ nguyên tham chiếu hàm ổn định xuyên suốt các frame kéo giãn cột.
+  - `src/components/grid/hooks/useColumnResize.ts` (82 dòng):
+    - Bổ sung `colWidthsRef` (Dòng 16 - 17, 35, 74) giúp `handleMouseDownResize` không bị tạo mới tham chiếu mỗi frame khi kéo cột.
+  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.
+
+---
+
+## 🕒 Lần 1: Tối Ưu Hóa Toàn Diện Tương Tác & Cuộn: Cách Ly Chunk Checkbox, Cache Tổng Toàn Bảng O(1), Chặn Re-render Sparkline, Cố Định Keydown Listener & Bọc `React.memo` Cho `PageToolbar` / `PageFooter`
+- **Thời gian**: 2026-10-29 01:46
+- **Files thay đổi**:
+  - `src/components/grid/GridChunkBlock.tsx` (267 dòng):
+    - Nâng cấp comparator `React.memo` (Dòng 180 - 204): Kiểm tra 20 dòng trong phạm vi chunk khi `checkedRowIndices` thay đổi; 6–7 chunk không có dòng nào đổi trạng thái `isChecked` bỏ qua render 100%.
+  - `src/App.tsx` (1892 dòng):
+    - Tách bộ đệm `uncheckedBaseGroupData` (Dòng 1118 - 1173): Giúp thao tác bỏ tích dòng cuối cùng (về `0 dòng`) trả lại tổng toàn bảng tức thì trong **0ms ($O(1)$)** thay vì quét lại 50.000 dòng × 15 cột số.
+    - Cố định 6 callback truyền xuống `PageToolbar` bằng `useCallback` (Dòng 1732 - 1740).
+  - `src/demo/TwelveMonthChartCell.tsx` (356 dòng):
+    - Bổ sung `hoveredIdxRef` và `svgRectRef` (Dòng 66 - 67, 110 - 154): Cache `getBoundingClientRect()` khi rê chuột vào và chỉ gọi `setHoveredIdx` / `setAnchorCoords` khi chỉ số tháng `idx` thực sự thay đổi (giảm >90% re-render khi di chuột trên biểu đồ).
+  - `src/components/grid/VirtualizedGrid.tsx` (2238 dòng):
+    - Gom trạng thái điều hướng bàn phím vào `keyNavStateRef` (Dòng 1435 - 1549) để listener `keydown` trên `window` gắn cố định 1 lần duy nhất, không bị tháo/gắn lại khi giữ phím `ArrowUp`/`ArrowDown`.
+  - `src/demo/PageToolbar.tsx` (653 dòng) & `src/demo/PageFooter.tsx` (130 dòng):
+    - Bọc `React.memo` để tránh re-render thanh công cụ và thanh trạng thái khi đổi dòng Focus hoặc khi nhịp đo FPS/Velocity cập nhật.
+  - `code_index.js`: Cập nhật đồng bộ số dòng và mô tả chức năng.

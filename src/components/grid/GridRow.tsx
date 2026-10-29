@@ -682,6 +682,8 @@ export const GridRow = memo(
     return (
       <div
         onClick={() => onSelectRow?.(rowIndex, row)}
+        data-row-focused={isSelected ? 'true' : undefined}
+        data-row-checked={isChecked ? 'true' : undefined}
         style={{
           height: `${rowHeight}px`,
           width: `${totalRowWidth}px`,
@@ -706,12 +708,20 @@ export const GridRow = memo(
           const isLeftDivider = col.key === lastEffectiveLeftColKey;
           const isRightDivider = col.key === firstEffectiveRightColKey;
 
+          const isSttCol = Boolean(
+            col.isRowNumber ||
+              col.key === 'col_stt' ||
+              (col.dataType === DATA_TYPES.SYSTEM && Boolean(col.title))
+          );
+          const isChkCol = isSelectionColumn(col);
+          const cellRole = isSttCol ? 'stt' : isChkCol ? 'chk' : 'data';
+
           const usesSharedHeaderBg =
             isEffectiveLeft ||
             isEffectiveRight ||
             col.dataType === DATA_TYPES.SYSTEM ||
-            Boolean(col.isRowNumber) ||
-            isSelectionColumn(col);
+            isSttCol ||
+            isChkCol;
 
           const stickyStyle: React.CSSProperties = {
             width: `${width}px`,
@@ -908,6 +918,7 @@ export const GridRow = memo(
           return (
             <div
               key={col.key}
+              data-cell-role={isEmptyCol ? undefined : cellRole}
               style={stickyStyle}
               onClick={(e) => {
                 if (isEmptyCol) return;

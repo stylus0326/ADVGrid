@@ -104,8 +104,8 @@ export function App() {
   const [overscanChunks] = useState<number>(3);
   const [rowHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
   const [antiGhostMode] = useState<boolean>(true);
-  const [rowSnapMode, setRowSnapMode] = useState<boolean>(true);
-  const [rowsPerWheelStep, setRowsPerWheelStep] = useState<number>(3);
+  const [rowSnapMode] = useState<boolean>(true);
+  const [rowsPerWheelStep] = useState<number>(3);
   // Persisted state from localStorage
   const persisted = useMemo(() => loadPersistedGridConfig(), []);
 
@@ -121,6 +121,7 @@ export function App() {
   const [editMode, setEditMode] = useState<GridEditMode>(GRID_EDIT_MODES.DOUBLE_CLICK);
   const [dataVersion, setDataVersion] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedRowKey, setSelectedRowKey] = useState<number | null>(0);
   const [autoScrolling, setAutoScrolling] = useState<boolean>(false);
   const [autoScrollSpeed] = useState<number>(32);
@@ -397,11 +398,18 @@ export function App() {
     savePersistedGridConfig({ hiddenColKeys: Array.from(hidden) });
   }, []);
 
-  // Column widths handler (Persisted)
+  // Column widths handler (Persisted with 150ms debounce to avoid blocking 60fps resize drag)
+  const saveColWidthsTimerRef = useRef<number | null>(null);
   const handleColWidthsChange = useCallback((widths: Record<string, number>) => {
     const { col_stt, col_chk, ...filtered } = widths;
     setColWidths(filtered);
-    savePersistedGridConfig({ colWidths: filtered });
+    if (saveColWidthsTimerRef.current !== null) {
+      window.clearTimeout(saveColWidthsTimerRef.current);
+    }
+    saveColWidthsTimerRef.current = window.setTimeout(() => {
+      saveColWidthsTimerRef.current = null;
+      savePersistedGridConfig({ colWidths: filtered });
+    }, 150);
   }, []);
 
   // Sort handler (Persisted)
@@ -492,6 +500,10 @@ export function App() {
 
   // Reset columns layout
   const handleResetColumns = useCallback(() => {
+    if (saveColWidthsTimerRef.current !== null) {
+      window.clearTimeout(saveColWidthsTimerRef.current);
+      saveColWidthsTimerRef.current = null;
+    }
     clearPersistedGridConfig();
     setColumnOrder(INITIAL_COLUMNS.map((c) => c.key));
     setColumnPins({
@@ -782,7 +794,7 @@ export function App() {
 
   // Filter pipeline (<5ms for 50,000 rows)
   const filteredRowIndices = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = deferredSearchQuery.trim().toLowerCase();
     const hasSearch = q.length > 0;
     const hasColFilters = activeColEntries.length > 0;
     const hasQueryTree = hasActiveQueryRules(appliedQueryTree);
@@ -841,7 +853,7 @@ export function App() {
     }
     return matched;
   }, [
-    searchQuery,
+    deferredSearchQuery,
     appliedQueryTree,
     effectiveCheckedForFilter,
     activeColEntries,
@@ -857,7 +869,7 @@ export function App() {
 
   const getDistinctValuesForColumn = useCallback(
     (targetColKey: string) => {
-      const q = searchQuery.trim().toLowerCase();
+      const q = deferredSearchQuery.trim().toLowerCase();
       const hasSearch = q.length > 0;
       const hasQueryTree = hasActiveQueryRules(appliedQueryTree);
 
@@ -994,7 +1006,7 @@ export function App() {
       return result;
     },
     [
-      searchQuery,
+      deferredSearchQuery,
       appliedQueryTree,
       effectiveCheckedForFilter,
       activeColEntries,
@@ -1115,36 +1127,20 @@ export function App() {
     };
   }, [groupByColumnKey, activeRowIndices, totalRowCount, colMap, getRowVal]);
 
-  // TẦNG 1B: Tính tổng cực tốc (Khi có dòng được chọn, tính theo các dòng đang chọn thay vì toàn bảng)
-  const baseGroupData = useMemo(() => {
+  // TẦNG 1B-1: Bộ đệm Tổng Toàn Bảng mặc định khi chưa chọn dòng (Giúp thao tác bỏ tích về 0 dòng đạt O(1) 0ms thay vì quét lại 50.000 dòng)
+  const uncheckedBaseGroupData = useMemo(() => {
     const numKeys = numericColKeys;
     const numCount = numKeys.length;
     const totalSums = new Float64Array(numCount);
-    const hasCheckedRows = checkedRowIndices.size > 0;
-
     const count = activeRowIndices ? activeRowIndices.length : totalRowCount;
 
-    // Fast path: Không gom nhóm
     if (!rawGroupBuckets) {
-      if (hasCheckedRows && !activeRowIndices) {
-        checkedRowIndices.forEach((origIdx) => {
-          if (origIdx < 0 || origIdx >= totalRowCount) return;
-          for (let c = 0; c < numCount; c++) {
-            const val = getRowVal(origIdx, numKeys[c]);
-            if (typeof val === 'number') {
-              totalSums[c] += val;
-            }
-          }
-        });
-      } else {
-        for (let i = 0; i < count; i++) {
-          const origIdx = activeRowIndices ? activeRowIndices[i] : i;
-          if (hasCheckedRows && !checkedRowIndices.has(origIdx)) continue;
-          for (let c = 0; c < numCount; c++) {
-            const val = getRowVal(origIdx, numKeys[c]);
-            if (typeof val === 'number') {
-              totalSums[c] += val;
-            }
+      for (let i = 0; i < count; i++) {
+        const origIdx = activeRowIndices ? activeRowIndices[i] : i;
+        for (let c = 0; c < numCount; c++) {
+          const val = getRowVal(origIdx, numKeys[c]);
+          if (typeof val === 'number') {
+            totalSums[c] += val;
           }
         }
       }
@@ -1155,14 +1151,12 @@ export function App() {
       return { columnSums: sumsObj, groupEntries: null, colTitle: '' };
     }
 
-    // Tính tổng trực tiếp trên các bucket đã chia nhóm (bỏ qua hoàn toàn quét chuỗi & tạo Map)
     const entries = rawGroupBuckets.buckets.map((bucket) => {
       const gSums = new Float64Array(numCount);
       const bIndices = bucket.indices;
       const bLen = bIndices.length;
       for (let i = 0; i < bLen; i++) {
         const origIdx = bIndices[i];
-        if (hasCheckedRows && !checkedRowIndices.has(origIdx)) continue;
         for (let c = 0; c < numCount; c++) {
           const val = getRowVal(origIdx, numKeys[c]);
           if (typeof val === 'number') {
@@ -1188,7 +1182,85 @@ export function App() {
     }
 
     return { columnSums: tableSums, groupEntries: entries, colTitle: rawGroupBuckets.colTitle };
-  }, [rawGroupBuckets, activeRowIndices, totalRowCount, numericColKeys, checkedRowIndices, getRowVal]);
+  }, [rawGroupBuckets, activeRowIndices, totalRowCount, numericColKeys, getRowVal]);
+
+  // TẦNG 1B-2: Tính tổng cực tốc (Khi có dòng được chọn, tính O(K) theo các dòng đang chọn; khi bỏ chọn về 0 dòng, trả về cache O(1) tức thì)
+  const baseGroupData = useMemo(() => {
+    const hasCheckedRows = checkedRowIndices.size > 0;
+    if (!hasCheckedRows) {
+      return uncheckedBaseGroupData;
+    }
+
+    const numKeys = numericColKeys;
+    const numCount = numKeys.length;
+    const totalSums = new Float64Array(numCount);
+    const count = activeRowIndices ? activeRowIndices.length : totalRowCount;
+
+    // Fast path: Không gom nhóm
+    if (!rawGroupBuckets) {
+      if (!activeRowIndices) {
+        checkedRowIndices.forEach((origIdx) => {
+          if (origIdx < 0 || origIdx >= totalRowCount) return;
+          for (let c = 0; c < numCount; c++) {
+            const val = getRowVal(origIdx, numKeys[c]);
+            if (typeof val === 'number') {
+              totalSums[c] += val;
+            }
+          }
+        });
+      } else {
+        for (let i = 0; i < count; i++) {
+          const origIdx = activeRowIndices[i];
+          if (!checkedRowIndices.has(origIdx)) continue;
+          for (let c = 0; c < numCount; c++) {
+            const val = getRowVal(origIdx, numKeys[c]);
+            if (typeof val === 'number') {
+              totalSums[c] += val;
+            }
+          }
+        }
+      }
+      const sumsObj: Record<string, number> = {};
+      for (let c = 0; c < numCount; c++) {
+        sumsObj[numKeys[c]] = totalSums[c];
+      }
+      return { columnSums: sumsObj, groupEntries: null, colTitle: '' };
+    }
+
+    // Tính tổng trực tiếp trên các bucket đã chia nhóm
+    const entries = rawGroupBuckets.buckets.map((bucket) => {
+      const gSums = new Float64Array(numCount);
+      const bIndices = bucket.indices;
+      const bLen = bIndices.length;
+      for (let i = 0; i < bLen; i++) {
+        const origIdx = bIndices[i];
+        if (!checkedRowIndices.has(origIdx)) continue;
+        for (let c = 0; c < numCount; c++) {
+          const val = getRowVal(origIdx, numKeys[c]);
+          if (typeof val === 'number') {
+            totalSums[c] += val;
+            gSums[c] += val;
+          }
+        }
+      }
+      const gSumsObj: Record<string, number> = {};
+      for (let c = 0; c < numCount; c++) {
+        gSumsObj[numKeys[c]] = gSums[c];
+      }
+      return {
+        groupValue: bucket.groupValue,
+        indices: bIndices,
+        sums: gSumsObj,
+      };
+    });
+
+    const tableSums: Record<string, number> = {};
+    for (let c = 0; c < numCount; c++) {
+      tableSums[numKeys[c]] = totalSums[c];
+    }
+
+    return { columnSums: tableSums, groupEntries: entries, colTitle: rawGroupBuckets.colTitle };
+  }, [uncheckedBaseGroupData, rawGroupBuckets, activeRowIndices, totalRowCount, numericColKeys, checkedRowIndices, getRowVal]);
 
   const columnSums = baseGroupData.columnSums;
 
@@ -1434,7 +1506,7 @@ export function App() {
         return (
           <span
             className="text-xs font-semibold text-center w-full"
-            style={{ color: 'var(--agv-text-muted)' }}
+            style={{ color: 'var(--agv-stt-cell-text, var(--agv-text-muted))' }}
           >
             {sttVal}
           </span>
@@ -1669,6 +1741,15 @@ export function App() {
     return baseTitle;
   }, [sortConfig, colMap]);
 
+  const handleClearSort = useCallback(() => handleSortChange(null), [handleSortChange]);
+  const handleNoopOpenFilters = useCallback(() => {}, []);
+  const handleToggleFilterRow = useCallback(() => setShowFilterRow((prev) => !prev), []);
+  const handleJumpToRowSubmit = useCallback(() => {
+    const num = parseInt(jumpRowInput, 10);
+    if (!Number.isNaN(num)) jumpToRowNumber(num);
+  }, [jumpRowInput, jumpToRowNumber]);
+  const handleToggleAutoScroll = useCallback(() => setAutoScrolling((prev) => !prev), []);
+
   return (
     <div
       className="w-screen h-screen flex flex-col overflow-hidden select-none"
@@ -1697,7 +1778,7 @@ export function App() {
         onCycleFormula={handleCycleFormula}
         sortConfig={sortConfig}
         sortTitle={computedSortTitle}
-        onClearSort={() => handleSortChange(null)}
+        onClearSort={handleClearSort}
         fps={metrics.fps}
         startChunkIndex={metrics.startChunk}
         endChunkIndex={metrics.endChunk}
@@ -1707,24 +1788,17 @@ export function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeFilterCount={0}
-        onOpenFilters={() => {}}
+        onOpenFilters={handleNoopOpenFilters}
         showFilterRow={showFilterRow}
-        onToggleFilterRow={() => setShowFilterRow((prev) => !prev)}
+        onToggleFilterRow={handleToggleFilterRow}
         activeColumnFilterCount={activeColumnFilterCount}
         jumpRowInput={jumpRowInput}
         onJumpRowInputChange={setJumpRowInput}
-        onJumpToRowSubmit={() => {
-          const num = parseInt(jumpRowInput, 10);
-          if (!Number.isNaN(num)) jumpToRowNumber(num);
-        }}
+        onJumpToRowSubmit={handleJumpToRowSubmit}
         surfaceTheme={surfaceTheme}
         onThemeChange={handleSurfaceThemeChange}
-        rowSnapMode={rowSnapMode}
-        onToggleRowSnap={() => setRowSnapMode((prev) => !prev)}
-        rowsPerWheelStep={rowsPerWheelStep}
-        onRowsPerWheelStepChange={setRowsPerWheelStep}
         autoScrolling={autoScrolling}
-        onToggleAutoScroll={() => setAutoScrolling((prev) => !prev)}
+        onToggleAutoScroll={handleToggleAutoScroll}
       />
 
       {/* 2. Main Viewport: Reusable VirtualizedGrid (2-Tier Header, LocalStorage Persisted) */}

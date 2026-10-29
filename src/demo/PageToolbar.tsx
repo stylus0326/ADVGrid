@@ -14,8 +14,6 @@ import {
   MorphIcon,
   Play,
   Pause,
-  Magnet,
-  Unlock,
   Sun,
   Moon,
   Monitor,
@@ -65,15 +63,11 @@ export interface PageToolbarProps {
   onJumpToRowSubmit: () => void;
   surfaceTheme: SurfaceTheme;
   onThemeChange: (theme: SurfaceTheme) => void;
-  rowSnapMode: boolean;
-  onToggleRowSnap: () => void;
-  rowsPerWheelStep: number;
-  onRowsPerWheelStepChange: (step: number) => void;
   autoScrolling: boolean;
   onToggleAutoScroll: () => void;
 }
 
-export const PageToolbar: React.FC<PageToolbarProps> = ({
+export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
   monthAnalyticsMode,
   onToggleMonthAnalyticsMode,
   formulaMode,
@@ -101,10 +95,6 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
   onJumpToRowSubmit,
   surfaceTheme,
   onThemeChange,
-  rowSnapMode,
-  onToggleRowSnap,
-  rowsPerWheelStep,
-  onRowsPerWheelStepChange,
   autoScrolling,
   onToggleAutoScroll,
 }) => {
@@ -543,77 +533,6 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
 
         {/* Right side toggles */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Row snap toggle */}
-          <div
-            className="flex items-center gap-1 rounded-lg border p-1"
-            style={{
-              backgroundColor: 'var(--agv-bg-root)',
-              borderColor: 'var(--agv-border)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={onToggleRowSnap}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition cursor-pointer min-h-[28px] ${
-                rowSnapMode ? '' : 'hover:opacity-80'
-              }`}
-              style={
-                rowSnapMode
-                  ? {
-                      backgroundColor: 'var(--agv-accent)',
-                      color: 'var(--agv-accent-text, #ffffff)',
-                    }
-                  : {
-                      color: 'var(--agv-text-muted)',
-                      backgroundColor: 'transparent',
-                    }
-              }
-            >
-              <MorphIcon
-                icon={rowSnapMode ? Magnet : Unlock}
-                size={14}
-                spring="bouncy"
-              />
-              Khớp Dòng: {rowSnapMode ? 'BẬT' : 'TẮT'}
-            </button>
-
-            {rowSnapMode && (
-              <div
-                className="flex items-center gap-0.5 pl-1 border-l"
-                style={{ borderColor: 'var(--agv-border)' }}
-              >
-                <span
-                  className="text-[10px] px-1"
-                  style={{ color: 'var(--agv-text-muted)' }}
-                >
-                  Nấc:
-                </span>
-                {[1, 3, 5, 20].map((step) => (
-                  <button
-                    key={step}
-                    type="button"
-                    onClick={() => onRowsPerWheelStepChange(step)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer min-h-[28px] ${
-                      rowsPerWheelStep === step
-                        ? 'font-bold'
-                        : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={
-                      rowsPerWheelStep === step
-                        ? {
-                            backgroundColor: 'var(--agv-accent)',
-                            color: 'var(--agv-accent-text, #ffffff)',
-                          }
-                        : { color: 'var(--agv-text-muted)' }
-                    }
-                  >
-                    {step === 20 ? '1Chunk' : `${step}d`}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Auto-scroll button */}
           <button
             type="button"
@@ -650,4 +569,4 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
       />
     </header>
   );
-};
+});

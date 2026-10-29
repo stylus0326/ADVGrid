@@ -177,7 +177,31 @@ export const GridChunkBlock = memo(
     if (prev.centerDockStatus !== next.centerDockStatus) return false;
     if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
     if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
-    if (prev.checkedRowIndices !== next.checkedRowIndices) return false;
+    if (prev.rows !== next.rows) return false;
+    if (prev.checkedRowIndices !== next.checkedRowIndices) {
+      if (!prev.checkedRowIndices || !next.checkedRowIndices) return false;
+      const start = next.startRowIndex;
+      let chunkCheckChanged = false;
+      for (let i = 0; i < next.rows.length; i++) {
+        const r = next.rows[i] as any;
+        const actualIdx = start + i;
+        const rKey = next.getRowId
+          ? next.getRowId(r, actualIdx)
+          : r?.originalIndex ?? r?.id ?? actualIdx;
+        const origIdx = r?.originalIndex;
+        const wasChecked =
+          prev.checkedRowIndices.has(rKey as any) ||
+          (origIdx !== undefined && prev.checkedRowIndices.has(origIdx));
+        const nowChecked =
+          next.checkedRowIndices.has(rKey as any) ||
+          (origIdx !== undefined && next.checkedRowIndices.has(origIdx));
+        if (wasChecked !== nowChecked) {
+          chunkCheckChanged = true;
+          break;
+        }
+      }
+      if (chunkCheckChanged) return false;
+    }
     if (
       prev.selectedRowKey !== next.selectedRowKey ||
       prev.selectedRowIndex !== next.selectedRowIndex

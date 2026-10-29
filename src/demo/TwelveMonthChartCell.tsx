@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId, useMemo, memo } from 'react';
+import React, { useState, useEffect, useId, useMemo, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { SurfaceTheme } from '../components/grid/types';
 import { formatGridNumber } from '../components/grid/gridUtils';
@@ -64,6 +64,8 @@ export const TwelveMonthChartCell = memo(
     const gradientId = useId();
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
     const [anchorCoords, setAnchorCoords] = useState<{ x: number; y: number } | null>(null);
+    const hoveredIdxRef = useRef<number | null>(null);
+    const svgRectRef = useRef<DOMRect | null>(null);
 
     // Kích thước chuẩn hóa của vector canvas khớp 1:1 với độ rộng thực tế của ô
     // Giúp các điểm circle cx, cy, r luôn hiển thị đúng hình tròn hoàn hảo 100%, không bị dẹt thành hình bầu dục
@@ -108,14 +110,21 @@ export const TwelveMonthChartCell = memo(
       };
     }, [values, minVal, range, innerW, innerH, calculatedAvg]);
 
-    // Xử lý rê chuột (Pointer Scrubbing) theo tỉ lệ ô và định vị Tooltip
+    // Xử lý rê chuột (Pointer Scrubbing) theo tỉ lệ ô và định vị Tooltip (Chỉ re-render khi nhảy sang tháng mới)
+    const handlePointerEnter = (e: React.PointerEvent<SVGSVGElement>) => {
+      svgRectRef.current = e.currentTarget.getBoundingClientRect();
+    };
+
     const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
+      const rect = svgRectRef.current || e.currentTarget.getBoundingClientRect();
+      svgRectRef.current = rect;
       const mouseX = e.clientX - rect.left;
       const actualW = Math.max(1, rect.width);
       const ratio = Math.max(0, Math.min(1, mouseX / actualW));
       const idx = Math.round(ratio * (values.length - 1));
 
+      if (hoveredIdxRef.current === idx) return;
+      hoveredIdxRef.current = idx;
       setHoveredIdx(idx);
 
       const pt = points[idx];
@@ -129,6 +138,9 @@ export const TwelveMonthChartCell = memo(
     };
 
     const handlePointerLeave = () => {
+      if (hoveredIdxRef.current === null) return;
+      hoveredIdxRef.current = null;
+      svgRectRef.current = null;
       setHoveredIdx(null);
       setAnchorCoords(null);
     };
@@ -137,6 +149,8 @@ export const TwelveMonthChartCell = memo(
     useEffect(() => {
       if (hoveredIdx === null) return;
       const handleScroll = () => {
+        hoveredIdxRef.current = null;
+        svgRectRef.current = null;
         setHoveredIdx(null);
         setAnchorCoords(null);
       };
@@ -180,6 +194,7 @@ export const TwelveMonthChartCell = memo(
           viewBox={`0 0 ${baseWidth} ${baseHeight}`}
           preserveAspectRatio="none"
           className="overflow-visible block shrink-0 cursor-crosshair"
+          onPointerEnter={handlePointerEnter}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
         >

@@ -100,14 +100,11 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
     disabled = false,
     blockedSourceKeys?: Set<string>
   ) => {
-    const isResizingActive =
-      typeof document !== 'undefined' &&
-      document.body.classList.contains('agv-resizing-column');
-    const canDrag = !disabled && Boolean(onReorderColumns) && !isResizingActive;
+    const canDrag = !disabled && Boolean(onReorderColumns);
     return {
       draggable: canDrag,
       onDragStart: (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDrag || (typeof document !== 'undefined' && document.body.classList.contains('agv-resizing-column'))) {
+        if (!canDrag) {
           e.preventDefault();
           return;
         }
@@ -249,8 +246,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
   return (
     <div
       style={{
-        width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-        minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+        width: `${totalGridWidth}px`,
         transform: 'translateZ(0)',
         height: headerHStr,
         backgroundColor: 'var(--agv-bg-header)',
@@ -284,12 +280,10 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               }
             }}
             style={{
-              width: `var(--agv-col-w-${col.key}, ${width}px)`,
-              minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
-              maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+              width: `${width}px`,
               height: headerHStr,
               position: 'sticky',
-              left: `var(--agv-left-offset-${col.key}, ${leftOffsets[col.key]}px)`,
+              left: `${leftOffsets[col.key]}px`,
               backgroundColor: 'var(--agv-bg-header)',
               color: 'var(--agv-text-header, var(--agv-text-main))',
             }}
@@ -319,16 +313,14 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
 
           const stickyHeaderStyle: React.CSSProperties = {
-            width: `var(--agv-col-w-${col.key}, ${width}px)`,
-            minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
-            maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+            width: `${width}px`,
             height: headerHStr,
             backgroundColor: 'var(--agv-bg-header)',
             color: 'var(--agv-text-header, var(--agv-text-main))',
             ...(isDockedLeft
-              ? { position: 'sticky', left: `var(--agv-center-left-offset-${col.key}, ${centerLeftOffsets[col.key]}px)`, zIndex: 40 }
+              ? { position: 'sticky', left: `${centerLeftOffsets[col.key]}px`, zIndex: 40 }
               : isDockedRight
-              ? { position: 'sticky', right: `var(--agv-center-right-offset-${col.key}, ${centerRightOffsets[col.key]}px)`, zIndex: 40 }
+              ? { position: 'sticky', right: `${centerRightOffsets[col.key]}px`, zIndex: 40 }
               : {}),
           };
 
@@ -372,22 +364,20 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             (sum, c) => sum + (colWidths[c.key] || c.defaultWidth),
             0
           );
-          const groupWidthCalc = `calc(${childCols.map((c) => `var(--agv-col-w-${c.key}, ${colWidths[c.key] || c.defaultWidth}px)`).join(' + ')})`;
           const childKeySet = new Set(childCols.map((c) => c.key));
           const isBandDragOver = dragOverColKey === group.id;
 
           return (
             <div
               key={elem.segmentKey}
-              style={{ width: groupWidthCalc, minWidth: groupWidthCalc, height: '64px' }}
+              style={{ width: `${groupWidth}px`, height: '64px' }}
               className="flex flex-col shrink-0 relative z-10 select-none box-border h-[64px] min-h-[64px] max-h-[64px]"
             >
               {/* Tầng 1: Tiêu đề nhóm */}
               <div
                 {...createDragProps(group.id, false, childKeySet)}
                 style={{
-                  width: groupWidthCalc,
-                  minWidth: groupWidthCalc,
+                  width: `${groupWidth}px`,
                   height: '32px',
                   backgroundColor: 'var(--agv-bg-header)',
                   color: 'var(--agv-text-header, var(--agv-text-main))',
@@ -453,7 +443,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
 
               {/* Tầng 2: Cột con */}
               <div
-                style={{ width: groupWidthCalc, minWidth: groupWidthCalc, height: '32px' }}
+                style={{ width: `${groupWidth}px`, height: '32px' }}
                 className="flex items-center shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px]"
               >
                 {childCols.map((col) => {
@@ -475,9 +465,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                         }
                       }}
                       style={{
-                        width: `var(--agv-col-w-${col.key}, ${width}px)`,
-                        minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
-                        maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+                        width: `${width}px`,
                         height: '32px',
                         backgroundColor: 'var(--agv-bg-header)',
                         color: 'var(--agv-text-header, var(--agv-text-main))',
@@ -520,12 +508,10 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               }
             }}
             style={{
-              width: `var(--agv-col-w-${col.key}, ${width}px)`,
-              minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
-              maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+              width: `${width}px`,
               height: headerHStr,
               position: 'sticky',
-              right: `var(--agv-right-offset-${col.key}, ${rightOffsets[col.key]}px)`,
+              right: `${rightOffsets[col.key]}px`,
               backgroundColor: 'var(--agv-bg-header)',
               color: 'var(--agv-text-header, var(--agv-text-main))',
             }}

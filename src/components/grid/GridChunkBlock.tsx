@@ -100,15 +100,14 @@ export const GridChunkBlock = memo(
           position: 'absolute',
           top: 0,
           left: 0,
-          width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-          minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          width: `${totalGridWidth}px`,
           height: `${chunkHeight}px`,
           transform: `translate3d(0px, ${topOffset}px, 0px)`,
           willChange: antiGhostMode ? 'transform' : undefined,
           backfaceVisibility: antiGhostMode ? 'hidden' : undefined,
           contain: antiGhostMode ? 'strict' : undefined,
         }}
-        className={theme.chunkBg}
+        className={`agv-chunk-block ${theme.chunkBg}`}
       >
         {rows.map((row, localIdx) => {
           const actualRowIndex = startRowIndex + localIdx;
@@ -134,6 +133,7 @@ export const GridChunkBlock = memo(
           return (
             <GridRow
               key={key}
+              rowKey={rowKey}
               row={row}
               rowIndex={actualRowIndex}
               columns={columns}

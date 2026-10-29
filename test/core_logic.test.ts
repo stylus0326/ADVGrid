@@ -17,6 +17,7 @@ import {
   isSelectionColumn,
   computeFilteredSelectionState,
   toggleFilteredRowsSelection,
+  computeSortRowFlipState,
 } from '../src/components/grid/gridUtils';
 import {
   formatNumberWithCommas,
@@ -298,4 +299,74 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       assert.strictEqual(deselected.has(100), true); // Dòng 100 ngoài activeRows vẫn được bảo toàn
     });
   });
+
+  describe('8. AG Grid-Style FLIP Row Sort Animation (computeSortRowFlipState)', () => {
+    it('should return null when row did not change position (oldRowIndex === newRowIndex)', () => {
+      const res = computeSortRowFlipState({
+        rowKey: 'row_5',
+        newRowIndex: 5,
+        oldRowIndex: 5,
+        rowHeight: 32,
+        viewportCenterRow: 10,
+        prevStartRow: 0,
+      });
+      assert.strictEqual(res, null);
+    });
+
+    it('should compute exact pixel FLIP deltaY for rows swapping within viewport range', () => {
+      // Dòng từ vị trí 8 trượt lên vị trí 2 -> deltaY = (8 - 2) * 32 = +192px
+      const moveUp = computeSortRowFlipState({
+        rowKey: 'row_up',
+        newRowIndex: 2,
+        oldRowIndex: 8,
+        rowHeight: 32,
+        viewportCenterRow: 10,
+        prevStartRow: 0,
+      });
+      assert.ok(moveUp);
+      assert.strictEqual(moveUp.deltaY, 192);
+      assert.strictEqual(moveUp.initialOpacity, 1);
+
+      // Dòng từ vị trí 2 trượt xuống vị trí 8 -> deltaY = (2 - 8) * 32 = -192px
+      const moveDown = computeSortRowFlipState({
+        rowKey: 'row_down',
+        newRowIndex: 8,
+        oldRowIndex: 2,
+        rowHeight: 32,
+        viewportCenterRow: 10,
+        prevStartRow: 0,
+      });
+      assert.ok(moveDown);
+      assert.strictEqual(moveDown.deltaY, -192);
+      assert.strictEqual(moveDown.initialOpacity, 1);
+    });
+
+    it('should compute bidirectional interleaving for rows entering from far away without exceeding top boundary or fading out', () => {
+      const slot0 = computeSortRowFlipState({
+        rowKey: 'row_990',
+        newRowIndex: 0,
+        oldRowIndex: undefined,
+        rowHeight: 32,
+        viewportCenterRow: 10,
+        prevStartRow: 0,
+      });
+      assert.ok(slot0);
+      assert.ok(slot0.deltaY > 0);
+      assert.strictEqual(slot0.initialOpacity, 1);
+
+      // Slot 2 trượt từ trên xuống (deltaY < 0) để lấp kín đỉnh bảng (y = 0px) nhưng không bao giờ vượt quá -2 * 32 (-64px)
+      const slot2 = computeSortRowFlipState({
+        rowKey: 'row_10',
+        newRowIndex: 2,
+        oldRowIndex: undefined,
+        rowHeight: 32,
+        viewportCenterRow: 50,
+        prevStartRow: 40,
+      });
+      assert.ok(slot2);
+      assert.ok(slot2.deltaY < 0 && slot2.deltaY >= -72);
+      assert.strictEqual(slot2.initialOpacity, 1);
+    });
+  });
 });
+

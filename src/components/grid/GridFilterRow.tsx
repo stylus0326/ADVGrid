@@ -687,8 +687,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
       `}</style>
       <div
         style={{
-          width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-          minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          width: `${totalGridWidth}px`,
           height: '34px',
           top: `${headerTopOffset}px`,
           backgroundColor: 'var(--agv-bg-header)',
@@ -725,19 +724,17 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
             (!!filterVal && (filterVal.val.trim().length > 0 || FILTER_OP_META[filterVal.op]?.noInput));
 
           const stickyFilterStyle: React.CSSProperties = {
-            width: `var(--agv-col-w-${col.key}, ${width}px)`,
-            minWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
-            maxWidth: `var(--agv-col-w-${col.key}, ${width}px)`,
+            width: `${width}px`,
             height: '34px',
             backgroundColor: 'var(--agv-bg-header)',
             ...(isPinnedLeft
-              ? { position: 'sticky', left: `var(--agv-left-offset-${col.key}, ${leftOffsets[col.key]}px)`, zIndex: 25 }
+              ? { position: 'sticky', left: `${leftOffsets[col.key]}px`, zIndex: 25 }
               : isDockedLeft
-              ? { position: 'sticky', left: `var(--agv-center-left-offset-${col.key}, ${centerLeftOffsets[col.key]}px)`, zIndex: 24 }
+              ? { position: 'sticky', left: `${centerLeftOffsets[col.key]}px`, zIndex: 24 }
               : isPinnedRight
-              ? { position: 'sticky', right: `var(--agv-right-offset-${col.key}, ${rightOffsets[col.key]}px)`, zIndex: 25 }
+              ? { position: 'sticky', right: `${rightOffsets[col.key]}px`, zIndex: 25 }
               : isDockedRight
-              ? { position: 'sticky', right: `var(--agv-center-right-offset-${col.key}, ${centerRightOffsets[col.key]}px)`, zIndex: 24 }
+              ? { position: 'sticky', right: `${centerRightOffsets[col.key]}px`, zIndex: 24 }
               : {}),
           };
 

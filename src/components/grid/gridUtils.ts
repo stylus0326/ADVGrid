@@ -968,4 +968,79 @@ export function toggleFilteredRowsSelection(
   return next;
 }
 
+/**
+ * Kết quả tính toán trạng thái FLIP (First - Last - Invert - Play) cho từng dòng khi Sort
+ */
+export interface SortRowFlipState {
+  deltaY: number;
+  initialOpacity: number;
+  zIndex: number;
+}
+
+/**
+ * Tính toán độ lệch vị trí dọc (FLIP Invert deltaY) cho hiệu ứng trượt dòng khi Sort chuẩn AG Grid:
+ * 1. Nếu dòng di chuyển trong vùng nhìn thấy / lân cận (<= maxDirectRows):
+ *    Trượt FLIP chính xác 100% từ tọa độ dòng cũ (oldRowIndex) sang tọa độ dòng mới (newRowIndex).
+ * 2. Nếu dòng bay từ vùng xa ngoài khung nhìn vào (> maxDirectRows hoặc ngoài vùng chunk cũ):
+ *    Giữ đúng chiều bay thực tế và phân tầng quãng đường trượt (3.5 .. 11.2 dòng)
+ *    để các dòng lướt đan xen tự nhiên như AG Grid thay vì dịch chuyển cứng thành 1 khối.
+ * 3. Luôn khóa biên trên (newRowIndex + deltaRows >= 0) để dòng không bao giờ trồi lên vùng Header.
+ */
+export function computeSortRowFlipState(params: {
+  rowKey: string;
+  newRowIndex: number;
+  oldRowIndex: number | undefined;
+  rowHeight: number;
+  viewportCenterRow: number;
+  prevStartRow: number;
+  maxDirectRows?: number;
+}): SortRowFlipState | null {
+  const {
+    rowKey,
+    newRowIndex,
+    oldRowIndex,
+    rowHeight,
+    maxDirectRows = 12,
+  } = params;
+
+  if (rowHeight <= 0 || newRowIndex < 0) return null;
+
+  if (oldRowIndex !== undefined) {
+    const rawDeltaRows = oldRowIndex - newRowIndex;
+    if (rawDeltaRows === 0) return null;
+
+    if (Math.abs(rawDeltaRows) <= maxDirectRows) {
+      const safeDeltaRows = Math.max(-newRowIndex, rawDeltaRows);
+      const deltaY = Math.round(safeDeltaRows * rowHeight);
+      if (deltaY === 0) return null;
+      return {
+        deltaY,
+        initialOpacity: 1,
+        zIndex: rawDeltaRows < 0 ? 3 : 2,
+      };
+    }
+  }
+
+  // Với các dòng nhảy từ xa vào khung nhìn: Phân bổ đan chéo 2 chiều (Lên / Xuống) trong phạm vi ±2..±4.5 dòng
+  // giúp lấp đầy 100% mép trên bảng (slot 2 -> 0, slot 3 -> 1) và tạo hiệu ứng các dòng trượt đan qua nhau đặc trưng của AG Grid.
+  const INTERLEAVE_OFFSETS = [2.5, 4.0, -2.0, -2.0, 3.5, -3.0, 3.0, -3.5];
+  const baseOffset = INTERLEAVE_OFFSETS[newRowIndex % INTERLEAVE_OFFSETS.length];
+
+  let hash = 0;
+  for (let i = 0; i < rowKey.length; i++) {
+    hash = (hash * 31 + rowKey.charCodeAt(i)) | 0;
+  }
+  const jitter = ((Math.abs(hash) % 3) - 1) * 0.25;
+  const rawTravelRows = baseOffset + (baseOffset > 0 ? jitter : -jitter);
+  const clampedRows = Math.max(-newRowIndex, Math.min(maxDirectRows, rawTravelRows));
+
+  const deltaY = Math.round(clampedRows * rowHeight);
+  if (deltaY === 0) return null;
+
+  return {
+    deltaY,
+    initialOpacity: 1,
+    zIndex: clampedRows < 0 ? 3 : 2,
+  };
+}
 

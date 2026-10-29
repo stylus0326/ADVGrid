@@ -25,6 +25,7 @@ pnpm-debug.log*
 .DS_Store
 
 # Temporary files, tests & backups
+.aistudio/
 temp_user_data.txt
 _backup_pre_refactor/
 /data/

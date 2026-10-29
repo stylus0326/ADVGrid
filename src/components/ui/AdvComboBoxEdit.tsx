@@ -108,6 +108,39 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     }
   }, [isOpen, curVal, normalizedOptions, isUserTyping]);
 
+  // Tự động cuộn đến vị trí mục đã chọn sẵn khi mở dropdown
+  useLayoutEffect(() => {
+    if (!isOpen || !dropdownRef.current) return;
+    const container = dropdownRef.current;
+    const activeEl =
+      (container.querySelector('[data-selected="true"]') as HTMLElement) ||
+      (container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement);
+
+    if (activeEl) {
+      const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
+      container.scrollTop = Math.max(0, targetScroll);
+    }
+  }, [isOpen]);
+
+  // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
+  useEffect(() => {
+    if (!isOpen || !dropdownRef.current || highlightedIndex < 0) return;
+    const container = dropdownRef.current;
+    const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
+    if (el) {
+      const containerTop = container.scrollTop;
+      const containerBottom = containerTop + container.clientHeight;
+      const elTop = el.offsetTop;
+      const elBottom = elTop + el.offsetHeight;
+
+      if (elTop < containerTop) {
+        container.scrollTop = elTop;
+      } else if (elBottom > containerBottom) {
+        container.scrollTop = elBottom - container.clientHeight;
+      }
+    }
+  }, [highlightedIndex, isOpen]);
+
   // Bộ lọc danh sách tức thì khi gõ
   const filteredOptions = useMemo<AdvComboBoxEditOption[]>(() => {
     if (!isUserTyping) return normalizedOptions;
@@ -318,6 +351,8 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
                   return (
                     <div
                       key={opt.value}
+                      data-item-index={idx}
+                      data-selected={isSelected ? 'true' : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(opt.value);

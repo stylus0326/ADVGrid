@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import {
@@ -97,6 +97,39 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   }, [isOpen, closeDropdown, openDropdown]);
 
   useClickOutside(isOpen, closeDropdown, updateCoords, triggerRef, popupRef);
+
+  // Tự động cuộn đến vị trí mục đã chọn sẵn khi mở dropdown
+  useLayoutEffect(() => {
+    if (!isOpen || !popupRef.current) return;
+    const container = popupRef.current;
+    const activeEl =
+      (container.querySelector('[data-selected="true"]') as HTMLElement) ||
+      (container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement);
+
+    if (activeEl) {
+      const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
+      container.scrollTop = Math.max(0, targetScroll);
+    }
+  }, [isOpen]);
+
+  // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
+  useEffect(() => {
+    if (!isOpen || !popupRef.current || highlightedIndex < 0) return;
+    const container = popupRef.current;
+    const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
+    if (el) {
+      const containerTop = container.scrollTop;
+      const containerBottom = containerTop + container.clientHeight;
+      const elTop = el.offsetTop;
+      const elBottom = elTop + el.offsetHeight;
+
+      if (elTop < containerTop) {
+        container.scrollTop = elTop;
+      } else if (elBottom > containerBottom) {
+        container.scrollTop = elBottom - container.clientHeight;
+      }
+    }
+  }, [highlightedIndex, isOpen]);
 
   const handleSelect = useCallback(
     (optVal: string) => {
@@ -216,6 +249,8 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
                       <button
                         key={opt.value}
                         type="button"
+                        data-item-index={idx}
+                        data-selected={isSelected ? 'true' : undefined}
                         disabled={opt.disabled}
                         onClick={() => !opt.disabled && handleSelect(opt.value)}
                         onMouseEnter={() => !opt.disabled && setHighlightedIndex(idx)}

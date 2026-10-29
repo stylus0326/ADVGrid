@@ -4,7 +4,21 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Tích Hợp Thư Mục 42 Themes Tweakcn Chuẩn, Điều Khiển Qua AdvComboBoxEdit & Nút Chuyển Đổi Ngày/Đêm (`src/themes/presets/*`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/App.tsx`, `src/components/ui/AdvComboBoxEdit.tsx`)
+## 🕒 Lần 3 (Mới nhất): Tự Động Cuộn Đến Mục Đã Chọn Sẵn & Theo Phím Mũi Tên Trong AdvComboBoxEdit và AdvSelect (`src/components/ui/AdvComboBoxEdit.tsx`, `src/components/ui/AdvSelect.tsx`, `code_index.js`)
+- **Thời gian**: 2026-10-30 00:44
+- **Files thay đổi**:
+  - `src/components/ui/AdvComboBoxEdit.tsx` (380 dòng):
+    - Gắn `data-item-index={idx}` và `data-selected={isSelected ? 'true' : undefined}` lên từng phần tử item dropdown.
+    - Bổ sung `useLayoutEffect` tự động tính toán `scrollTop` căn giữa ngay tức thì mục đang chọn vào trung tâm khung nhìn dropdown khi vừa mở popup (triệt tiêu 100% việc phải cuộn mò mẫm qua 42 items).
+    - Bổ sung `useEffect` tự động cuộn bám theo phím mũi tên `ArrowUp` / `ArrowDown` (Nearest Boundary Scroll), bảo đảm không gây trôi lệch thanh cuộn của Grid hoặc Window.
+  - `src/components/ui/AdvSelect.tsx` (301 dòng):
+    - Đồng bộ cơ chế auto-scroll to selected item khi mở dropdown và scroll tracking khi điều hướng bàn phím cho primitive Select thuần.
+  - `code_index.js` (1087 dòng):
+    - Cập nhật số dòng `AdvComboBoxEdit.tsx` (380 dòng) và `AdvSelect.tsx` (301 dòng).
+
+---
+
+## 🕒 Lần 2: Tích Hợp Thư Mục 42 Themes Tweakcn Chuẩn, Điều Khiển Qua AdvComboBoxEdit & Nút Chuyển Đổi Ngày/Đêm (`src/themes/presets/*`, `src/themes/common.ts`, `src/themes/index.ts`, `src/demo/PageToolbar.tsx`, `src/App.tsx`, `src/components/ui/AdvComboBoxEdit.tsx`)
 - **Thời gian**: 2026-10-30 00:40
 - **Files thay đổi**:
   - `src/themes/presets/` (4 files, 3819 dòng):
@@ -23,7 +37,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi PostCSS `The border-border class does not exist` & Hỗ Trợ 100% Cú Pháp Raw Tweakcn (`vite.config.ts`, `src/index.css`, `code_index.js`)
+## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi PostCSS `The border-border class does not exist` & Hỗ Trợ 100% Cú Pháp Raw Tweakcn (`vite.config.ts`, `src/index.css`, `code_index.js`)
 - **Thời gian**: 2026-10-29 21:53
 - **Files thay đổi**:
   - `vite.config.ts` (54 dòng):
@@ -35,15 +49,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
   - `code_index.js` (1087 dòng):
     - Bổ sung mã lỗi chẩn đoán `ERR_TWEAKCN_V4_BORDER_BORDER` hỗ trợ tra cứu tự động qua `node code_index.js --error "border-border"`.
     - Cập nhật số dòng `src/index.css` (1001 dòng) và bổ sung `vite.config.ts` (54 dòng).
-
----
-
-## 🕒 Lần 1: Đồng Bộ Triệt Để Bộ Tokens Theme Sáng (Light) & Bổ Sung Biến --radius Vào Render Tokens (`src/themes/light.ts`, `src/themes/common.ts`, `code_index.js`)
-- **Thời gian**: 2026-10-29 21:32
-- **Files thay đổi**:
-  - `src/themes/light.ts` (44 dòng):
-    - Đồng bộ 100% các giá trị màu quang học OKLCH: `warning` & `warningBg` khớp `--secondary` / `--chart-2` (`oklch(0.8567 0.1164 81.0092)`), `trendUp` khớp `--chart-3` / `--accent` (`oklch(0.6896 0.0714 234.0387)`), `trendDown` khớp `--destructive` (`oklch(0.2611 0.0376 322.5267)`).
-  - `src/themes/common.ts` (353 dòng):
-    - Bổ sung `--radius: 0.5rem;` trực tiếp vào hàm `renderTokensCssBlock` đảm bảo mọi theme khi kích hoạt đều tự động xuất token bo góc đồng bộ chuẩn Shadcn.
-  - `code_index.js` (1066 dòng):
-    - Cập nhật số dòng `src/themes/` (735 dòng).

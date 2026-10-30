@@ -7,7 +7,8 @@ export type { GridTheme };
  * Trích xuất biến CSS Theme Variables để bảo vệ Dropdown Portal và Control luôn đồng bộ 100% theme
  */
 export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUSE): React.CSSProperties {
-  const tokens = getThemeTokens(theme as GridTheme);
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const tokens = getThemeTokens(theme as GridTheme, isDark ? 'dark' : 'light');
   return {
     '--agv-bg-root': tokens.bgRoot,
     '--agv-bg-header': tokens.bgHeader,

@@ -168,8 +168,10 @@ export function App() {
   const activePresetCss = useMemo(() => {
     const preset = getPresetById(surfaceTheme);
     const styles = themeMode === 'dark' ? preset.styles.dark : preset.styles.light;
-    return generatePresetCssVariables(styles, ':root, .agv-app-container');
-  }, [surfaceTheme, themeMode]);
+    const themeCls = getThemeClass(surfaceTheme);
+    const selector = `:root, .agv-app-container, .agv-app-container.${themeCls}, .agv-app-container[data-theme="${surfaceTheme}"], [data-theme="${surfaceTheme}"]`;
+    return generatePresetCssVariables(styles, selector);
+  }, [surfaceTheme, themeMode, customThemeVersion]);
 
   const [editMode, setEditMode] = useState<GridEditMode>(GRID_EDIT_MODES.DOUBLE_CLICK);
   const [dataVersion, setDataVersion] = useState<number>(0);

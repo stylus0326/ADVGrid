@@ -157,6 +157,7 @@ export function normalizeThemeId(theme?: string | null): string {
   if (theme === 'bezier-arthouse') return 'amber-minimal';
   if (theme === 'e-ink' || theme === 'eink') return 'vintage-paper';
   if (TWEAKCN_THEME_PRESETS[theme]) return theme;
+  if (typeof theme === 'string' && (theme.startsWith('custom-') || theme.includes('custom'))) return theme;
   return 'modern-minimal';
 }
 
@@ -167,6 +168,7 @@ export function getThemeClass(theme?: string | null, fallback: string = 'agv-the
   if (!theme) return fallback;
   const norm = normalizeThemeId(theme);
   if (THEME_CLASS_MAP[norm]) return THEME_CLASS_MAP[norm];
+  if (typeof norm === 'string' && norm.startsWith('custom-')) return `agv-theme-${norm}`;
   if (theme.startsWith('agv-')) return theme;
   return `agv-theme-${norm}`;
 }

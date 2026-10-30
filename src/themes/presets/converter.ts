@@ -94,31 +94,32 @@ ${selector} {
   ${styles['sidebar-accent-foreground'] ? `--sidebar-accent-foreground: ${styles['sidebar-accent-foreground']};` : ''}
   ${styles['sidebar-border'] ? `--sidebar-border: ${styles['sidebar-border']};` : ''}
   ${styles['sidebar-ring'] ? `--sidebar-ring: ${styles['sidebar-ring']};` : ''}
+  ${styles['font-sans'] ? `--font-sans: ${styles['font-sans']};` : ''}
 
-  /* Cầu nối Grid Engine */
-  --agv-accent: var(--primary);
-  --agv-accent-text: var(--primary-foreground);
-  --agv-accent-hover: var(--primary);
-  --agv-bg-root: var(--background);
-  --agv-text-main: var(--foreground);
-  --agv-border: var(--border);
-  --agv-border-strong: var(--border);
-  --agv-bg-header: var(--card);
-  --agv-bg-row: var(--background);
-  --agv-bg-row-alt: var(--card);
-  --agv-bg-hover: var(--muted);
-  --agv-bg-selected: var(--secondary);
-  --agv-bg-popup: var(--popover);
-  --agv-bg-control: var(--card);
-  --agv-bg-control-hover: var(--accent);
-  --agv-bg-item-hover: var(--accent);
-  --agv-bg-item-active: var(--secondary);
-  --agv-text-header: var(--card-foreground);
-  --agv-text-muted: var(--muted-foreground);
-  --agv-text-subtle: var(--muted-foreground);
-  --agv-text-active: var(--primary);
-  --scroll-thumb: var(--border);
-  --scroll-thumb-hover: var(--primary);
+  /* Cầu nối Grid Engine với giá trị màu trực tiếp chuẩn xác */
+  --agv-accent: ${styles.primary};
+  --agv-accent-text: ${styles['primary-foreground'] || '#ffffff'};
+  --agv-accent-hover: ${styles.primary};
+  --agv-bg-root: ${styles.background};
+  --agv-text-main: ${styles.foreground};
+  --agv-border: ${styles.border};
+  --agv-border-strong: ${styles.border};
+  --agv-bg-header: ${styles.card};
+  --agv-bg-row: ${styles.background};
+  --agv-bg-row-alt: ${styles.card};
+  --agv-bg-hover: ${styles.muted};
+  --agv-bg-selected: ${styles.secondary};
+  --agv-bg-popup: ${styles.popover};
+  --agv-bg-control: ${styles.card};
+  --agv-bg-control-hover: ${styles.accent};
+  --agv-bg-item-hover: ${styles.accent};
+  --agv-bg-item-active: ${styles.secondary};
+  --agv-text-header: ${styles['card-foreground'] || styles.foreground};
+  --agv-text-muted: ${styles['muted-foreground'] || styles.foreground};
+  --agv-text-subtle: ${styles['muted-foreground'] || styles.foreground};
+  --agv-text-active: ${styles.primary};
+  --scroll-thumb: ${styles.border};
+  --scroll-thumb-hover: ${styles.primary};
 }
 `;
 }

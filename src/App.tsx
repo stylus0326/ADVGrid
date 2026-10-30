@@ -1740,7 +1740,7 @@ export function App() {
               checked={Boolean(isChecked)}
               onChange={(e) => handleToggleCheck(row.rowIndex, row, e)}
               size={16}
-              spring="smooth"
+              spring="snappy"
             />
           </div>
         );

@@ -3,7 +3,7 @@ import { MorphCheckbox } from '../ui/MorphIcons';
 
 /* ==============================================================================
    HỆ THỐNG CHECKBOX CHUẨN DÙNG CHUNG (AdvCheckbox)
-   Tích hợp 100% MorphIcons: Square <-> SquareCheck <-> SquareMinus (mặc định spring smooth êm dịu triệt tiêu độ nảy)
+   Tích hợp 100% MorphIcons: Square <-> SquareCheck <-> SquareMinus (mặc định spring snappy nhanh dứt khoát)
    Tuân thủ 100% theme hệ thống qua CSS variables và hỗ trợ Indeterminate
    ============================================================================== */
 
@@ -30,7 +30,7 @@ export const AdvCheckbox: React.FC<AdvCheckboxProps> = ({
   title,
   style,
   size = 16,
-  spring = 'smooth',
+  spring = 'snappy',
 }) => {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled) return;

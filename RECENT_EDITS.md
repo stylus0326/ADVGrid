@@ -4,20 +4,20 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Tắt Lò Xo Nảy (Bouncy), Chuyển Toàn Bộ Checkbox Sang Kiểu Biến Hình Êm Ái Smooth Spring (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `App.tsx`, `GridFilterRow.tsx`, `FilterModal.tsx`)
-- **Thời gian**: 2026-10-30 17:08
+## 🕒 Lần 3 (Mới nhất): Chuyển Hoạt Ảnh Checkbox Toàn Hệ Thống Sang Snappy Nhanh & Dứt Khoát (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `App.tsx`, `GridFilterRow.tsx`, `FilterModal.tsx`)
+- **Thời gian**: 2026-10-30 17:14
 - **Files thay đổi**:
   - `src/components/ui/MorphIcons.tsx` (199 dòng):
-    - Chuyển cấu hình `spring` mặc định của `MorphCheckbox` từ `'bouncy'` sang `'smooth'`.
-    - Triệt tiêu hoàn toàn hiện tượng rung lắc/nảy lò xo (`zero overshoot`), chuyển sang cơ chế nội suy vector êm dịu, nhẹ nhàng, trơn tru khi check/uncheck giữa `Square` <-> `SquareCheck` <-> `SquareMinus`.
+    - Đổi cấu hình `spring` mặc định của `MorphCheckbox` sang `'snappy'` (`stiffness: 420`, `damping: 30`).
+    - Tốc độ chuyển đổi siêu tốc, phản hồi dứt khoát tức thì khi click chọn dòng/lọc dữ liệu với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
   - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
-    - Đổi `spring = 'smooth'` mặc định cho toàn bộ các control dùng chung kế thừa `AdvCheckbox` (Phễu lọc Checklist, Modal chọn cột, v.v.).
+    - Đồng bộ `spring = 'snappy'` mặc định cho toàn bộ các control dùng chung kế thừa `AdvCheckbox` (Phễu lọc Checklist, Modal chọn cột, v.v.).
   - `src/App.tsx` (2096 dòng):
-    - Chuyển cột chọn dòng Grid (`col_chk`) sang `spring="smooth"`.
+    - Cập nhật cột chọn dòng Grid (`col_chk`) sang `spring="snappy"`.
   - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
-    - Chuyển checkbox 3 trạng thái trên hàng Filter Row sang `spring="smooth"`.
+    - Cập nhật checkbox 3 trạng thái trên hàng Filter Row sang `spring="snappy"`.
   - `src/demo/FilterModal.tsx` (280 dòng):
-    - Đồng bộ toàn bộ 5 khối Checkbox điều kiện lọc sang `spring="smooth"`.
+    - Đồng bộ toàn bộ 5 khối Checkbox điều kiện lọc sang `spring="snappy"`.
 
 ---
 

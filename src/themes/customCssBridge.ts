@@ -288,6 +288,10 @@ export function generateCustomThemeCssBlock(
     '[data-theme="custom"]',
     '.agv-app-container.agv-theme-custom',
     '.agv-grid-root.agv-theme-custom',
+    'html:not(.dark) .agv-theme-custom',
+    'body:not(.dark) .agv-theme-custom',
+    '[data-theme="custom"]:not(.dark)',
+    '.agv-theme-custom:not(.dark)',
   ];
 
   let out = renderTokensCssBlock(rootTokens, rootSelectors);
@@ -305,11 +309,14 @@ export function generateCustomThemeCssBlock(
   if (hasDark) {
     const darkTokens = mapVarsToGridThemeTokens(darkVars);
     const darkSelectors = [
-      'html.agv-theme-custom.dark',
       'html.dark .agv-theme-custom',
-      'body.agv-theme-custom.dark',
+      'html.dark.agv-theme-custom',
       'body.dark .agv-theme-custom',
+      'body.dark.agv-theme-custom',
+      'html.dark [data-theme="custom"]',
+      'body.dark [data-theme="custom"]',
       '.dark .agv-theme-custom',
+      '.dark.agv-theme-custom',
       '.dark[data-theme="custom"]',
       '.agv-theme-custom.dark',
       '[data-theme="custom"].dark',

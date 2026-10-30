@@ -464,12 +464,19 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   return (
     <div
       ref={triggerRef}
-      style={{ ...getPortalThemeVars(theme), ...style }}
+      data-theme={theme || undefined}
+      style={{
+        backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))',
+        color: 'var(--agv-text-main)',
+        borderColor: isOpen ? 'var(--agv-accent)' : 'var(--agv-border)',
+        ...getPortalThemeVars(theme),
+        ...style,
+      }}
       onClick={toggleDropdown}
-      className={`agv-searchlookupedit-wrapper relative inline-flex items-center ${getGridControlRadiusClass()} bg-[var(--agv-bg-control)] cursor-pointer select-none ${sizeHeight} min-h-[28px] max-h-[30px] w-full h-full ${
+      className={`agv-searchlookupedit-wrapper relative inline-flex items-center ${getGridControlRadiusClass()} cursor-pointer select-none ${sizeHeight} min-h-[28px] max-h-[30px] w-full h-full ${
         isOpen
-          ? 'is-open border-2 border-[var(--agv-accent)]'
-          : 'border border-[var(--agv-border)]'
+          ? 'is-open border-2'
+          : 'border'
       } ${disabled ? 'opacity-50 pointer-events-none' : ''} ${themeClass} ${className}`.trim()}
     >
       <div className="agv-searchlookupedit-display w-full h-full flex items-center px-2.5 py-0.5 truncate text-xs flex-1 min-w-0">
@@ -481,6 +488,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
         createPortal(
           <div
             ref={dropdownRef}
+            data-theme={theme || undefined}
             style={{
               position: 'fixed',
               ...(coords.isFlipUp
@@ -490,10 +498,13 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
               width: `${coords.width}px`,
               maxHeight: `${coords.maxHeight}px`,
               zIndex: 99999999,
+              backgroundColor: 'var(--agv-bg-popup)',
+              borderColor: 'var(--agv-border-popup, var(--agv-border))',
+              color: 'var(--agv-text-main)',
               boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
               ...getPortalThemeVars(theme),
             }}
-            className={`agv-searchlookupedit-dropdown rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] overflow-hidden flex flex-col text-xs ${
+            className={`agv-searchlookupedit-dropdown rounded-md border overflow-hidden flex flex-col text-xs ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${themeClass}`}
             data-agv-popup="true"
@@ -719,6 +730,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
         createPortal(
           <div
             ref={opMenuRef}
+            data-theme={theme || undefined}
             style={{
               position: 'fixed',
               ...(opMenuCoords.isFlipUp
@@ -726,10 +738,13 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
                 : { top: `${opMenuCoords.top}px`, bottom: 'auto' }),
               left: `${opMenuCoords.left}px`,
               zIndex: 100000000,
+              backgroundColor: 'var(--agv-bg-popup)',
+              borderColor: 'var(--agv-border-popup, var(--agv-border))',
+              color: 'var(--agv-text-main)',
               boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
               ...getPortalThemeVars(theme),
             }}
-            className={`agv-lookup-op-menu rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] overflow-hidden flex flex-col text-xs py-1 min-w-[145px] ${
+            className={`agv-lookup-op-menu rounded-md border overflow-hidden flex flex-col text-xs py-1 min-w-[145px] ${
               opMenuCoords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${themeClass}`}
             data-agv-popup="true"

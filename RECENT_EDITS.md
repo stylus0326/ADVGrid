@@ -4,7 +4,25 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Tối Ưu Toàn Diện Hiệu Năng 0% CPU Idle, Độ Mượt Cuộn Cao Tốc & Tái Cấu Trúc Module Chuẩn Data-Driven (`VirtualizedGrid.tsx`, `App.tsx`, `GridRow.tsx`, `apiService.ts`, `useColumnResize.ts`, `useGridKeyboardNav.ts`, `useGridSortFlipAnimation.ts`, `datePickerStyles.ts`, `index.css`, `themes/index.ts`)
+## 🕒 Lần 3 (Mới nhất): Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
+- **Thời gian**: 2026-10-30 14:40
+- **Files thay đổi**:
+  - `src/index.css` (784 dòng):
+    - Khắc phục triệt để lỗi giật dòng sau mỗi lần cuộn: Loại bỏ selector `.agv-scroll-viewport[data-agv-scrolling="true"] .agv-row-enter` can thiệp vào `animation: none !important`. Trước đó khi dừng cuộn (sau 110ms timeout), cờ `data-agv-scrolling` bị xóa khiến CSS engine re-trigger lại keyframe `agv-row-enter` từ 0% làm các hàng bị giật nhảy 3px.
+    - Loại bỏ hoàn toàn `transform: translateY(3px)` khỏi `@keyframes agv-row-enter` (chỉ chuyển đổi độ mờ `opacity: 0.88 -> 1` trong 100ms), bảo toàn 100% `position: sticky` và loại bỏ nguy cơ xô lệch pixel theo trục dọc $Y$ khi virtualizing chunk.
+  - `src/App.tsx` (2096 dòng):
+    - Sửa lỗi gốc lệch màu theme trên Portals: Đồng bộ đồng thời class Theme (`agv-light`, `agv-dark`, `agv-theme-custom`...), class `dark` và thuộc tính `data-theme={surfaceTheme}` lên cả `document.documentElement` (`<html>`) VÀ `document.body` (`<body>`). Ngăn chặn triệt để tình trạng thẻ `body` không có class `.dark` khiến selector `body:not(.dark)` bị match nhầm trong chế độ Đêm.
+  - `src/themes/index.ts` (246 dòng) & `src/themes/customCssBridge.ts` (337 dòng):
+    - Chuẩn hóa toàn diện các bộ selectors Ngày và Đêm cho cả 4 Theme chuẩn và Custom CSS: các biến chế độ Ngày chỉ kích hoạt khi `:not(.dark)`, các biến chế độ Đêm luôn áp dụng với độ đặc hiệu cao khi có `.dark`, đảm bảo khi người dùng nhập bất kỳ đoạn mã CSS nào thì toàn bộ hệ thống đều tự động cập nhật đồng nhất không ngoại lệ.
+  - `src/components/ui/AdvComboBoxEdit.tsx` (371 dòng) & `src/components/ui/AdvSearchLookUpEdit.tsx` (781 dòng) & `src/components/grid/floating/AdvGridQueryBuilderModal.tsx` (1525 dòng):
+    - Thêm `data-theme={theme}` và gắn inline style trực tiếp (`backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))'`, `color: 'var(--agv-text-main)'`, `backgroundColor: 'var(--agv-bg-popup)'`, `borderColor: 'var(--agv-border-popup)'`) cho trigger wrapper và dropdown portal.
+    - Dropdown item của `AdvComboBoxEdit`: mục được chọn (`isSelected`) luôn nhận `var(--agv-accent)` chữ trắng `var(--agv-accent-text, #ffffff)`, mục hover nhận `var(--agv-bg-item-hover)` chữ `var(--agv-text-main)`, đồng bộ 100% với Theme hiện tại.
+  - `src/components/ui/datepicker/datePickerStyles.ts` (639 dòng):
+    - Khắc phục lỗi tương phản tách rời Quý/Tháng trên Popup DatePicker: chuyển `background` của `.agv-preset-subgrid` sang `var(--agv-bg-subtle, var(--agv-bg-row-alt, var(--agv-bg-root)))` và `.agv-preset-chip` sang `var(--agv-bg-control, var(--agv-bg-popup))`, giúp khối mốc nhanh hòa hợp 100% với nền popup.
+
+---
+
+## 🕒 Lần 2: Tối Ưu Toàn Diện Hiệu Năng 0% CPU Idle, Độ Mượt Cuộn Cao Tốc & Tái Cấu Trúc Module Chuẩn Data-Driven (`VirtualizedGrid.tsx`, `App.tsx`, `GridRow.tsx`, `apiService.ts`, `useColumnResize.ts`, `useGridKeyboardNav.ts`, `useGridSortFlipAnimation.ts`, `datePickerStyles.ts`, `index.css`, `themes/index.ts`)
 - **Thời gian**: 2026-10-30 14:15
 - **Files thay đổi**:
   - `src/components/grid/VirtualizedGrid.tsx` (2260 dòng):
@@ -24,13 +42,12 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Lưu trữ và khôi phục biểu thức `origWidthStyle` (`calc(var(--agv-col-w-...))`) trên `bandContainers` sau khi kết thúc kéo giãn cột (`cleanupResize`).
   - `src/components/ui/datepicker/datePickerStyles.ts` (640 dòng):
     - Tối ưu `ensureDatePickerStyles()` thoát sớm $O(1)$ (`if (style) return;`) khi thẻ `#agv-datepicker-core-styles` đã tồn tại, không ghi đè lại 600+ dòng CSS mỗi lần mở DatePicker.
-  - `src/index.css` (788 dòng) & `src/themes/index.ts` (211 dòng):
-    - Tắt hiệu ứng `.agv-row-enter` khi đang cuộn nhanh (`.agv-scroll-viewport[data-agv-scrolling="true"] .agv-row-enter { animation: none !important; }`) để các chunk mới hiển thị tức thì 0ms.
+  - `src/themes/index.ts` (211 dòng):
     - Xóa khối `scrollbarCss` trùng lặp trong `src/themes/index.ts`.
 
 ---
 
-## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi Gắn Class CSS & Inline Style Khiến ComboBox Bị Trắng Toát Trên Theme Dark (`enterpriseEditorUtils.ts`, `themes/index.ts`)
+## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi Gắn Class CSS & Inline Style Khiến ComboBox Bị Trắng Toát Trên Theme Dark (`enterpriseEditorUtils.ts`, `themes/index.ts`)
 - **Thời gian**: 2026-10-30 12:45
 - **Files thay đổi**:
   - `src/components/ui/enterpriseEditorUtils.ts` (114 dòng):
@@ -42,26 +59,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
       - Ngày: `html:not(.dark) .agv-dark`, `html:not(.dark).agv-dark`, `body:not(.dark) .agv-dark`...
       - Đêm: `html.dark .agv-dark`, `html.dark.agv-dark`, `body.dark .agv-dark`, `body.dark.agv-dark`, `.dark .agv-dark`, `.dark.agv-dark`...
     - Giúp Theme ComboBox (`AdvComboBoxEdit`) hiển thị đúng 100% màu nền và chữ của Balham Dark (nền `#182230`, viền `#2e3d4f`, chữ `#f0f4f8`), tự động chuyển đổi hoàn hảo giữa 5 theme và 2 chế độ Ngày/Đêm.
-
----
-
-## 🕒 Lần 1: Triển Khai Segmented Control Ngày/Đêm Chuẩn Mockup 1, Đồng Bộ 100% Ngày/Đêm Cho 4 Theme & Custom CSS, Khắc Phục Triệt Để Lệch Màu Popup ComboBox & DatePicker (`PageToolbar.tsx`, `App.tsx`, `AdvComboBoxEdit.tsx`, `datePickerStyles.ts`, `customCssBridge.ts`, `themes/common.ts`, `themes/index.ts`)
-- **Thời gian**: 2026-10-30 11:45
-- **Files thay đổi**:
-  - `src/demo/PageToolbar.tsx` (626 dòng):
-    - Mở rộng `PageToolbarProps` với `isDark?: boolean; onToggleColorScheme?: (isDark: boolean) => void;`.
-    - Tích hợp cụm Segmented Control 2 nấc `[ ☀️ Ngày | 🌙 Đêm ]` chuẩn 100% Mockup 1: chiều cao tối thiểu $\ge 28$px, mục active có nền màu theme `var(--agv-accent)` và chữ màu trắng `var(--agv-accent-text, #ffffff)`, mục inactive có nền `transparent` và chữ `var(--agv-text-muted)`.
-    - Sử dụng Lucide Icons `Sun` và `Moon` size 13px đồng bộ chuẩn hệ thống.
-  - `src/App.tsx` (2090 dòng):
-    - Bổ sung state `isDark` và handler `handleToggleColorScheme` lưu vào `localStorage.agv_color_scheme`.
-    - Tự động đồng bộ `isDark` khi đổi giữa các theme Sáng/Tối.
-    - Đồng bộ class `dark` lên thẻ gốc `document.documentElement` và container `.agv-app-container`.
-    - Truyền `isDark={isDark}` và `onToggleColorScheme={handleToggleColorScheme}` vào `<PageToolbar />`.
-  - `src/components/ui/AdvComboBoxEdit.tsx` (346 dòng):
-    - Khắc phục lỗi UX: chỉ mục đang được chọn (`isSelected`) mới nhận nền `var(--agv-accent)` chữ trắng; mục di chuột hover qua (`isHighlighted && !isSelected`) nhận nền hover `var(--agv-bg-item-hover)` và giữ màu chữ `var(--agv-text-main)`.
-  - `src/components/ui/datepicker/datePickerStyles.ts` (639 dòng):
-    - Dọn dẹp triệt để các khối hardcode biến CSS ở đầu file, cho phép DatePicker, Calendar và DatePresetSelect kế thừa 100% tự nhiên bộ biến màu `--agv-*`.
-  - `src/themes/common.ts` (345 dòng) & `src/themes/index.ts` (219 dòng):
-    - Nâng cấp `setCustomTokens(rootTokens, darkTokens)` và `getCustomTokens(isDark)` lưu trữ và trả về token độc lập cho cả Ngày và Đêm của CSS Tùy Biến.
-  - `src/themes/customCssBridge.ts` (330 dòng):
-    - Phân tích và sinh đồng thời cả 2 bộ token `rootTokens` (cho `:root`) và `darkTokens` (cho `.dark`), đăng ký vào engine theme.

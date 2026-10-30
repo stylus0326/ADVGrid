@@ -620,17 +620,15 @@ body, button, input, select, textarea {
 /* Subtle Virtualized Row Entry Animation */
 @keyframes agv-row-enter {
   0% {
-    opacity: 0.72;
-    transform: translateY(3px);
+    opacity: 0.88;
   }
   100% {
     opacity: 1;
-    transform: none;
   }
 }
 
 .agv-row-enter {
-  animation: agv-row-enter 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: agv-row-enter 100ms ease-out;
 }
 
 /* Tạm mở giới hạn contain của Chunk trong đúng 300ms khi chạy hiệu ứng trượt dòng Sort (FLIP chuẩn AG Grid)
@@ -640,8 +638,7 @@ body, button, input, select, textarea {
   overflow: visible !important;
 }
 
-.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter,
-.agv-scroll-viewport[data-agv-scrolling="true"] .agv-row-enter {
+.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter {
   animation: none !important;
 }
 

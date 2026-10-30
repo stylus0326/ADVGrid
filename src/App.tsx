@@ -166,17 +166,36 @@ export function App() {
     savePersistedGridConfig({ surfaceTheme: 'custom' as SurfaceTheme });
   }, []);
 
-  // Đồng bộ class Theme và Dark Mode lên document.documentElement để mọi Portal (render vào body) tự động hưởng 100% theme
+  // Đồng bộ triệt để class Theme, Dark Mode và data-theme lên cả document.documentElement và document.body
+  // Giúp toàn bộ Portals render vào body tự động thừa hưởng 100% theme CSS variables không bị lệch màu
   useEffect(() => {
     const themeClass = getThemeClass(surfaceTheme);
     const rootEl = document.documentElement;
-    rootEl.classList.remove('agv-light', 'agv-dark', 'agv-bezier-arthouse', 'agv-e-ink', 'theme-eink', 'agv-theme-custom');
+    const bodyEl = document.body;
+
+    rootEl.setAttribute('data-theme', surfaceTheme);
+    if (bodyEl) {
+      bodyEl.setAttribute('data-theme', surfaceTheme);
+    }
+
+    const themeClasses = ['agv-light', 'agv-dark', 'agv-bezier-arthouse', 'agv-e-ink', 'theme-eink', 'agv-theme-custom'];
+    themeClasses.forEach((cls) => {
+      rootEl.classList.remove(cls);
+      if (bodyEl) bodyEl.classList.remove(cls);
+    });
+
     const tokens = themeClass.split(' ').filter(Boolean);
-    tokens.forEach((t) => rootEl.classList.add(t));
+    tokens.forEach((t) => {
+      rootEl.classList.add(t);
+      if (bodyEl) bodyEl.classList.add(t);
+    });
+
     if (isDark) {
       rootEl.classList.add('dark');
+      if (bodyEl) bodyEl.classList.add('dark');
     } else {
       rootEl.classList.remove('dark');
+      if (bodyEl) bodyEl.classList.remove('dark');
     }
   }, [surfaceTheme, isDark]);
 

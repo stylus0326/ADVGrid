@@ -252,12 +252,19 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   return (
     <div
       ref={triggerRef}
-      style={{ ...getPortalThemeVars(theme), ...style }}
+      data-theme={theme || undefined}
+      style={{
+        backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))',
+        color: 'var(--agv-text-main)',
+        borderColor: isOpen ? 'var(--agv-accent)' : 'var(--agv-border)',
+        ...getPortalThemeVars(theme),
+        ...style,
+      }}
       onClick={handleTriggerClick}
-      className={`agv-comboboxedit-wrapper relative inline-flex items-center ${getGridControlRadiusClass()} bg-[var(--agv-bg-control)] min-h-[28px] max-h-[30px] w-full h-full ${sizeHeight} ${
+      className={`agv-comboboxedit-wrapper relative inline-flex items-center ${getGridControlRadiusClass()} min-h-[28px] max-h-[30px] w-full h-full ${sizeHeight} ${
         isOpen
-          ? 'is-open border-2 border-[var(--agv-accent)]'
-          : 'border border-[var(--agv-border)]'
+          ? 'is-open border-2'
+          : 'border'
       } ${disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'} ${themeClass} ${className}`.trim()}
     >
       {/* Ô nhập thuần túy, tràn viền 100%, không chứa icon phụ theo đúng yêu cầu */}
@@ -272,7 +279,11 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         {...NO_AUTOFILL_PROPS}
-        className={`agv-comboboxedit-input w-full h-full bg-transparent px-2.5 text-xs text-[var(--agv-text-main)] outline-none placeholder:text-[var(--agv-text-muted)] ${
+        style={{
+          color: 'var(--agv-text-main)',
+          backgroundColor: 'transparent',
+        }}
+        className={`agv-comboboxedit-input w-full h-full bg-transparent px-2.5 text-xs outline-none placeholder:text-[var(--agv-text-muted)] ${
           !allowCustomInput ? 'cursor-pointer select-none' : ''
         }`}
       />
@@ -282,6 +293,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
         createPortal(
           <div
             ref={dropdownRef}
+            data-theme={theme || undefined}
             style={{
               position: 'fixed',
               ...(coords.isFlipUp
@@ -291,10 +303,13 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
               width: `${coords.width}px`,
               maxHeight: `${coords.maxHeight}px`,
               zIndex: 99999999,
+              backgroundColor: 'var(--agv-bg-popup)',
+              borderColor: 'var(--agv-border-popup, var(--agv-border))',
+              color: 'var(--agv-text-main)',
               boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
               ...getPortalThemeVars(theme),
             }}
-            className={`agv-comboboxedit-dropdown rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] p-1 overflow-y-auto text-xs ${
+            className={`agv-comboboxedit-dropdown rounded-md border p-1 overflow-y-auto text-xs ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${themeClass}`}
             data-agv-popup="true"
@@ -310,13 +325,6 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
                   const isSelected = opt.value === curVal || opt.label === curVal;
                   const isHighlighted = idx === highlightedIndex;
 
-                  let itemClass = 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]';
-                  if (isSelected) {
-                    itemClass = 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold';
-                  } else if (isHighlighted) {
-                    itemClass = 'bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]';
-                  }
-
                   return (
                     <div
                       key={opt.value}
@@ -325,7 +333,24 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
                         handleSelect(opt.value);
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition-colors text-xs select-none ${itemClass}`}
+                      style={
+                        isSelected
+                          ? {
+                              backgroundColor: 'var(--agv-accent)',
+                              color: 'var(--agv-accent-text, #ffffff)',
+                              fontWeight: 600,
+                            }
+                          : isHighlighted
+                          ? {
+                              backgroundColor: 'var(--agv-bg-item-hover)',
+                              color: 'var(--agv-text-main)',
+                            }
+                          : {
+                              backgroundColor: 'transparent',
+                              color: 'var(--agv-text-main)',
+                            }
+                      }
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition-colors text-xs select-none"
                     >
                       <span className="truncate">{opt.label}</span>
                       {isSelected && (

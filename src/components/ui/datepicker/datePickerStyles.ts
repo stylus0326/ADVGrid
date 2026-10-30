@@ -473,7 +473,7 @@ function ensureDatePickerStyles() {
       margin: 3px 0 5px 12px;
       padding: 4px 6px;
       border-left: 2px solid var(--agv-border);
-      background: var(--agv-bg-subtle);
+      background: var(--agv-bg-subtle, var(--agv-bg-row-alt, var(--agv-bg-root)));
       border-radius: 0 6px 6px 0;
     }
     .agv-preset-chips-section {
@@ -505,7 +505,7 @@ function ensureDatePickerStyles() {
       padding: 1.5px 5px;
       border-radius: 6px;
       border: 1px solid var(--agv-border);
-      background: var(--agv-bg-popup);
+      background: var(--agv-bg-control, var(--agv-bg-popup));
       color: var(--agv-text-main);
       font-size: 10.5px;
       cursor: pointer;

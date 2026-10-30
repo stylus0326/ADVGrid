@@ -179,6 +179,7 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
           <div
             ref={popupRef}
             data-agv-popup="true"
+            data-theme={theme || undefined}
             style={{
               position: 'fixed',
               left: `${coords.left}px`,
@@ -188,10 +189,13 @@ export const QueryCustomSelect = React.memo(function QueryCustomSelect({
               minWidth: `${Math.max(coords.width, effectiveMinWidth)}px`,
               maxHeight: `${coords.maxHeight}px`,
               zIndex: 99999999,
+              backgroundColor: 'var(--agv-bg-popup)',
+              borderColor: 'var(--agv-border-popup, var(--agv-border))',
+              color: 'var(--agv-text-main)',
               boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
               ...getPortalThemeVars(theme),
             }}
-            className={`agv-query-dropdown flex flex-col rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] py-1 overflow-hidden text-xs ${
+            className={`agv-query-dropdown flex flex-col rounded-md border py-1 overflow-hidden text-xs ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             }`}
             onClick={(e) => e.stopPropagation()}

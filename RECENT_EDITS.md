@@ -4,7 +4,24 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Đồng Bộ Hóa Toàn Diện Checkbox Hệ Thống Sang MorphIcons Lò Xo Với SquareCheck Chuẩn Lucide (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
+## 🕒 Lần 3 (Mới nhất): Tắt Lò Xo Nảy (Bouncy), Chuyển Toàn Bộ Checkbox Sang Kiểu Biến Hình Êm Ái Smooth Spring (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `App.tsx`, `GridFilterRow.tsx`, `FilterModal.tsx`)
+- **Thời gian**: 2026-10-30 17:08
+- **Files thay đổi**:
+  - `src/components/ui/MorphIcons.tsx` (199 dòng):
+    - Chuyển cấu hình `spring` mặc định của `MorphCheckbox` từ `'bouncy'` sang `'smooth'`.
+    - Triệt tiêu hoàn toàn hiện tượng rung lắc/nảy lò xo (`zero overshoot`), chuyển sang cơ chế nội suy vector êm dịu, nhẹ nhàng, trơn tru khi check/uncheck giữa `Square` <-> `SquareCheck` <-> `SquareMinus`.
+  - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
+    - Đổi `spring = 'smooth'` mặc định cho toàn bộ các control dùng chung kế thừa `AdvCheckbox` (Phễu lọc Checklist, Modal chọn cột, v.v.).
+  - `src/App.tsx` (2096 dòng):
+    - Chuyển cột chọn dòng Grid (`col_chk`) sang `spring="smooth"`.
+  - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
+    - Chuyển checkbox 3 trạng thái trên hàng Filter Row sang `spring="smooth"`.
+  - `src/demo/FilterModal.tsx` (280 dòng):
+    - Đồng bộ toàn bộ 5 khối Checkbox điều kiện lọc sang `spring="smooth"`.
+
+---
+
+## 🕒 Lần 2: Đồng Bộ Hóa Toàn Diện Checkbox Hệ Thống Sang MorphIcons Lò Xo Với SquareCheck Chuẩn Lucide (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
 - **Thời gian**: 2026-10-30 16:53
 - **Files thay đổi**:
   - `src/components/ui/MorphIcons.tsx` (199 dòng):
@@ -13,16 +30,16 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
       + Chưa chọn (`unchecked`): `Square` (`https://lucide.dev/icons/square`)
       + Đã chọn (`checked`): `SquareCheck` (`https://lucide.dev/icons/square-check`)
       + Bán chọn (`indeterminate`): `SquareMinus` (`https://lucide.dev/icons/square-minus`)
-    - Chuyển đổi trạng thái bằng `MorphIcon` sử dụng vật lý lò xo (spring physics `bouncy`), màu sắc chuẩn CSS tokens `var(--agv-accent)` và `var(--agv-text-muted)`.
+    - Chuyển đổi trạng thái bằng `MorphIcon`, màu sắc chuẩn CSS tokens `var(--agv-accent)` và `var(--agv-text-muted)`.
   - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
-    - Tái sử dụng trực tiếp `MorphCheckbox` lò xo với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
-    - Tự động mang lại hiệu ứng biến hình lò xo `MorphIcons` cho toàn bộ các nơi dùng `AdvCheckbox`: Phễu lọc giá trị (`AdvChecklistFilterPopup.tsx`), Modal chọn cột (`AdvColumnChooserModal.tsx`), v.v.
+    - Tái sử dụng trực tiếp `MorphCheckbox` với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
+    - Tự động mang lại hiệu ứng biến hình cho toàn bộ các nơi dùng `AdvCheckbox`: Phễu lọc giá trị (`AdvChecklistFilterPopup.tsx`), Modal chọn cột (`AdvColumnChooserModal.tsx`), v.v.
   - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
     - Tích hợp `MorphCheckbox` 3 trạng thái cho các cột checkbox trên hàng Filter Row (`ALL` -> `indeterminate` / `SquareMinus`, `CHECKED` -> `checked` / `SquareCheck`, `UNCHECKED` -> `unchecked` / `Square`), đồng bộ triệt để hiệu ứng động và màu sắc theo theme.
 
 ---
 
-## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
+## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
 - **Thời gian**: 2026-10-30 14:40
 - **Files thay đổi**:
   - `src/index.css` (784 dòng):
@@ -37,28 +54,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Dropdown item của `AdvComboBoxEdit`: mục được chọn (`isSelected`) luôn nhận `var(--agv-accent)` chữ trắng `var(--agv-accent-text, #ffffff)`, mục hover nhận `var(--agv-bg-item-hover)` chữ `var(--agv-text-main)`, đồng bộ 100% với Theme hiện tại.
   - `src/components/ui/datepicker/datePickerStyles.ts` (639 dòng):
     - Khắc phục lỗi tương phản tách rời Quý/Tháng trên Popup DatePicker: chuyển `background` của `.agv-preset-subgrid` sang `var(--agv-bg-subtle, var(--agv-bg-row-alt, var(--agv-bg-root)))` và `.agv-preset-chip` sang `var(--agv-bg-control, var(--agv-bg-popup))`, giúp khối mốc nhanh hòa hợp 100% với nền popup.
-
----
-
-## 🕒 Lần 1: Tối Ưu Toàn Diện Hiệu Năng 0% CPU Idle, Độ Mượt Cuộn Cao Tốc & Tái Cấu Trúc Module Chuẩn Data-Driven (`VirtualizedGrid.tsx`, `App.tsx`, `GridRow.tsx`, `apiService.ts`, `useColumnResize.ts`, `useGridKeyboardNav.ts`, `useGridSortFlipAnimation.ts`, `datePickerStyles.ts`, `index.css`, `themes/index.ts`)
-- **Thời gian**: 2026-10-30 14:15
-- **Files thay đổi**:
-  - `src/components/grid/VirtualizedGrid.tsx` (2260 dòng):
-    - Thay thế vòng lặp `requestAnimationFrame` đo FPS chạy ngầm 24/7 bằng cơ chế **On-Demand FPS Monitor** (`startFpsMonitor` / `stopFpsMonitor`): chỉ kích hoạt đo FPS khi bảng thực sự đang cuộn hoặc bật `autoScrolling`, tự động ngủ 0% CPU khi bảng đứng yên (idle).
-    - Gộp 2 listener `wheel` (`handleWheelSnap` & `handleWheelLock`) thành 1 listener duy nhất `handleWheel`, kiểm tra `target.closest(POPUP_SELECTORS)` ở đầu hàm giúp cuộn tự nhiên bên trong mọi popup con trước khi khóa cuộn Grid hoặc căn dòng `rowSnapMode`.
-    - Dùng chung `POPUP_SELECTORS` từ `src/components/grid/constants.ts` (xóa khai báo trùng lặp).
-    - Tách 2 khối logic lớn sang custom hooks độc lập: `useGridKeyboardNav` và `useGridSortFlipAnimation`.
-  - `src/components/grid/hooks/useGridKeyboardNav.ts` (156 dòng) & `src/components/grid/hooks/useGridSortFlipAnimation.ts` (180 dòng) & `src/components/grid/hooks/index.ts`:
-    - Đóng gói hoàn chỉnh điều hướng bàn phím (`ArrowUp/Down/PageUp/Down/Space`) và động cơ trượt dòng FLIP khi Sort chuẩn AG Grid.
-  - `src/App.tsx` (2078 dòng):
-    - Nâng cấp `monthStatsCacheRef` (`WeakMap`) gắn trực tiếp vào `baseRecord` gốc (`apiData[r]`) thông qua hàm `getOrComputeMonthStats(recordObj)` và thuộc tính `_baseRecord` trong `getRow`.
-    - Tái sử dụng $O(1)$ `getOrComputeMonthStats` trong cả `getRowVal(r, 'col_formula')` lẫn `renderCell`, loại bỏ triệt để việc cấp phát 50.000 mảng tạm `mVals` trên Heap khi lọc dữ liệu, đổi công thức `AVG/SUM/MIN/MAX` hoặc tính tổng nhóm.
-    - Dùng chung `DEFAULT_CHUNK_SIZE` và `DEFAULT_ROW_HEIGHT` từ `./components/grid`.
-  - `src/components/grid/GridRow.tsx` (1000 dòng) & `src/services/apiService.ts` (1045 dòng):
-    - Chuyển các danh mục `STATUS_COMBO_OPTIONS`, `REGION_LOOKUP_DATA`, `REGION_LOOKUP_COLUMNS` từ `GridRow.tsx` sang `apiService.ts` và truyền qua `col.editorOptions` của `INITIAL_COLUMNS`, giúp `GridRow.tsx` thuần khiết 100% Data-Driven.
-  - `src/components/grid/hooks/useColumnResize.ts` (340 dòng):
-    - Lưu trữ và khôi phục biểu thức `origWidthStyle` (`calc(var(--agv-col-w-...))`) trên `bandContainers` sau khi kết thúc kéo giãn cột (`cleanupResize`).
-  - `src/components/ui/datepicker/datePickerStyles.ts` (640 dòng):
-    - Tối ưu `ensureDatePickerStyles()` thoát sớm $O(1)$ (`if (style) return;`) khi thẻ `#agv-datepicker-core-styles` đã tồn tại, không ghi đè lại 600+ dòng CSS mỗi lần mở DatePicker.
-  - `src/themes/index.ts` (211 dòng):
-    - Xóa khối `scrollbarCss` trùng lặp trong `src/themes/index.ts`.

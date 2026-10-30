@@ -827,7 +827,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                     checked={isChecked}
                     indeterminate={isAll}
                     size={16}
-                    spring="bouncy"
+                    spring="smooth"
                     className="pointer-events-none"
                   />
                 </div>

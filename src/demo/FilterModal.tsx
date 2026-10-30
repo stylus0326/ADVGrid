@@ -99,7 +99,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                   onFiltersChange((prev) => ({ ...prev, onlyChecked: !prev.onlyChecked }))
                 }
                 size={16}
-                spring="bouncy"
+                spring="smooth"
               />
               <span style={{ color: 'var(--agv-text-main)' }}>
                 Chỉ hiển thị các dòng đã đánh dấu chọn ({checkedRowCount} dòng)
@@ -139,7 +139,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       }))
                     }
                     size={16}
-                    spring="bouncy"
+                    spring="smooth"
                   />
                   <span className="font-medium text-[11px]" style={{ color: 'var(--agv-text-main)' }}>
                     {st}
@@ -181,7 +181,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       }))
                     }
                     size={16}
-                    spring="bouncy"
+                    spring="smooth"
                   />
                   <span className="font-medium text-[11px]" style={{ color: 'var(--agv-text-main)' }}>
                     {reg}
@@ -209,7 +209,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     onFiltersChange((prev) => ({ ...prev, highCpu: !prev.highCpu }))
                   }
                   size={16}
-                  spring="bouncy"
+                  spring="smooth"
                 />
                 <span style={{ color: 'var(--agv-text-main)' }}>Tải CPU cao (&gt; 70.00%)</span>
               </label>
@@ -220,7 +220,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     onFiltersChange((prev) => ({ ...prev, lowSla: !prev.lowSla }))
                   }
                   size={16}
-                  spring="bouncy"
+                  spring="smooth"
                 />
                 <span style={{ color: 'var(--agv-text-main)' }}>SLA cảnh báo vi phạm (&lt; 98.00%)</span>
               </label>

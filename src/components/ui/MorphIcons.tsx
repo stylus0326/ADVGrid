@@ -52,7 +52,7 @@ export const MorphCheckbox: React.FC<MorphCheckboxProps> = ({
   onClick,
   size = 16,
   className = '',
-  spring = 'bouncy',
+  spring = 'smooth',
   disabled = false,
   title,
   style,

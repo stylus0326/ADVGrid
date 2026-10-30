@@ -3,8 +3,9 @@ import { MorphIcon, MorphIconProps } from 'morphicons/react';
 import { SortDirection, SORT_DIRECTIONS } from '../grid/types';
 import {
   Square,
+  SquareCheck,
+  SquareMinus,
   Check,
-  Minus,
   CheckSquare,
   Play,
   Pause,
@@ -57,7 +58,7 @@ export const MorphCheckbox: React.FC<MorphCheckboxProps> = ({
   style,
 }) => {
   const isSelected = checked && !indeterminate;
-  const activeIcon = indeterminate ? Minus : isSelected ? Check : Square;
+  const activeIcon = indeterminate ? SquareMinus : isSelected ? SquareCheck : Square;
   const isAccent = isSelected || indeterminate;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -173,7 +174,6 @@ export const MorphChevronIcon: React.FC<MorphChevronIconProps> = ({
 export {
   Square,
   Check,
-  Minus,
   CheckSquare,
   Play,
   Pause,

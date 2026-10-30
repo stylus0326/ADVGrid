@@ -3,8 +3,7 @@ import { MorphCheckbox } from '../ui/MorphIcons';
 
 /* ==============================================================================
    HỆ THỐNG CHECKBOX CHUẨN DÙNG CHUNG (AdvCheckbox)
-   Tích hợp 100% MorphIcons Spring Physics: Square <-> Check <-> Minus
-   Single-layer morphing không khung tĩnh vẽ sẵn, loại bỏ triệt để lỗi 2 ô chồng đè nhau
+   Tích hợp 100% MorphIcons Spring Physics: Square <-> SquareCheck <-> SquareMinus
    Tuân thủ 100% theme hệ thống qua CSS variables và hỗ trợ Indeterminate
    ============================================================================== */
 

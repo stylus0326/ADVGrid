@@ -4,23 +4,21 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Loại Bỏ Khung Tĩnh Square Vẽ Sẵn & Đồng Bộ Hoàn Hảo Checkbox Hệ Thống Sang MorphIcons Lò Xo Đơn Tầng Single-Layer (`Square` <-> `Check` <-> `Minus`) (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
-- **Thời gian**: 2026-10-30 15:38
+## 🕒 Lần 3 (Mới nhất): Đồng Bộ Hóa Toàn Diện Checkbox Hệ Thống Sang MorphIcons Lò Xo Với SquareCheck Chuẩn Lucide (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
+- **Thời gian**: 2026-10-30 16:53
 - **Files thay đổi**:
-  - `src/components/ui/MorphIcons.tsx` (200 dòng):
-    - Khắc phục triệt để lỗi 2 ô vuông chồng đè nhau (`ERR_CHECKBOX_STATIC_SQUARE`): Xóa bỏ hoàn toàn khung vuông tĩnh vẽ sẵn (`SquareCheckBig` và `SquareMinus` vốn chứa 2 paths gồm khung viền + nét phụ khiến thư viện `morphicons` phải nhân đôi shape dẫn tới 2 ô lồng lệch nhau khi chuyển đổi).
-    - Chuyển sang cơ chế **Single-Layer Morphing** với 1 path duy nhất:
-      + Chưa chọn (Unchecked): `Square` (1 ô vuông rỗng thanh mảnh duy nhất, màu `var(--agv-text-muted)`).
-      + Đã chọn (Checked): Biến hình lò xo mượt mà sang `Check` (dấu tích ✓ bung nở, màu `var(--agv-accent)`).
-      + Bán chọn / Chọn tất cả (Indeterminate): Biến hình lò xo sang `Minus` (dấu gạch ngang `-`, màu `var(--agv-accent)`).
-    - Hỗ trợ đầy đủ props: `checked`, `indeterminate`, `size`, `spring="bouncy"`, `disabled`, `title`, `style`.
-  - `src/components/grid/AdvCheckbox.tsx` (56 dòng):
-    - Tái cấu trúc chuẩn hóa: `AdvCheckbox` wrap trực tiếp `MorphCheckbox` đơn tầng lò xo (`Square` <-> `Check` <-> `Minus`), bảo toàn 100% API cho toàn bộ các modal, filter popup và popover trong hệ thống.
-  - `src/components/grid/GridFilterRow.tsx` (1304 dòng):
-    - Đồng bộ ô lọc STT/Chọn trên Dòng Lọc: Tích hợp `MorphCheckbox` 3 trạng thái với hoạt ảnh lò xo nảy:
-      + `ALL` ➔ `indeterminate={true}`, `checked={false}` (`Minus` lò xo).
-      + `CHECKED` ➔ `checked={true}`, `indeterminate={false}` (`Check` lò xo).
-      + `UNCHECKED` ➔ `checked={false}`, `indeterminate={false}` (`Square` lò xo).
+  - `src/components/ui/MorphIcons.tsx` (199 dòng):
+    - Thay thế icon trạng thái Checked bằng `SquareCheck` từ `lucide` (`https://lucide.dev/icons/square-check`) thay cho `SquareCheckBig`, mang lại hình ảnh dấu tick gọn gàng chuẩn xác bên trong khung viền vuông khép kín.
+    - Bộ ba trạng thái của `MorphCheckbox`:
+      + Chưa chọn (`unchecked`): `Square` (`https://lucide.dev/icons/square`)
+      + Đã chọn (`checked`): `SquareCheck` (`https://lucide.dev/icons/square-check`)
+      + Bán chọn (`indeterminate`): `SquareMinus` (`https://lucide.dev/icons/square-minus`)
+    - Chuyển đổi trạng thái bằng `MorphIcon` sử dụng vật lý lò xo (spring physics `bouncy`), màu sắc chuẩn CSS tokens `var(--agv-accent)` và `var(--agv-text-muted)`.
+  - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
+    - Tái sử dụng trực tiếp `MorphCheckbox` lò xo với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
+    - Tự động mang lại hiệu ứng biến hình lò xo `MorphIcons` cho toàn bộ các nơi dùng `AdvCheckbox`: Phễu lọc giá trị (`AdvChecklistFilterPopup.tsx`), Modal chọn cột (`AdvColumnChooserModal.tsx`), v.v.
+  - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
+    - Tích hợp `MorphCheckbox` 3 trạng thái cho các cột checkbox trên hàng Filter Row (`ALL` -> `indeterminate` / `SquareMinus`, `CHECKED` -> `checked` / `SquareCheck`, `UNCHECKED` -> `unchecked` / `Square`), đồng bộ triệt để hiệu ứng động và màu sắc theo theme.
 
 ---
 

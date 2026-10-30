@@ -1,30 +1,45 @@
 import { TWEAKCN_THEME_PRESETS } from './data';
 import { ThemePreset, ThemeStyleProps } from './types';
 import { convertPresetToGridTokens, generatePresetCssVariables } from './converter';
+import { loadCustomPresets } from './customThemes';
 import { GridThemeTokens } from '../common';
 
 export * from './types';
 export * from './data';
 export * from './converter';
+export * from './customThemes';
 
 export const DEFAULT_PRESET_ID = 'modern-minimal';
 
 /**
- * Trả về danh sách option chuẩn { value, label } phục vụ AdvComboBoxEdit
+ * Trả về danh sách option chuẩn { value, label } phục vụ AdvComboBoxEdit (bao gồm 42 themes chuẩn và các theme tùy biến đã lưu)
  */
 export function getAllPresetOptions(): { value: string; label: string }[] {
-  return Object.entries(TWEAKCN_THEME_PRESETS).map(([key, preset]) => ({
+  const builtIn = Object.entries(TWEAKCN_THEME_PRESETS).map(([key, preset]) => ({
     value: key,
     label: preset.label,
   }));
+
+  const custom = Object.entries(loadCustomPresets()).map(([key, preset]) => ({
+    value: key,
+    label: `${preset.label} (Custom)`,
+  }));
+
+  return [...custom, ...builtIn];
 }
 
 /**
- * Lấy ThemePreset theo ID, fallback về modern-minimal nếu không tồn tại
+ * Lấy ThemePreset theo ID, tra cứu cả bảng 42 presets lẫn các preset tùy biến từ localStorage
  */
 export function getPresetById(id?: string | null): ThemePreset {
-  if (id && TWEAKCN_THEME_PRESETS[id]) {
-    return TWEAKCN_THEME_PRESETS[id];
+  if (id) {
+    if (TWEAKCN_THEME_PRESETS[id]) {
+      return TWEAKCN_THEME_PRESETS[id];
+    }
+    const customs = loadCustomPresets();
+    if (customs[id]) {
+      return customs[id];
+    }
   }
   return TWEAKCN_THEME_PRESETS[DEFAULT_PRESET_ID];
 }

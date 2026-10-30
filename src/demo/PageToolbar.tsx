@@ -67,6 +67,8 @@ export interface PageToolbarProps {
   onThemeChange: (theme: SurfaceTheme) => void;
   themeMode?: 'light' | 'dark';
   onToggleThemeMode?: () => void;
+  onOpenThemeImportModal?: () => void;
+  customThemeVersion?: number;
   autoScrolling: boolean;
   onToggleAutoScroll: () => void;
 }
@@ -101,11 +103,13 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
   onThemeChange,
   themeMode = 'light',
   onToggleThemeMode,
+  onOpenThemeImportModal,
+  customThemeVersion = 0,
   autoScrolling,
   onToggleAutoScroll,
 }) => {
   const [showPrimitivesDemo, setShowPrimitivesDemo] = useState(false);
-  const presetOptions = useMemo(() => getAllPresetOptions(), []);
+  const presetOptions = useMemo(() => getAllPresetOptions(), [customThemeVersion, surfaceTheme]);
   const isDark = themeMode === 'dark';
 
   return (
@@ -526,6 +530,22 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
               />
               <span>{isDark ? 'Đêm' : 'Ngày'}</span>
             </button>
+
+            {/* Nút mở Modal Nhập Theme Tùy Biến (Community Theme) */}
+            {onOpenThemeImportModal && (
+              <button
+                type="button"
+                onClick={onOpenThemeImportModal}
+                className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer min-h-[28px] hover:opacity-85"
+                style={{
+                  backgroundColor: 'var(--agv-bg-root)',
+                  borderColor: 'var(--agv-border-strong)',
+                  color: 'var(--agv-text-main)',
+                }}
+              >
+                <span>Nhập Theme</span>
+              </button>
+            )}
           </div>
         </div>
 

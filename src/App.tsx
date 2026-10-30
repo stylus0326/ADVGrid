@@ -51,6 +51,7 @@ const DEFAULT_ROW_HEIGHT = 32;
 import { TwelveMonthChartCell } from './demo/TwelveMonthChartCell';
 import { PageToolbar } from './demo/PageToolbar';
 import { PageFooter } from './demo/PageFooter';
+import { AdvThemeImportModal } from './demo/AdvThemeImportModal';
 import { generateThemeCssVariables, getThemeClass, getPresetById, generatePresetCssVariables, DEFAULT_PRESET_ID } from './themes';
 import { QueryGroup, hasActiveQueryRules, evaluateQueryTreeNode } from './components/grid/floating';
 import { copyTextToClipboard, formatGridNumber } from './components/grid/gridUtils';
@@ -131,6 +132,22 @@ export function App() {
     setSurfaceTheme(nextTheme);
     savePersistedGridConfig({ surfaceTheme: nextTheme });
   }, []);
+
+  const [isThemeImportOpen, setIsThemeImportOpen] = useState<boolean>(false);
+  const [customThemeVersion, setCustomThemeVersion] = useState<number>(0);
+
+  const handleOpenThemeImportModal = useCallback(() => {
+    setIsThemeImportOpen(true);
+  }, []);
+
+  const handleCloseThemeImportModal = useCallback(() => {
+    setIsThemeImportOpen(false);
+  }, []);
+
+  const handleThemeApplied = useCallback((newThemeId: string) => {
+    setCustomThemeVersion((v) => v + 1);
+    handleSurfaceThemeChange(newThemeId as SurfaceTheme);
+  }, [handleSurfaceThemeChange]);
 
   const handleToggleThemeMode = useCallback(() => {
     setThemeMode((prev) => {
@@ -1954,6 +1971,8 @@ export function App() {
         onThemeChange={handleSurfaceThemeChange}
         themeMode={themeMode}
         onToggleThemeMode={handleToggleThemeMode}
+        onOpenThemeImportModal={handleOpenThemeImportModal}
+        customThemeVersion={customThemeVersion}
         autoScrolling={autoScrolling}
         onToggleAutoScroll={handleToggleAutoScroll}
       />
@@ -2049,6 +2068,13 @@ export function App() {
         checkedRowCount={checkedRowIndices.size}
         isFilterCheckedOnly={columnFilters['col_chk']?.val === CHECK_FILTER_STATES.CHECKED}
         onToggleFilterCheckedOnly={handleToggleFilterCheckedOnly}
+      />
+
+      {/* 4. Modal Nhập Theme Tùy Biến (Tweakcn Community) */}
+      <AdvThemeImportModal
+        isOpen={isThemeImportOpen}
+        onClose={handleCloseThemeImportModal}
+        onThemeApplied={handleThemeApplied}
       />
     </div>
   );

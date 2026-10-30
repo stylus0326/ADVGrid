@@ -24,6 +24,8 @@ import {
   MONTH_ANALYTICS_MODES,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_ROW_HEIGHT,
+  GridLayoutMode,
+  GRID_LAYOUT_MODES,
 } from './components/grid';
 import {
   INITIAL_COLUMNS,
@@ -411,6 +413,9 @@ export function App() {
       active = false;
     };
   }, []);
+
+  // Responsive Layout Mode (PC, Tablet, Phone, Auto)
+  const [gridLayoutMode, setGridLayoutMode] = useState<GridLayoutMode>(GRID_LAYOUT_MODES.AUTO);
 
   // Grid ref
   const gridRef = useRef<VirtualizedGridRef>(null);
@@ -1987,12 +1992,15 @@ export function App() {
         onToggleColorScheme={handleToggleColorScheme}
         autoScrolling={autoScrolling}
         onToggleAutoScroll={handleToggleAutoScroll}
+        gridLayoutMode={gridLayoutMode}
+        onGridLayoutModeChange={setGridLayoutMode}
       />
 
       {/* 2. Main Viewport: Reusable VirtualizedGrid (2-Tier Header, LocalStorage Persisted) */}
       <div className="flex-1 flex min-h-0 relative">
         <VirtualizedGrid
           ref={gridRef}
+          layoutMode={gridLayoutMode}
           dataVersion={dataVersion}
           rowCount={totalVirtualRowCount}
           getRow={getRow}

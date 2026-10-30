@@ -656,6 +656,10 @@ body, button, input, select, textarea {
   background-color: var(--agv-group-row-bg);
 }
 
+.agv-grid-row {
+  background-color: var(--agv-row-data-bg, var(--agv-bg-row));
+}
+
 .agv-grid-row[data-row-parity="even"] {
   --agv-row-data-bg: var(--agv-bg-row);
   --agv-row-sticky-bg: var(--agv-bg-header);
@@ -719,6 +723,57 @@ body, button, input, select, textarea {
   background-color: var(--agv-accent) !important;
   color: var(--agv-accent-text, #ffffff) !important;
   --agv-stt-cell-text: var(--agv-accent-text, #ffffff);
+}
+
+/* ==========================================================================
+   AGV PHONE CARD (Responsive Mobile State Matrix)
+   Đồng bộ 100% Theme Tokens với GridRow (PC) & GridTabletRow (Tablet):
+   Normal, Hover, Focus, Checked (Active), Checked + Focus
+   ========================================================================== */
+.agv-phone-card {
+  --agv-card-bg: var(--agv-bg-card, var(--agv-bg-root));
+  --agv-card-border: var(--agv-border);
+  background-color: var(--agv-card-bg);
+  border-color: var(--agv-card-border);
+}
+
+.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]) {
+  --agv-card-bg: var(--agv-bg-selected);
+  --agv-card-border: var(--agv-accent);
+}
+
+.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]) {
+  --agv-card-bg: var(--agv-bg-focused);
+  --agv-card-border: var(--agv-accent);
+}
+
+.agv-phone-card[data-card-focused="true"][data-card-checked="true"] {
+  --agv-card-bg: var(--agv-bg-checked-focused);
+  --agv-card-border: var(--agv-accent);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover,
+.agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover {
+  --agv-card-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+  --agv-card-border: var(--agv-border-strong, var(--agv-border));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover,
+.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover {
+  --agv-card-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+  --agv-card-border: var(--agv-accent);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover,
+.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover {
+  --agv-card-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+  --agv-card-border: var(--agv-accent);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover,
+.agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover {
+  --agv-card-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+  --agv-card-border: var(--agv-accent);
 }
 
 /* Đảm bảo các phần tử draggable="true" (Header cột/nhóm) luôn kéo thả được trong vùng select-none */

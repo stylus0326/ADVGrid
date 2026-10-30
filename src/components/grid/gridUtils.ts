@@ -1044,3 +1044,73 @@ export function computeSortRowFlipState(params: {
   };
 }
 
+/**
+ * Bộ đệm WeakMap lưu thống kê 12 tháng gắn trực tiếp theo record gốc
+ * Giúp tái sử dụng O(1) xuyên suốt toàn hệ thống mà không cấp phát mảng lặp lại
+ */
+const globalMonthStatsCache = new WeakMap<
+  object,
+  {
+    mVals: number[];
+    minVal: number;
+    maxVal: number;
+    minIdx: number;
+    maxIdx: number;
+    sumVal: number;
+    avgVal: number;
+  }
+>();
+
+export function getOrComputeMonthStats(recordObj: any) {
+  const defaultVals = [40, 55, 70, 35, 60, 85, 75, 90, 65, 80, 92, 78];
+  if (!recordObj || typeof recordObj !== 'object') {
+    return {
+      mVals: defaultVals,
+      minVal: 35,
+      maxVal: 92,
+      minIdx: 3,
+      maxIdx: 10,
+      sumVal: 825,
+      avgVal: 68.75,
+    };
+  }
+
+  const target = recordObj._baseRecord || recordObj;
+  let stats = globalMonthStatsCache.get(target);
+  if (!stats) {
+    const mVals: number[] = [];
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    let minIdx = 0;
+    let maxIdx = 0;
+    let sumVal = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const raw = target[`col_m${m}`] ?? target[`m${m}`];
+      const v = typeof raw === 'number' ? raw : (raw !== undefined && !isNaN(Number(raw)) ? Number(raw) : defaultVals[m - 1]);
+      mVals.push(v);
+      sumVal += v;
+      if (v < minVal) {
+        minVal = v;
+        minIdx = m - 1;
+      }
+      if (v > maxVal) {
+        maxVal = v;
+        maxIdx = m - 1;
+      }
+    }
+
+    if (minVal === Infinity) {
+      minVal = 35;
+      maxVal = 92;
+      minIdx = 3;
+      maxIdx = 10;
+    }
+
+    const avgVal = Math.round((sumVal / 12) * 100) / 100;
+    stats = { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal };
+    globalMonthStatsCache.set(target, stats);
+  }
+  return stats;
+}
+

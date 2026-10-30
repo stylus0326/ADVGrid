@@ -58,6 +58,17 @@ export const GRID_EDIT_MODES = {
 } as const;
 export type GridEditMode = (typeof GRID_EDIT_MODES)[keyof typeof GRID_EDIT_MODES];
 
+/**
+ * Chế độ bố cục hiển thị Grid (PC, Tablet, Phone hoặc Tự động theo kích thước màn hình)
+ */
+export const GRID_LAYOUT_MODES = {
+  AUTO: 'auto',
+  PC: 'pc',
+  TABLET: 'tablet',
+  PHONE: 'phone',
+} as const;
+export type GridLayoutMode = (typeof GRID_LAYOUT_MODES)[keyof typeof GRID_LAYOUT_MODES];
+
 
 /**
  * Danh mục chế độ tính toán công thức cột 12 tháng
@@ -304,6 +315,10 @@ export interface VirtualizedGridProps<T = any> {
   onStartEditCell?: (rowIndex: number, colKey: string) => void;
   onEndEditCell?: () => void;
   onCellChange?: (rowIndex: number, row: T, colKey: string, newValue: any) => void;
+
+  // Responsive Layout Mode (PC, Tablet, Phone hoặc Auto)
+  layoutMode?: GridLayoutMode;
+  onLayoutModeChange?: (mode: GridLayoutMode) => void;
 
   // Virtualization & Performance configs
   chunkSize?: number;

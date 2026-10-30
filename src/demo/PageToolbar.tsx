@@ -11,6 +11,8 @@ import {
   Filter,
   Sun,
   Moon,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   MorphIcon,
@@ -32,6 +34,8 @@ import {
   GRID_EDIT_MODES,
   SORT_DIRECTIONS,
   MONTH_ANALYTICS_MODES,
+  GridLayoutMode,
+  GRID_LAYOUT_MODES,
 } from '../components/grid/types';
 import { REGISTERED_THEMES, normalizeThemeId } from '../themes';
 import { AdvComboBoxEdit, AdvComboBoxEditOption } from '../components/ui/AdvComboBoxEdit';
@@ -77,6 +81,8 @@ export interface PageToolbarProps {
   onToggleColorScheme?: (isDark: boolean) => void;
   autoScrolling: boolean;
   onToggleAutoScroll: () => void;
+  gridLayoutMode?: GridLayoutMode;
+  onGridLayoutModeChange?: (mode: GridLayoutMode) => void;
 }
 
 export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
@@ -112,8 +118,100 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
   onToggleColorScheme,
   autoScrolling,
   onToggleAutoScroll,
+  gridLayoutMode = GRID_LAYOUT_MODES.AUTO,
+  onGridLayoutModeChange,
 }) => {
   const [showPrimitivesDemo, setShowPrimitivesDemo] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('agv_page_toolbar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleCollapse = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    try {
+      localStorage.setItem('agv_page_toolbar_collapsed', String(collapsed));
+    } catch {}
+  };
+
+  // Khi thu gọn: Render thanh Strip Bar tinh gọn 34px tiết kiệm 90% diện tích màn hình
+  if (isCollapsed) {
+    return (
+      <header
+        className="px-3 py-1 shrink-0 select-none border-b transition-all flex items-center justify-between gap-2"
+        style={{
+          height: '34px',
+          minHeight: '34px',
+          backgroundColor: 'var(--agv-bg-header, var(--agv-bg-root))',
+          borderColor: 'var(--agv-border)',
+          color: 'var(--agv-text-main)',
+        }}
+      >
+        {/* Segmented Control Bố cục [ Tự động | PC | Tablet | Phone ] */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+          <span className="text-[11px] font-semibold shrink-0" style={{ color: 'var(--agv-text-muted)' }}>
+            Bố cục:
+          </span>
+          <div
+            className="inline-flex items-center p-0.5 rounded-lg border shrink-0"
+            style={{
+              backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))',
+              borderColor: 'var(--agv-border)',
+            }}
+          >
+            {[
+              { id: GRID_LAYOUT_MODES.AUTO, label: 'Tự động' },
+              { id: GRID_LAYOUT_MODES.PC, label: 'PC' },
+              { id: GRID_LAYOUT_MODES.TABLET, label: 'Tablet' },
+              { id: GRID_LAYOUT_MODES.PHONE, label: 'Phone' },
+            ].map((mode) => {
+              const active = gridLayoutMode === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => onGridLayoutModeChange?.(mode.id as any)}
+                  className="px-2 h-[26px] min-h-[26px] rounded-md text-[11px] font-medium transition cursor-pointer select-none"
+                  style={
+                    active
+                      ? {
+                          backgroundColor: 'var(--agv-accent)',
+                          color: 'var(--agv-accent-text, #ffffff)',
+                          fontWeight: 600,
+                        }
+                      : {
+                          backgroundColor: 'transparent',
+                          color: 'var(--agv-text-muted)',
+                        }
+                  }
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Nút bung mở lại Toolbar: [ Hiện Toolbar ▼ ] */}
+        <button
+          type="button"
+          onClick={() => handleToggleCollapse(false)}
+          className="inline-flex items-center gap-1.5 px-3 h-[28px] min-h-[28px] rounded-lg border text-xs font-semibold transition cursor-pointer shrink-0 select-none shadow-2xs hover:bg-[var(--agv-bg-hover)]"
+          style={{
+            backgroundColor: 'var(--agv-bg-root)',
+            borderColor: 'var(--agv-border)',
+            color: 'var(--agv-text-main)',
+          }}
+        >
+          <span>Hiện Toolbar</span>
+          <ChevronDown size={14} />
+        </button>
+      </header>
+    );
+  }
 
   return (
     <header
@@ -308,6 +406,21 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
               </div>
             </div>
           </div>
+
+          {/* Nút Ẩn Toolbar trên hàng Top */}
+          <button
+            type="button"
+            onClick={() => handleToggleCollapse(true)}
+            className="inline-flex items-center gap-1.5 px-3 h-[36px] min-h-[28px] rounded-lg border text-xs font-semibold transition cursor-pointer select-none shadow-2xs hover:bg-[var(--agv-bg-hover)]"
+            style={{
+              backgroundColor: 'var(--agv-bg-root)',
+              borderColor: 'var(--agv-border)',
+              color: 'var(--agv-text-main)',
+            }}
+          >
+            <span>Ẩn Toolbar</span>
+            <ChevronUp size={14} />
+          </button>
         </div>
       </div>
 
@@ -487,6 +600,57 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
             })}
           </div>
 
+          {/* Layout Mode switcher (Tự động / PC / Tablet / Phone) */}
+          {onGridLayoutModeChange && (
+            <div
+              className="flex items-center gap-1 rounded-lg border p-1"
+              style={{
+                backgroundColor: 'var(--agv-bg-root)',
+                borderColor: 'var(--agv-border-strong)',
+              }}
+            >
+              <span
+                className="text-[11px] px-1.5 font-semibold select-none"
+                style={{ color: 'var(--agv-text-muted)' }}
+              >
+                Bố cục:
+              </span>
+              {(
+                [
+                  { id: GRID_LAYOUT_MODES.AUTO, label: 'Tự động' },
+                  { id: GRID_LAYOUT_MODES.PC, label: 'PC' },
+                  { id: GRID_LAYOUT_MODES.TABLET, label: 'Tablet' },
+                  { id: GRID_LAYOUT_MODES.PHONE, label: 'Phone' },
+                ] as const
+              ).map((modeItem) => {
+                const isActive = gridLayoutMode === modeItem.id;
+                return (
+                  <button
+                    key={modeItem.id}
+                    type="button"
+                    onClick={() => onGridLayoutModeChange(modeItem.id)}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer min-h-[28px] flex items-center justify-center select-none ${
+                      isActive ? '' : 'hover:opacity-75'
+                    }`}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: 'var(--agv-accent)',
+                            color: 'var(--agv-accent-text, #ffffff)',
+                          }
+                        : {
+                            backgroundColor: 'transparent',
+                            color: 'var(--agv-text-muted)',
+                          }
+                    }
+                  >
+                    <span>{modeItem.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Surface Theme switcher: ComboBox 4 themes + Nhập CSS */}
           <div className="flex items-center gap-1.5">
             <div
@@ -610,6 +774,21 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
               spring="bouncy"
             />
             {autoScrolling ? 'Dừng Test' : 'Test Cuộn Cao Tốc'}
+          </button>
+
+          {/* Nút Ẩn Toolbar trên hàng Bottom */}
+          <button
+            type="button"
+            onClick={() => handleToggleCollapse(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold border transition cursor-pointer min-h-[28px] text-xs hover:bg-[var(--agv-bg-hover)] select-none shadow-2xs"
+            style={{
+              backgroundColor: 'var(--agv-bg-root)',
+              borderColor: 'var(--agv-border)',
+              color: 'var(--agv-text-main)',
+            }}
+          >
+            <span>Ẩn Toolbar</span>
+            <ChevronUp size={14} />
           </button>
         </div>
       </div>

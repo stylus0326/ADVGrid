@@ -23,6 +23,8 @@ import {
   GridScrollMetrics,
   GRID_EDIT_MODES,
   SURFACE_THEMES,
+  GRID_LAYOUT_MODES,
+  GridLayoutMode,
 } from './types';
 import {
   DEFAULT_CHUNK_SIZE,
@@ -54,6 +56,7 @@ import {
 import { getDefaultFilterOpForColumn } from './FilterIcons';
 import { GridFloatingToolbar } from './GridFloatingToolbar';
 import { GridSettingsState, QueryGroup, DENSITY_MODES } from './floating/types';
+import { useGridLayoutMode, GridTabletHeader } from './responsive';
 import {
   useColumnResize,
   useColumnAutoFit,
@@ -159,6 +162,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onToggleGroupSort,
       matchFilterValue,
       dataVersion = 0,
+      layoutMode = GRID_LAYOUT_MODES.AUTO,
     }: VirtualizedGridProps<T>,
     ref: React.Ref<VirtualizedGridRef>
   ) => {
@@ -440,9 +444,23 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       [onRowSnapModeChange]
     );
 
+    const { activeMode } = useGridLayoutMode({
+      layoutMode,
+      containerRef,
+    });
+    const isTabletMode = activeMode === 'tablet';
+    const isPhoneMode = activeMode === 'phone';
+    const isResponsiveMode = isTabletMode || isPhoneMode;
+
     const rowSnapMode = gridSettings.rowSnapMode;
 
-    const actualRowHeight = gridSettings.densityMode === DENSITY_MODES.COMPACT ? 28 : rowHeight;
+    const actualRowHeight = isTabletMode
+      ? 68
+      : isPhoneMode
+      ? 88
+      : gridSettings.densityMode === DENSITY_MODES.COMPACT
+      ? 28
+      : rowHeight;
 
     // Hidden columns state (controlled or uncontrolled)
     const [internalHiddenColKeys, setInternalHiddenColKeys] = useState<Set<string>>(
@@ -1889,80 +1907,103 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           }}
           className={`agv-scroll-viewport flex-1 overflow-auto relative ${theme.viewportBg}`}
         >
-          {/* Sticky Header (1-tier 34px or 2-tier 64px) */}
-          <GridHeader
-            totalGridWidth={totalGridWidth}
-            leftColumns={leftColumns}
-            middleElements={middleElements}
-            rightColumns={rightColumns}
-            colWidths={colWidths}
-            columnPins={columnPins}
-            leftOffsets={leftOffsets}
-            rightOffsets={rightOffsets}
-            centerDockStatus={centerDockStatus}
-            centerLeftOffsets={centerLeftOffsets}
-            centerRightOffsets={centerRightOffsets}
-            lastEffectiveLeftColKey={lastEffectiveLeftColKey}
-            firstEffectiveRightColKey={firstEffectiveRightColKey}
-            sortConfig={sortConfig}
-            surfaceTheme={surfaceTheme}
-            columnFilters={columnFilters}
-            onOpenChecklistFilter={handleOpenChecklistFilter}
-            onToggleSort={handleToggleSort}
-            onColumnContextMenu={handleColumnContextMenu}
-            onBandContextMenu={handleBandContextMenu}
-            onMouseDownResize={handleMouseDownResize}
-            onToggleGroup={onToggleGroup}
-            onReorderColumns={onReorderColumns}
-            headerHeight={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
-            emptyColKeys={emptyColKeys}
-            hasFilterRow={showFilterRow}
-          />
+          {/* Header & Filter Row */}
+          {isTabletMode ? (
+            <div className="sticky top-0 z-30 w-full">
+              <GridTabletHeader surfaceTheme={surfaceTheme} />
+            </div>
+          ) : isPhoneMode ? (
+            <div
+              className="sticky top-0 z-30 px-3 py-2 border-b flex items-center justify-between text-[11px] font-semibold select-none"
+              style={{
+                backgroundColor: 'var(--agv-bg-header, var(--agv-bg-root))',
+                borderColor: 'var(--agv-border)',
+                color: 'var(--agv-text-main)',
+              }}
+            >
+              <span>DANH SÁCH DỮ LIỆU ({totalRows.toLocaleString()} DÒNG)</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--agv-bg-subtle)', color: 'var(--agv-accent)' }}>
+                Phone View
+              </span>
+            </div>
+          ) : (
+            <>
+              {/* Sticky Header (1-tier 34px or 2-tier 64px) */}
+              <GridHeader
+                totalGridWidth={totalGridWidth}
+                leftColumns={leftColumns}
+                middleElements={middleElements}
+                rightColumns={rightColumns}
+                colWidths={colWidths}
+                columnPins={columnPins}
+                leftOffsets={leftOffsets}
+                rightOffsets={rightOffsets}
+                centerDockStatus={centerDockStatus}
+                centerLeftOffsets={centerLeftOffsets}
+                centerRightOffsets={centerRightOffsets}
+                lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                firstEffectiveRightColKey={firstEffectiveRightColKey}
+                sortConfig={sortConfig}
+                surfaceTheme={surfaceTheme}
+                columnFilters={columnFilters}
+                onOpenChecklistFilter={handleOpenChecklistFilter}
+                onToggleSort={handleToggleSort}
+                onColumnContextMenu={handleColumnContextMenu}
+                onBandContextMenu={handleBandContextMenu}
+                onMouseDownResize={handleMouseDownResize}
+                onToggleGroup={onToggleGroup}
+                onReorderColumns={onReorderColumns}
+                headerHeight={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
+                emptyColKeys={emptyColKeys}
+                hasFilterRow={showFilterRow}
+              />
 
-          {/* Sticky Inline Filter Row */}
-          {showFilterRow && (
-            <GridFilterRow
-              totalGridWidth={totalGridWidth}
-              columns={flatColumns}
-              colWidths={colWidths}
-              columnPins={columnPins}
-              leftOffsets={leftOffsets}
-              rightOffsets={rightOffsets}
-              centerDockStatus={centerDockStatus}
-              centerLeftOffsets={centerLeftOffsets}
-              centerRightOffsets={centerRightOffsets}
-              lastEffectiveLeftColKey={lastEffectiveLeftColKey}
-              firstEffectiveRightColKey={firstEffectiveRightColKey}
-              surfaceTheme={surfaceTheme}
-              columnFilters={columnFilters}
-              onColumnFilterChange={onColumnFilterChange}
-              onClearAllColumnFilters={onClearAllColumnFilters}
-              onClearAllCriteria={onClearAllCriteria}
-              activeFilterCount={activeColumnFilterCount}
-              hasColumnEmptyCells={effectiveHasColumnEmptyCells}
-              getColumnDateBounds={effectiveGetColumnDateBounds}
-              headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
-              columnSums={columnSums}
-              hasCheckedRows={Boolean(checkedRowIndices && checkedRowIndices.size > 0)}
-              emptyColKeys={emptyColKeys}
-              groupByColumnKey={groupByColumnKey}
-              quickFilterText={controlledQuickFilterText}
-              sortConfig={sortConfig}
-              groupSortConfig={groupSortConfig}
-              appliedQueryTree={controlledAppliedQueryTree}
-              pinnedRows={pinnedRows}
-              onUngroup={onUngroup}
-              onSortChange={onSortChange}
-              onToggleGroupSort={onToggleGroupSort}
-              onQuickFilterTextChange={controlledOnQuickFilterTextChange}
-              onApplyQueryTree={controlledOnApplyQueryTree}
-              onUnpinRow={handleUnpinRow}
-              onClearPinnedRows={handleClearPinnedRows}
-            />
+              {/* Sticky Inline Filter Row */}
+              {showFilterRow && (
+                <GridFilterRow
+                  totalGridWidth={totalGridWidth}
+                  columns={flatColumns}
+                  colWidths={colWidths}
+                  columnPins={columnPins}
+                  leftOffsets={leftOffsets}
+                  rightOffsets={rightOffsets}
+                  centerDockStatus={centerDockStatus}
+                  centerLeftOffsets={centerLeftOffsets}
+                  centerRightOffsets={centerRightOffsets}
+                  lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                  firstEffectiveRightColKey={firstEffectiveRightColKey}
+                  surfaceTheme={surfaceTheme}
+                  columnFilters={columnFilters}
+                  onColumnFilterChange={onColumnFilterChange}
+                  onClearAllColumnFilters={onClearAllColumnFilters}
+                  onClearAllCriteria={onClearAllCriteria}
+                  activeFilterCount={activeColumnFilterCount}
+                  hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+                  getColumnDateBounds={effectiveGetColumnDateBounds}
+                  headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
+                  columnSums={columnSums}
+                  hasCheckedRows={Boolean(checkedRowIndices && checkedRowIndices.size > 0)}
+                  emptyColKeys={emptyColKeys}
+                  groupByColumnKey={groupByColumnKey}
+                  quickFilterText={controlledQuickFilterText}
+                  sortConfig={sortConfig}
+                  groupSortConfig={groupSortConfig}
+                  appliedQueryTree={controlledAppliedQueryTree}
+                  pinnedRows={pinnedRows}
+                  onUngroup={onUngroup}
+                  onSortChange={onSortChange}
+                  onToggleGroupSort={onToggleGroupSort}
+                  onQuickFilterTextChange={controlledOnQuickFilterTextChange}
+                  onApplyQueryTree={controlledOnApplyQueryTree}
+                  onUnpinRow={handleUnpinRow}
+                  onClearPinnedRows={handleClearPinnedRows}
+                />
+              )}
+            </>
           )}
 
-          {/* Sticky Pinned Rows (Ghim dòng cố định trên đầu bảng) */}
-          {pinnedRows.length > 0 && (
+          {/* Sticky Pinned Rows (Ghim dòng cố định trên đầu bảng trên PC) */}
+          {!isResponsiveMode && pinnedRows.length > 0 && (
             <div
               data-agv-fullwidth="true"
               style={{
@@ -2095,11 +2136,11 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {/* Virtualized Rows Canvas */}
           <div
             className="agv-rows-canvas"
-            data-agv-fullwidth="true"
+            data-agv-fullwidth={isResponsiveMode ? undefined : "true"}
             style={{
               height: `${totalContentHeight}px`,
-              width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-              minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+              width: isResponsiveMode ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+              minWidth: isResponsiveMode ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
               position: 'relative',
             }}
           >
@@ -2143,6 +2184,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                   onCellChange={handleInternalCellChange}
                   getColumnDateBounds={getColumnDateBounds}
                   emptyColKeys={emptyColKeys}
+                  activeMode={activeMode}
                 />
               );
             })}
@@ -2214,7 +2256,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         />
 
         {/* Floating Toolbar (Right-docked, 6 Buttons, 4 Popups, strictly bounded inside Grid) */}
-        {enableFloatingToolbar && (
+        {!isPhoneMode && enableFloatingToolbar && (
           <GridFloatingToolbar
             gridContainerRef={containerRef}
             surfaceTheme={surfaceTheme}

@@ -10,6 +10,7 @@ import {
 } from './types';
 import { getThemeClasses } from './constants';
 import { GridRow } from './GridRow';
+import { GridTabletRow, GridPhoneCard } from './responsive';
 
 export interface GridChunkBlockProps<T = any> {
   chunkIndex: number;
@@ -45,6 +46,7 @@ export interface GridChunkBlockProps<T = any> {
   onCellChange?: (rowIndex: number, row: T, colKey: string, newValue: any) => void;
   getColumnDateBounds?: (colKey: string) => { min: string; max: string };
   emptyColKeys?: Set<string>;
+  activeMode?: 'pc' | 'tablet' | 'phone';
 }
 
 export const GridChunkBlock = memo(
@@ -82,7 +84,9 @@ export const GridChunkBlock = memo(
     onCellChange,
     getColumnDateBounds,
     emptyColKeys,
+    activeMode = 'pc',
   }: GridChunkBlockProps<T>) => {
+    const isResponsiveCard = activeMode === 'tablet' || activeMode === 'phone';
     const chunkHeight = rows.length * rowHeight;
     const topOffset = Math.round(chunkIndex * chunkSize * rowHeight);
     const totalGridWidth = columns.reduce(
@@ -96,13 +100,13 @@ export const GridChunkBlock = memo(
 
     return (
       <div
-        data-agv-fullwidth="true"
+        data-agv-fullwidth={isResponsiveCard ? undefined : "true"}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-          minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          width: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          minWidth: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
           height: `${chunkHeight}px`,
           transform: `translate3d(0px, ${topOffset}px, 0px)`,
           willChange: antiGhostMode ? 'transform' : undefined,
@@ -131,6 +135,41 @@ export const GridChunkBlock = memo(
               (row as any)?.isChecked === true;
 
           const key = rowKey;
+
+          if (activeMode === 'tablet') {
+            return (
+              <GridTabletRow
+                key={key}
+                row={row}
+                rowIndex={actualRowIndex}
+                rowKey={rowKey}
+                rowHeight={rowHeight}
+                isSelected={isSelected}
+                isChecked={isChecked}
+                onSelectRow={onSelectRow}
+                onToggleCheck={onToggleCheck}
+                surfaceTheme={surfaceTheme}
+                renderCell={renderCell}
+              />
+            );
+          }
+
+          if (activeMode === 'phone') {
+            return (
+              <GridPhoneCard
+                key={key}
+                row={row}
+                rowIndex={actualRowIndex}
+                rowKey={rowKey}
+                rowHeight={rowHeight}
+                isSelected={isSelected}
+                isChecked={isChecked}
+                onSelectRow={onSelectRow}
+                onToggleCheck={onToggleCheck}
+                surfaceTheme={surfaceTheme}
+              />
+            );
+          }
 
           return (
             <GridRow

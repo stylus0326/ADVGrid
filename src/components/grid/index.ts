@@ -9,6 +9,7 @@ export * from './FilterIcons';
 export * from './GridFilterRow';
 export * from './AdvChecklistFilterPopup';
 export * from './AdvCheckbox';
+export * from './responsive';
 export * from './GridFloatingToolbar';
 export * from './floating';
 export {

@@ -14,6 +14,7 @@ export interface TwelveMonthChartProps {
   avgVal?: number;
   surfaceTheme?: SurfaceTheme;
   width?: number;
+  height?: number;
 }
 
 /**
@@ -61,17 +62,38 @@ function getSmoothSplinePath(
 }
 
 export const TwelveMonthChartCell = memo(
-  ({ values, minIdx, maxIdx, minVal, maxVal, avgVal, width, surfaceTheme }: TwelveMonthChartProps) => {
+  ({ values, minIdx, maxIdx, minVal, maxVal, avgVal, width, height, surfaceTheme }: TwelveMonthChartProps) => {
     const gradientId = useId();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
     const [anchorCoords, setAnchorCoords] = useState<{ x: number; y: number } | null>(null);
     const hoveredIdxRef = useRef<number | null>(null);
     const svgRectRef = useRef<DOMRect | null>(null);
 
+    // Tự động đo kích thước container thực tế khi không có width cố định
+    // Giúp viewBox và render pixel khớp 1:1, triệt tiêu 100% hiện tượng elip méo mó của chấm tròn cực trị
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      const updateW = () => {
+        const w = el.clientWidth;
+        if (w > 0) {
+          setMeasuredWidth((prev) => (prev !== w ? w : prev));
+        }
+      };
+      updateW();
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(updateW);
+        ro.observe(el);
+        return () => ro.disconnect();
+      }
+    }, [width]);
+
     // Kích thước chuẩn hóa của vector canvas khớp 1:1 với độ rộng thực tế của ô
-    // Giúp các điểm circle cx, cy, r luôn hiển thị đúng hình tròn hoàn hảo 100%, không bị dẹt thành hình bầu dục
-    const baseWidth = Math.max(60, (width || 150) - 4);
-    const baseHeight = 24;
+    const effectiveWidth = measuredWidth || width || 150;
+    const baseWidth = Math.max(60, effectiveWidth - 4);
+    const baseHeight = height || 24;
     const padX = 6;
     const padTop = 6;
     const padBottom = 6;
@@ -186,6 +208,7 @@ export const TwelveMonthChartCell = memo(
 
     return (
       <div
+        ref={containerRef}
         className="relative w-full h-full flex items-center justify-center overflow-hidden select-none px-0"
         onMouseLeave={handlePointerLeave}
       >

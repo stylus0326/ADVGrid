@@ -4,53 +4,32 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Chuyển Hoạt Ảnh Checkbox Toàn Hệ Thống Sang Snappy Nhanh & Dứt Khoát (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `App.tsx`, `GridFilterRow.tsx`, `FilterModal.tsx`)
-- **Thời gian**: 2026-10-30 17:14
+## 🕒 Lần 3 (Mới nhất): Triển Khai Tính Năng Thu Gọn Toolbar Thành Strip Bar 34px Tinh Gọn Để Tối Ưu Diện Tích Test Grid (`PageToolbar.tsx`)
+- **Thời gian**: 2026-10-30 20:36
 - **Files thay đổi**:
-  - `src/components/ui/MorphIcons.tsx` (199 dòng):
-    - Đổi cấu hình `spring` mặc định của `MorphCheckbox` sang `'snappy'` (`stiffness: 420`, `damping: 30`).
-    - Tốc độ chuyển đổi siêu tốc, phản hồi dứt khoát tức thì khi click chọn dòng/lọc dữ liệu với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
-  - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
-    - Đồng bộ `spring = 'snappy'` mặc định cho toàn bộ các control dùng chung kế thừa `AdvCheckbox` (Phễu lọc Checklist, Modal chọn cột, v.v.).
-  - `src/App.tsx` (2096 dòng):
-    - Cập nhật cột chọn dòng Grid (`col_chk`) sang `spring="snappy"`.
-  - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
-    - Cập nhật checkbox 3 trạng thái trên hàng Filter Row sang `spring="snappy"`.
-  - `src/demo/FilterModal.tsx` (280 dòng):
-    - Đồng bộ toàn bộ 5 khối Checkbox điều kiện lọc sang `spring="snappy"`.
+  - `src/demo/PageToolbar.tsx` (804 dòng):
+    - Triển khai **Phương án 1 (Dải Strip Bar 34px khi thu gọn)** theo đúng lựa chọn của người dùng:
+      + Bổ sung state `isCollapsed` kết hợp lưu trữ `localStorage` (`agv_page_toolbar_collapsed`).
+      + Khi thu gọn (`isCollapsed === true`): Thu nhỏ toàn bộ thanh điều khiển từ ~300px xuống chỉ còn đúng **34px** (tiết kiệm hơn 90% diện tích màn hình).
+      + Trên thanh Strip Bar 34px: Giữ lại Segmented Control `Bố cục: [ Tự động | PC | Tablet | Phone ]` (min-h >= 28px, active nền màu chữ trắng chuẩn `AGENTS.md`) giúp người dùng chuyển đổi thử nghiệm nhanh giữa các chế độ màn hình mà không bị che khuất không gian Grid.
+      + Trang bị nút `[ Hiện Toolbar ▼ ]` để bung mở lại toàn bộ thanh điều khiển bất kỳ lúc nào.
+      + Khi thanh mở (`isCollapsed === false`): Bố trí nút `[ Ẩn Toolbar ▲ ]` (chuẩn theme, min-h 28px) ở cả 2 vị trí thuận tiện: cạnh khối Telemetry Metrics ở trên và cạnh nút Test Cuộn Cao Tốc ở dưới.
 
 ---
 
-## 🕒 Lần 2: Đồng Bộ Hóa Toàn Diện Checkbox Hệ Thống Sang MorphIcons Lò Xo Với SquareCheck Chuẩn Lucide (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
-- **Thời gian**: 2026-10-30 16:53
+## 🕒 Lần 2: Triển Khai Bố Cục Thẻ Tài Chính 2 Cột Cho Biểu Đồ 12T Trên Phone & Triệt Tiêu Hoàn Toàn Lỗi Méo Mó Chấm Tròn Cực Trị (`TwelveMonthChartCell.tsx`, `GridPhoneCard.tsx`)
+- **Thời gian**: 2026-10-30 20:28
 - **Files thay đổi**:
-  - `src/components/ui/MorphIcons.tsx` (199 dòng):
-    - Thay thế icon trạng thái Checked bằng `SquareCheck` từ `lucide` (`https://lucide.dev/icons/square-check`) thay cho `SquareCheckBig`, mang lại hình ảnh dấu tick gọn gàng chuẩn xác bên trong khung viền vuông khép kín.
-    - Bộ ba trạng thái của `MorphCheckbox`:
-      + Chưa chọn (`unchecked`): `Square` (`https://lucide.dev/icons/square`)
-      + Đã chọn (`checked`): `SquareCheck` (`https://lucide.dev/icons/square-check`)
-      + Bán chọn (`indeterminate`): `SquareMinus` (`https://lucide.dev/icons/square-minus`)
-    - Chuyển đổi trạng thái bằng `MorphIcon`, màu sắc chuẩn CSS tokens `var(--agv-accent)` và `var(--agv-text-muted)`.
-  - `src/components/grid/AdvCheckbox.tsx` (54 dòng):
-    - Tái sử dụng trực tiếp `MorphCheckbox` với bộ ba `Square` <-> `SquareCheck` <-> `SquareMinus`.
-    - Tự động mang lại hiệu ứng biến hình cho toàn bộ các nơi dùng `AdvCheckbox`: Phễu lọc giá trị (`AdvChecklistFilterPopup.tsx`), Modal chọn cột (`AdvColumnChooserModal.tsx`), v.v.
-  - `src/components/grid/GridFilterRow.tsx` (1303 dòng):
-    - Tích hợp `MorphCheckbox` 3 trạng thái cho các cột checkbox trên hàng Filter Row (`ALL` -> `indeterminate` / `SquareMinus`, `CHECKED` -> `checked` / `SquareCheck`, `UNCHECKED` -> `unchecked` / `Square`), đồng bộ triệt để hiệu ứng động và màu sắc theo theme.
+  - `src/demo/TwelveMonthChartCell.tsx` (382 dòng): Tích hợp `ResizeObserver` tự động đo chiều rộng pixel container thực tế (`measuredWidth`), đồng bộ 1:1 giữa `viewBox` và khung hiển thị. Triệt tiêu 100% hiện tượng elip méo mó của chấm tròn cực đại Max (xanh lá) và cực tiểu Min (đỏ); đảm bảo đốm tròn luôn tròn xoe hoàn hảo.
+  - `src/components/grid/responsive/GridPhoneCard.tsx` (236 dòng): Triển khai **Ý tưởng A (Bố cục Thẻ tài chính 2 Cột)**: Cột trái Biểu đồ 12T Catmull-Rom spline cao 50px thoáng đãng, vạch ngăn cách 1px, Cột phải Bảng tóm tắt số liệu cực trị xếp tầng dọc gọn gàng (Cao nhất, Thấp nhất, Trung bình).
 
 ---
 
-## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
-- **Thời gian**: 2026-10-30 14:40
+## 🕒 Lần 1: Đồng Bộ Hóa Toàn Diện Biểu Đồ 12 Tháng Catmull-Rom Spline Giữa 3 Kiểu Hiển Thị PC, Tablet & Phone (`TwelveMonthChartCell.tsx`, `GridPhoneCard.tsx`, `GridTabletRow.tsx`, `GridTabletHeader.tsx`, `gridUtils.ts`)
+- **Thời gian**: 2026-10-30 20:12
 - **Files thay đổi**:
-  - `src/index.css` (784 dòng):
-    - Khắc phục triệt để lỗi giật dòng sau mỗi lần cuộn: Loại bỏ selector `.agv-scroll-viewport[data-agv-scrolling="true"] .agv-row-enter` can thiệp vào `animation: none !important`. Trước đó khi dừng cuộn (sau 110ms timeout), cờ `data-agv-scrolling` bị xóa khiến CSS engine re-trigger lại keyframe `agv-row-enter` từ 0% làm các hàng bị giật nhảy 3px.
-    - Loại bỏ hoàn toàn `transform: translateY(3px)` khỏi `@keyframes agv-row-enter` (chỉ chuyển đổi độ mờ `opacity: 0.88 -> 1` trong 100ms), bảo toàn 100% `position: sticky` và loại bỏ nguy cơ xô lệch pixel theo trục dọc $Y$ khi virtualizing chunk.
-  - `src/App.tsx` (2096 dòng):
-    - Sửa lỗi gốc lệch màu theme trên Portals: Đồng bộ đồng thời class Theme (`agv-light`, `agv-dark`, `agv-theme-custom`...), class `dark` và thuộc tính `data-theme={surfaceTheme}` lên cả `document.documentElement` (`<html>`) VÀ `document.body` (`<body>`). Ngăn chặn triệt để tình trạng thẻ `body` không có class `.dark` khiến selector `body:not(.dark)` bị match nhầm trong chế độ Đêm.
-  - `src/themes/index.ts` (246 dòng) & `src/themes/customCssBridge.ts` (337 dòng):
-    - Chuẩn hóa toàn diện các bộ selectors Ngày và Đêm cho cả 4 Theme chuẩn và Custom CSS: các biến chế độ Ngày chỉ kích hoạt khi `:not(.dark)`, các biến chế độ Đêm luôn áp dụng với độ đặc hiệu cao khi có `.dark`, đảm bảo khi người dùng nhập bất kỳ đoạn mã CSS nào thì toàn bộ hệ thống đều tự động cập nhật đồng nhất không ngoại lệ.
-  - `src/components/ui/AdvComboBoxEdit.tsx` (371 dòng) & `src/components/ui/AdvSearchLookUpEdit.tsx` (781 dòng) & `src/components/grid/floating/AdvGridQueryBuilderModal.tsx` (1525 dòng):
-    - Thêm `data-theme={theme}` và gắn inline style trực tiếp (`backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))'`, `color: 'var(--agv-text-main)'`, `backgroundColor: 'var(--agv-bg-popup)'`, `borderColor: 'var(--agv-border-popup)'`) cho trigger wrapper và dropdown portal.
-    - Dropdown item của `AdvComboBoxEdit`: mục được chọn (`isSelected`) luôn nhận `var(--agv-accent)` chữ trắng `var(--agv-accent-text, #ffffff)`, mục hover nhận `var(--agv-bg-item-hover)` chữ `var(--agv-text-main)`, đồng bộ 100% với Theme hiện tại.
-  - `src/components/ui/datepicker/datePickerStyles.ts` (639 dòng):
-    - Khắc phục lỗi tương phản tách rời Quý/Tháng trên Popup DatePicker: chuyển `background` của `.agv-preset-subgrid` sang `var(--agv-bg-subtle, var(--agv-bg-row-alt, var(--agv-bg-root)))` và `.agv-preset-chip` sang `var(--agv-bg-control, var(--agv-bg-popup))`, giúp khối mốc nhanh hòa hợp 100% với nền popup.
+  - `src/components/grid/gridUtils.ts` (1117 dòng): Bổ sung hàm `getOrComputeMonthStats(recordObj)` dùng chung toàn hệ thống kết hợp bộ đệm `globalMonthStatsCache` (WeakMap $O(1)$) tránh cấp phát rác, trích xuất chính xác 12 tháng `mVals`, `minVal`, `maxVal`, `minIdx`, `maxIdx`, `avgVal`.
+  - `src/demo/TwelveMonthChartCell.tsx`: Bổ sung prop tùy chọn `height?: number` (mặc định 24px) giúp component biểu đồ co giãn linh hoạt trên mọi kích thước.
+  - `src/components/grid/responsive/GridPhoneCard.tsx`: Thay thế hoàn toàn đường polyline đơn điệu cũ bằng `TwelveMonthChartCell` chuẩn hệ thống: đầy đủ đường sóng Catmull-Rom spline, bóng gradient theo theme, chấm cực đại/cực tiểu, mốc trung bình và Animate UI Tooltip.
+  - `src/components/grid/responsive/GridTabletRow.tsx` (177 dòng): Tích hợp biểu đồ 12T mini (`TwelveMonthChartCell` cao 22px, rộng 140px) trực tiếp vào Cụm 3 bên trên thông số AVG và giờ GD.
+  - `src/components/grid/responsive/GridTabletHeader.tsx` (39 dòng): Cập nhật tiêu đề Cụm 3 thành "Biểu đồ 12T & AVG".

@@ -27,6 +27,7 @@ import {
 import {
   DEFAULT_CHUNK_SIZE,
   DEFAULT_ROW_HEIGHT,
+  POPUP_SELECTORS,
   getThemeClasses,
 } from './constants';
 import { getThemeClass } from '../../themes';
@@ -45,7 +46,6 @@ import {
   createEqualsFilter,
   isNoInputFilterOp,
   isSelectionColumn,
-  computeSortRowFlipState,
 } from './gridUtils';
 import {
   AdvChecklistFilterPopup,
@@ -54,23 +54,13 @@ import {
 import { getDefaultFilterOpForColumn } from './FilterIcons';
 import { GridFloatingToolbar } from './GridFloatingToolbar';
 import { GridSettingsState, QueryGroup, DENSITY_MODES } from './floating/types';
-import { useColumnResize, useColumnAutoFit, useInCellEditor } from './hooks';
-
-const POPUP_SELECTORS = [
-  '.agv-calendar-popover',
-  '.agv-preset-dropdown-menu',
-  '.agv-portal-dropdown',
-  '.agv-comboboxedit-dropdown',
-  '.agv-searchlookupedit-dropdown',
-  '.agv-lookup-op-menu',
-  '.agv-context-menu',
-  '.agv-modal-portal',
-  '.agv-filter-dropdown-menu',
-  '.agv-settings-popup',
-  '.agv-column-chooser',
-  '.agv-query-builder-modal',
-  '[data-agv-popup="true"]',
-].join(', ');
+import {
+  useColumnResize,
+  useColumnAutoFit,
+  useInCellEditor,
+  useGridKeyboardNav,
+  useGridSortFlipAnimation,
+} from './hooks';
 
 let cachedPopupActive = false;
 let lastPopupCheckTime = 0;
@@ -1427,7 +1417,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       return (r as any)?._isGroupRow ? r : null;
     }, [groupByColumnKey, stickyGroupRowIndex, totalRows, getRowItem, dataVersion]);
 
-    // Velocity & FPS tracking
+    // Velocity & On-Demand FPS tracking (Chỉ chạy vòng lặp đo FPS khi thực sự cuộn, 0% CPU khi đứng yên)
     const lastScrollTopRef = useRef<number>(0);
     const lastScrollLeftRef = useRef<number>(0);
     const lastScrollTimeRef = useRef<number>(performance.now());
@@ -1438,37 +1428,63 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const isScrollingAttrSetRef = useRef<boolean>(false);
     const currentVelocityRef = useRef<number>(0);
     const currentFpsRef = useRef<number>(60);
+    const fpsRafRef = useRef<number | null>(null);
+    const fpsFrameCountRef = useRef<number>(0);
+    const fpsLastTimeRef = useRef<number>(0);
 
-    useEffect(() => {
-      let frameCount = 0;
-      let lastTime = performance.now();
-      let rafId: number;
+    const startFpsMonitor = useCallback(() => {
+      if (fpsRafRef.current !== null) return;
+      fpsFrameCountRef.current = 0;
+      fpsLastTimeRef.current = performance.now();
 
       const measureFps = (now: number) => {
-        frameCount++;
-        if (now - lastTime >= 500) {
-          const fps = Math.min(144, Math.round((frameCount * 1000) / (now - lastTime)));
+        fpsFrameCountRef.current++;
+        const elapsed = now - fpsLastTimeRef.current;
+        if (elapsed >= 350) {
+          const fps = Math.min(144, Math.round((fpsFrameCountRef.current * 1000) / elapsed));
           currentFpsRef.current = fps;
-          frameCount = 0;
-          lastTime = now;
+          fpsFrameCountRef.current = 0;
+          fpsLastTimeRef.current = now;
         }
-        rafId = requestAnimationFrame(measureFps);
+        fpsRafRef.current = requestAnimationFrame(measureFps);
       };
 
-      rafId = requestAnimationFrame(measureFps);
-      return () => cancelAnimationFrame(rafId);
+      fpsRafRef.current = requestAnimationFrame(measureFps);
     }, []);
 
-    // Wheel snapping listener
+    const stopFpsMonitor = useCallback(() => {
+      if (fpsRafRef.current !== null) {
+        cancelAnimationFrame(fpsRafRef.current);
+        fpsRafRef.current = null;
+      }
+      currentFpsRef.current = 60;
+    }, []);
+
+    useEffect(() => {
+      return () => {
+        if (fpsRafRef.current !== null) {
+          cancelAnimationFrame(fpsRafRef.current);
+          fpsRafRef.current = null;
+        }
+      };
+    }, []);
+
+    // Unified Wheel Listener: Cho phép cuộn tự nhiên bên trong Popup con, khóa cuộn Grid khi mở Popup/Editor, và căn dòng (Row Snapping)
     useEffect(() => {
       const el = scrollContainerRef.current;
-      if (!el || !rowSnapMode) return;
+      if (!el) return;
 
-      const handleWheelSnap = (e: WheelEvent) => {
+      const handleWheel = (e: WheelEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest(POPUP_SELECTORS)) {
+          return; // Cho phép cuộn tự nhiên bên trong chính popup đó
+        }
         if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
           e.preventDefault();
+          e.stopPropagation();
           return;
         }
+        if (!rowSnapMode) return;
         if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
         if (e.deltaY === 0) return;
 
@@ -1490,36 +1506,16 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         el.scrollTop = nextScrollTop;
       };
 
-      el.addEventListener('wheel', handleWheelSnap, { passive: false });
-      return () => el.removeEventListener('wheel', handleWheelSnap);
+      el.addEventListener('wheel', handleWheel, { passive: false });
+      return () => el.removeEventListener('wheel', handleWheel);
     }, [rowSnapMode, rowsPerWheelStep, actualRowHeight, activeContextMenu, activeEditingCell]);
 
-    // Popup Scroll Lock: Chặn cuộn chuột khi có bất kỳ Popup / Menu / Editor nào đang mở
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-
-      const handleWheelLock = (e: WheelEvent) => {
-        const target = e.target as HTMLElement | null;
-        if (target && target.closest(POPUP_SELECTORS)) {
-          return; // Cho phép cuộn bên trong chính popup đó
-        }
-        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      };
-
-      el.addEventListener('wheel', handleWheelLock, { passive: false });
-      return () => {
-        el.removeEventListener('wheel', handleWheelLock);
-      };
-    }, [activeContextMenu, activeEditingCell]);
-
-    // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space) - Giữ cố định listener qua Ref khi nhấn giữ phím liên tục
-    const keyNavStateRef = useRef({
+    // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space)
+    useGridKeyboardNav({
+      scrollContainerRef,
       activeContextMenu,
       activeEditingCell,
+      isAnyPopupActive,
       totalRows,
       selectedRowIndex,
       onSelectRow,
@@ -1533,104 +1529,6 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       pinnedRowsLength: pinnedRows.length,
       stickyGroupRow,
     });
-    keyNavStateRef.current = {
-      activeContextMenu,
-      activeEditingCell,
-      totalRows,
-      selectedRowIndex,
-      onSelectRow,
-      onToggleCheck,
-      getRowItem,
-      viewportHeight,
-      actualRowHeight,
-      customHeaderHeight,
-      middleElements,
-      showFilterRow,
-      pinnedRowsLength: pinnedRows.length,
-      stickyGroupRow,
-    };
-
-    useEffect(() => {
-      const handleKeyDownNav = (e: KeyboardEvent) => {
-        const st = keyNavStateRef.current;
-        if (st.activeContextMenu || st.activeEditingCell || isAnyPopupActive()) return;
-        const target = e.target as HTMLElement | null;
-        if (
-          target &&
-          (target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.tagName === 'SELECT' ||
-            target.isContentEditable)
-        ) {
-          return;
-        }
-        if (st.totalRows <= 0) return;
-
-        if (
-          e.key === 'ArrowDown' ||
-          e.key === 'ArrowUp' ||
-          e.key === 'PageDown' ||
-          e.key === 'PageUp'
-        ) {
-          if (!st.onSelectRow) return;
-          e.preventDefault();
-          const pageStep = Math.max(
-            1,
-            Math.floor((st.viewportHeight || 400) / st.actualRowHeight) - 1
-          );
-          const curIdx: number =
-            typeof st.selectedRowIndex === 'number' && st.selectedRowIndex >= 0
-              ? st.selectedRowIndex
-              : 0;
-          let nextIdx: number = curIdx;
-          if (e.key === 'ArrowDown') nextIdx = Math.min(st.totalRows - 1, curIdx + 1);
-          else if (e.key === 'ArrowUp') nextIdx = Math.max(0, curIdx - 1);
-          else if (e.key === 'PageDown') nextIdx = Math.min(st.totalRows - 1, curIdx + pageStep);
-          else if (e.key === 'PageUp') nextIdx = Math.max(0, curIdx - pageStep);
-
-          if (nextIdx === curIdx) return;
-
-          const nextRow = st.getRowItem(nextIdx);
-          st.onSelectRow(nextIdx, nextRow);
-
-          const el = scrollContainerRef.current;
-          if (el) {
-            const rowTop = nextIdx * st.actualRowHeight;
-            const rowBottom = rowTop + st.actualRowHeight;
-            const viewTop = el.scrollTop;
-            const stickyHeaderHeight =
-              (st.customHeaderHeight ??
-                (st.middleElements.some((m) => m.type === 'group') ? 64 : 34)) +
-              (st.showFilterRow ? 34 : 0) +
-              st.pinnedRowsLength * st.actualRowHeight +
-              (st.stickyGroupRow ? st.actualRowHeight : 0);
-            const visibleDataHeight = Math.max(
-              st.actualRowHeight,
-              el.clientHeight - stickyHeaderHeight
-            );
-            if (rowTop < viewTop) {
-              el.scrollTop = rowTop;
-            } else if (rowBottom > viewTop + visibleDataHeight) {
-              el.scrollTop = Math.max(0, rowBottom - visibleDataHeight);
-            }
-          }
-        } else if (
-          e.key === ' ' &&
-          typeof st.selectedRowIndex === 'number' &&
-          st.selectedRowIndex >= 0 &&
-          st.onToggleCheck
-        ) {
-          const curRow = st.getRowItem(st.selectedRowIndex) as any;
-          if (curRow && !curRow._isGroupRow) {
-            e.preventDefault();
-            st.onToggleCheck(st.selectedRowIndex, curRow, e as unknown as React.MouseEvent);
-          }
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyDownNav);
-      return () => window.removeEventListener('keydown', handleKeyDownNav);
-    }, []);
 
     // Auto scrolling test mode (Tối ưu dt mượt 60-144Hz, không đọc scrollHeight gây Forced Reflow)
     useEffect(() => {
@@ -1666,9 +1564,11 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         isScrollingAttrSetRef.current = true;
         scrollContainerRef.current.setAttribute('data-agv-scrolling', 'true');
       }
+      startFpsMonitor();
       rafId = requestAnimationFrame(step);
       return () => {
         cancelAnimationFrame(rafId);
+        stopFpsMonitor();
         // Khi dừng auto-scroll, căn chỉnh snap dòng mượt mà và đưa vận tốc hiển thị về 0 px/s
         const el = scrollContainerRef.current;
         if (el) {
@@ -1707,6 +1607,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onScrollMetrics,
       chunkSize,
       totalRows,
+      startFpsMonitor,
+      stopFpsMonitor,
     ]);
 
     // Scroll handler
@@ -1779,6 +1681,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           if (!isScrollingAttrSetRef.current) {
             isScrollingAttrSetRef.current = true;
             target.setAttribute('data-agv-scrolling', 'true');
+            startFpsMonitor();
           }
           if (scrollStopTimeoutRef.current) {
             window.clearTimeout(scrollStopTimeoutRef.current);
@@ -1788,13 +1691,15 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
               isScrollingAttrSetRef.current = false;
               scrollContainerRef.current?.removeAttribute('data-agv-scrolling');
             }
+            const lastFps = currentFpsRef.current;
+            stopFpsMonitor();
             currentVelocityRef.current = 0;
             windowAccumDistanceRef.current = 0;
             windowStartTimeRef.current = performance.now();
             lastMetricsEmitTimeRef.current = performance.now();
             if (onScrollMetrics) {
               onScrollMetrics({
-                fps: currentFpsRef.current,
+                fps: lastFps,
                 velocity: 0,
                 startChunk: activeChunkWindowRef.current.start,
                 endChunk: activeChunkWindowRef.current.end,
@@ -1913,158 +1818,17 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     }, [visibleChunkIndices, chunkSize, totalRows, getRowItem, dataVersion]);
 
     // Động cơ hiệu ứng trượt dòng FLIP khi Sort chuẩn AG Grid (First - Last - Invert - Play, 300ms GPU)
-    const sortSignature = `${sortConfig?.key ?? ''}:${sortConfig?.direction ?? ''}:${
-      sortConfig?.sortByMonth ?? ''
-    }|${groupSortConfig?.colKey ?? ''}:${groupSortConfig?.direction ?? ''}`;
-    const prevSortSignatureRef = useRef<string | null>(null);
-    const prevRowIndexMapRef = useRef<Map<string, number>>(new Map());
-    const prevViewportRowRangeRef = useRef<{ startRow: number; centerRow: number }>({
-      startRow: 0,
-      centerRow: 10,
-    });
-    const sortAnimRafRef = useRef<number | null>(null);
-    const sortAnimTimeoutRef = useRef<number | null>(null);
-    const activeAnimatedRowsRef = useRef<HTMLElement[]>([]);
-
-    useLayoutEffect(() => {
-      const isSortChanged =
-        prevSortSignatureRef.current !== null &&
-        prevSortSignatureRef.current !== sortSignature;
-      prevSortSignatureRef.current = sortSignature;
-
-      const viewportEl = scrollContainerRef.current;
-
-      if (isSortChanged && viewportEl && !autoScrolling) {
-        if (sortAnimRafRef.current !== null) {
-          cancelAnimationFrame(sortAnimRafRef.current);
-          sortAnimRafRef.current = null;
-        }
-        if (sortAnimTimeoutRef.current !== null) {
-          window.clearTimeout(sortAnimTimeoutRef.current);
-          sortAnimTimeoutRef.current = null;
-        }
-        for (const el of activeAnimatedRowsRef.current) {
-          el.style.transition = '';
-          el.style.transform = '';
-          el.style.opacity = '';
-          el.style.zIndex = '';
-          el.style.willChange = '';
-        }
-        activeAnimatedRowsRef.current = [];
-
-        const prevMap = prevRowIndexMapRef.current;
-        const { startRow: prevStartRow, centerRow: viewportCenterRow } =
-          prevViewportRowRangeRef.current;
-        const rowNodes = viewportEl.querySelectorAll<HTMLElement>(
-          '.agv-rows-canvas [data-row-key]'
-        );
-        const animatedEls: HTMLElement[] = [];
-
-        rowNodes.forEach((rowEl) => {
-          const rKey = rowEl.getAttribute('data-row-key');
-          const rIdxAttr = rowEl.getAttribute('data-row-idx');
-          if (!rKey || rIdxAttr === null) return;
-          const newRowIdx = parseInt(rIdxAttr, 10);
-          if (Number.isNaN(newRowIdx) || newRowIdx < 0) return;
-
-          const oldRowIdx = prevMap.get(rKey);
-          const flip = computeSortRowFlipState({
-            rowKey: rKey,
-            newRowIndex: newRowIdx,
-            oldRowIndex: oldRowIdx,
-            rowHeight: actualRowHeight,
-            viewportCenterRow,
-            prevStartRow,
-          });
-
-          rowEl.style.animation = 'none';
-          if (!flip) return;
-
-          // Bước 1 (Invert): Đặt dòng ở vị trí cũ ngay trước khi trình duyệt paint
-          rowEl.style.transition = 'none';
-          rowEl.style.willChange = 'transform, opacity';
-          rowEl.style.transform = `translate3d(0px, ${flip.deltaY}px, 0px)`;
-          if (flip.initialOpacity < 1) {
-            rowEl.style.opacity = String(flip.initialOpacity);
-          }
-          rowEl.style.zIndex = String(flip.zIndex);
-          animatedEls.push(rowEl);
-        });
-
-        if (animatedEls.length > 0) {
-          viewportEl.setAttribute('data-agv-sorting', 'true');
-          activeAnimatedRowsRef.current = animatedEls;
-          void viewportEl.offsetHeight;
-
-          // Bước 2 (Play): Trượt mượt GPU 300ms về vị trí mới (0px)
-          sortAnimRafRef.current = requestAnimationFrame(() => {
-            sortAnimRafRef.current = null;
-            for (const el of animatedEls) {
-              el.style.transition =
-                'transform 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out';
-              el.style.transform = 'translate3d(0px, 0px, 0px)';
-              el.style.opacity = '1';
-            }
-          });
-
-          // Bước 3 (Cleanup): Xóa sạch inline styles sau 320ms để bảo toàn 100% position: sticky và contain: strict
-          sortAnimTimeoutRef.current = window.setTimeout(() => {
-            sortAnimTimeoutRef.current = null;
-            for (const el of animatedEls) {
-              el.style.transition = '';
-              el.style.transform = '';
-              el.style.opacity = '';
-              el.style.zIndex = '';
-              el.style.willChange = '';
-            }
-            activeAnimatedRowsRef.current = [];
-            viewportEl.removeAttribute('data-agv-sorting');
-          }, 320);
-        }
-      }
-
-      // Cập nhật bản đồ tọa độ dòng hiện hành phục vụ lần Sort kế tiếp
-      const nextMap = new Map<string, number>();
-      for (const [cIdx, cRows] of visibleChunksMap.entries()) {
-        const baseIdx = cIdx * chunkSize;
-        for (let i = 0; i < cRows.length; i++) {
-          const r = cRows[i] as any;
-          const actualIdx = baseIdx + i;
-          const keyStr = r?._isGroupRow
-            ? `group_${r.groupColumnKey || ''}_${r.groupValue ?? r.path ?? actualIdx}`
-            : String(getRowKey(r, actualIdx));
-          nextMap.set(keyStr, actualIdx);
-        }
-      }
-      prevRowIndexMapRef.current = nextMap;
-
-      const curTop = viewportEl?.scrollTop || 0;
-      const startRow = Math.max(0, Math.floor(curTop / actualRowHeight));
-      const visibleCount = Math.max(1, Math.floor((viewportHeight || 600) / actualRowHeight));
-      prevViewportRowRangeRef.current = {
-        startRow,
-        centerRow: startRow + Math.floor(visibleCount / 2),
-      };
-    }, [
-      sortSignature,
+    useGridSortFlipAnimation({
+      scrollContainerRef,
+      sortConfig,
+      groupSortConfig,
       visibleChunksMap,
       chunkSize,
       actualRowHeight,
       viewportHeight,
       getRowKey,
       autoScrolling,
-    ]);
-
-    useEffect(() => {
-      return () => {
-        if (sortAnimRafRef.current !== null) {
-          cancelAnimationFrame(sortAnimRafRef.current);
-        }
-        if (sortAnimTimeoutRef.current !== null) {
-          window.clearTimeout(sortAnimTimeoutRef.current);
-        }
-      };
-    }, []);
+    });
 
     // Imperative Ref API
     useImperativeHandle(

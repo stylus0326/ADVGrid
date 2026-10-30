@@ -24,39 +24,8 @@ import {
 import { AdvDatePicker, AdvDateRangePicker, formatGridDateValue } from '../ui/AdvDatePicker';
 import { formatGridNumber, getAlignTextClass, getAlignJustifyClass, parseGridNumber, isSelectionColumn } from './gridUtils';
 import { handleNumericKeyDown, expandAllShortcuts } from './smartNumberUtils';
-import { AdvComboBoxEdit, AdvSearchLookUpEdit, AdvLookUpColumn, AdvComboBoxEditOption } from '../ui';
+import { AdvComboBoxEdit, AdvSearchLookUpEdit } from '../ui';
 import { MorphChevronIcon } from '../ui/MorphIcons';
-
-const STATUS_COMBO_OPTIONS: AdvComboBoxEditOption[] = [
-  { value: 'Healthy', label: 'Healthy (Bình thường)' },
-  { value: 'Warning', label: 'Warning (Cảnh báo)' },
-  { value: 'Critical', label: 'Critical (Nguy cấp)' },
-  { value: 'Maintenance', label: 'Maintenance (Bảo trì)' },
-  { value: 'Pending', label: 'Pending (Đang chờ)' },
-];
-
-interface RegionLookupItem {
-  id: string;
-  name: string;
-  country: string;
-  ping: string;
-}
-
-const REGION_LOOKUP_DATA: RegionLookupItem[] = [
-  { id: 'VN-HAN-02', name: 'Hà Nội DC', country: 'Việt Nam', ping: '4ms' },
-  { id: 'VN-SGN-01', name: 'Sài Gòn DC', country: 'Việt Nam', ping: '16ms' },
-  { id: 'SG-SIN-01', name: 'Singapore DC', country: 'Singapore', ping: '38ms' },
-  { id: 'JP-TYO-03', name: 'Tokyo DC', country: 'Nhật Bản', ping: '65ms' },
-  { id: 'US-WST-02', name: 'Silicon Valley', country: 'Hoa Kỳ', ping: '160ms' },
-  { id: 'DE-FRA-01', name: 'Frankfurt DC', country: 'Đức', ping: '185ms' },
-];
-
-const REGION_LOOKUP_COLUMNS: AdvLookUpColumn<RegionLookupItem>[] = [
-  { key: 'id', title: 'Mã Vùng', width: 105, className: 'agv-cell-code' },
-  { key: 'name', title: 'Trung Tâm', width: 120 },
-  { key: 'country', title: 'Quốc Gia', width: 90 },
-  { key: 'ping', title: 'Độ Trễ', width: 65, align: ALIGNMENTS.RIGHT },
-];
 
 export interface GridRowProps<T = any> {
   row: T;
@@ -833,12 +802,13 @@ export const GridRow = memo(
                 />
               );
             } else if (col.editorType === EDITOR_TYPES.COMBOBOX) {
+              const comboOpts = col.editorOptions || {};
               cellContent = (
                 <div className="w-full h-full flex items-center justify-center">
                   <AdvComboBoxEdit
                     value={getRawCellValue(row, col.key)}
-                    options={STATUS_COMBO_OPTIONS}
-                    allowCustomInput={true}
+                    options={comboOpts.options || []}
+                    allowCustomInput={comboOpts.allowCustomInput !== undefined ? comboOpts.allowCustomInput : true}
                     defaultOpen={true}
                     autoFocus={true}
                     theme={surfaceTheme}
@@ -855,18 +825,19 @@ export const GridRow = memo(
                 </div>
               );
             } else if (col.editorType === EDITOR_TYPES.LOOKUP) {
+              const lookupOpts = col.editorOptions || {};
               cellContent = (
                 <div className="w-full h-full flex items-center justify-center">
                   <AdvSearchLookUpEdit
                     value={getRawCellValue(row, col.key)}
-                    valueMember="id"
-                    displayMember="id"
-                    dataSource={REGION_LOOKUP_DATA}
-                    columns={REGION_LOOKUP_COLUMNS}
-                    multiSelect={false}
+                    valueMember={lookupOpts.valueMember || 'id'}
+                    displayMember={lookupOpts.displayMember || 'id'}
+                    dataSource={lookupOpts.dataSource || []}
+                    columns={lookupOpts.columns || []}
+                    multiSelect={Boolean(lookupOpts.multiSelect)}
                     defaultOpen={true}
                     theme={surfaceTheme}
-                    dropdownWidth={420}
+                    dropdownWidth={lookupOpts.dropdownWidth || 420}
                     className="w-full h-full"
                     onChange={(newVal) => {
                       onCellChange?.(rowIndex, row, col.key, newVal);

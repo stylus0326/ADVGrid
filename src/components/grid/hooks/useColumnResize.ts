@@ -58,7 +58,7 @@ export function useColumnResize<T>({
       const overscanTargetCells: CellItem[] = [];
       const visibleGroupSpanCells: SpanCellItem[] = [];
       const overscanGroupSpanCells: SpanCellItem[] = [];
-      const bandContainers: HTMLElement[] = [];
+      const bandContainers: { el: HTMLElement; origWidthStyle: string }[] = [];
       let startBandWidth = 0;
       const visibleFullWidthContainers: HTMLElement[] = [];
       const overscanFullWidthContainers: HTMLElement[] = [];
@@ -116,11 +116,11 @@ export function useColumnResize<T>({
         const bandWrap = tier2Header?.closest<HTMLElement>('[data-band-key]');
         if (bandWrap) {
           startBandWidth = parseFloat(bandWrap.style.width) || bandWrap.getBoundingClientRect().width;
-          bandContainers.push(bandWrap);
+          bandContainers.push({ el: bandWrap, origWidthStyle: bandWrap.style.width });
           for (let i = 0; i < bandWrap.children.length; i++) {
             const child = bandWrap.children[i] as HTMLElement;
             if (child && child.style) {
-              bandContainers.push(child);
+              bandContainers.push({ el: child, origWidthStyle: child.style.width });
             }
           }
         }
@@ -277,7 +277,7 @@ export function useColumnResize<T>({
           if (bandContainers.length > 0) {
             const bandPx = `${startBandWidth + actualDelta}px`;
             for (let i = 0; i < bandContainers.length; i++) {
-              bandContainers[i].style.width = bandPx;
+              bandContainers[i].el.style.width = bandPx;
             }
           }
         } else {
@@ -318,6 +318,9 @@ export function useColumnResize<T>({
             lastAppliedWidth,
             finalDelta
           );
+          for (let i = 0; i < bandContainers.length; i++) {
+            bandContainers[i].el.style.width = bandContainers[i].origWidthStyle;
+          }
           setColWidth(activeResize.key, lastAppliedWidth);
         }
       };

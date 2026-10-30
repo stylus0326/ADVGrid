@@ -640,7 +640,8 @@ body, button, input, select, textarea {
   overflow: visible !important;
 }
 
-.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter {
+.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter,
+.agv-scroll-viewport[data-agv-scrolling="true"] .agv-row-enter {
   animation: none !important;
 }
 

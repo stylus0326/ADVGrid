@@ -22,6 +22,8 @@ import {
   SORT_DIRECTIONS,
   FORMULA_MODES,
   MONTH_ANALYTICS_MODES,
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_ROW_HEIGHT,
 } from './components/grid';
 import {
   INITIAL_COLUMNS,
@@ -45,9 +47,6 @@ import {
   isNoInputFilterOp,
   createEqualsFilter,
 } from './components/grid/gridUtils';
-
-const DEFAULT_CHUNK_SIZE = 20;
-const DEFAULT_ROW_HEIGHT = 32;
 import { TwelveMonthChartCell } from './demo/TwelveMonthChartCell';
 import { PageToolbar } from './demo/PageToolbar';
 import { PageFooter } from './demo/PageFooter';
@@ -400,43 +399,79 @@ export function App() {
 
   const totalRowCount = apiData.length;
 
+  // Bộ đệm WeakMap lưu thống kê 12 tháng gắn trực tiếp theo baseRecord gốc (apiData[r])
+  // Giúp tái sử dụng O(1) xuyên suốt cả getRowVal (lọc/tính tổng 50.000 dòng) lẫn renderCell mà không cấp phát mảng tạm lặp lại
+  const monthStatsCacheRef = useRef(
+    new WeakMap<
+      object,
+      {
+        mVals: number[];
+        minVal: number;
+        maxVal: number;
+        minIdx: number;
+        maxIdx: number;
+        sumVal: number;
+        avgVal: number;
+      }
+    >()
+  );
+
+  const getOrComputeMonthStats = useCallback((recordObj: any) => {
+    let stats = monthStatsCacheRef.current.get(recordObj);
+    if (!stats) {
+      const mVals = [
+        Number(recordObj.col_m1) || 0,
+        Number(recordObj.col_m2) || 0,
+        Number(recordObj.col_m3) || 0,
+        Number(recordObj.col_m4) || 0,
+        Number(recordObj.col_m5) || 0,
+        Number(recordObj.col_m6) || 0,
+        Number(recordObj.col_m7) || 0,
+        Number(recordObj.col_m8) || 0,
+        Number(recordObj.col_m9) || 0,
+        Number(recordObj.col_m10) || 0,
+        Number(recordObj.col_m11) || 0,
+        Number(recordObj.col_m12) || 0,
+      ];
+      let minVal = Infinity;
+      let maxVal = -Infinity;
+      let minIdx = 0;
+      let maxIdx = 0;
+      let sumVal = 0;
+      for (let m = 0; m < 12; m++) {
+        const v = mVals[m];
+        sumVal += v;
+        if (v < minVal) {
+          minVal = v;
+          minIdx = m;
+        }
+        if (v > maxVal) {
+          maxVal = v;
+          maxIdx = m;
+        }
+      }
+      const avgVal = Math.round((sumVal / 12) * 100) / 100;
+      stats = { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal };
+      monthStatsCacheRef.current.set(recordObj, stats);
+    }
+    return stats;
+  }, []);
+
   // Trích xuất giá trị ô từ mảng Plain JSON API phục vụ lọc, sắp xếp, tìm kiếm
   const getRowVal = useCallback(
     (r: number, k: string): any => {
       const row = apiData[r];
       if (!row) return undefined;
       if (k === 'col_formula') {
-        const mVals = [
-          Number(row.col_m1) || 0,
-          Number(row.col_m2) || 0,
-          Number(row.col_m3) || 0,
-          Number(row.col_m4) || 0,
-          Number(row.col_m5) || 0,
-          Number(row.col_m6) || 0,
-          Number(row.col_m7) || 0,
-          Number(row.col_m8) || 0,
-          Number(row.col_m9) || 0,
-          Number(row.col_m10) || 0,
-          Number(row.col_m11) || 0,
-          Number(row.col_m12) || 0,
-        ];
-        let sum = 0;
-        let min = Infinity;
-        let max = -Infinity;
-        for (let m = 0; m < 12; m++) {
-          const v = mVals[m];
-          sum += v;
-          if (v < min) min = v;
-          if (v > max) max = v;
-        }
-        if (formulaMode === FORMULA_MODES.MIN) return min;
-        if (formulaMode === FORMULA_MODES.MAX) return max;
-        if (formulaMode === FORMULA_MODES.SUM) return sum;
-        return Math.round((sum / 12) * 100) / 100;
+        const stats = getOrComputeMonthStats(row);
+        if (formulaMode === FORMULA_MODES.MIN) return stats.minVal;
+        if (formulaMode === FORMULA_MODES.MAX) return stats.maxVal;
+        if (formulaMode === FORMULA_MODES.SUM) return stats.sumVal;
+        return stats.avgVal;
       }
       return (row as any)[k];
     },
-    [apiData, formulaMode]
+    [apiData, formulaMode, getOrComputeMonthStats]
   );
 
   // Metrics telemetry
@@ -1632,6 +1667,7 @@ export function App() {
         if (!baseRecord) return null;
         return {
           ...baseRecord,
+          _baseRecord: baseRecord,
           rowIndex: index,
           originalIndex: originalRowIdx,
           localRowIndex: localIndex,
@@ -1646,6 +1682,7 @@ export function App() {
       if (!baseRecord) return null;
       return {
         ...baseRecord,
+        _baseRecord: baseRecord,
         rowIndex: index,
         originalIndex: originalRowIdx,
         col_stt: index + 1,
@@ -1657,22 +1694,6 @@ export function App() {
   );
 
   const chartColumnWidth = colWidths['col_chart'];
-
-  // Bộ đệm WeakMap lưu thống kê 12 tháng theo từng dòng (Tránh cấp phát mảng mVals 13 lần/dòng khi render 13 cột tháng & công thức)
-  const monthStatsCacheRef = useRef(
-    new WeakMap<
-      object,
-      {
-        mVals: number[];
-        minVal: number;
-        maxVal: number;
-        minIdx: number;
-        maxIdx: number;
-        sumVal: number;
-        avgVal: number;
-      }
-    >()
-  );
 
   // Custom Cell Renderer (Tương thích 100% Plain JSON API Objects, bảo toàn React.memo của GridRow)
   const renderCell = useCallback(
@@ -1706,47 +1727,11 @@ export function App() {
         );
       }
 
-      // 3, 4, 5. Chỉ tính toán mảng 12 tháng 1 lần duy nhất cho mỗi dòng nhờ WeakMap
+      // 3, 4, 5. Tái sử dụng O(1) thống kê 12 tháng gắn theo baseRecord gốc
       const isMonthCol = column.key.startsWith('col_m');
       if (column.key === 'col_chart' || column.key === 'col_formula' || isMonthCol) {
-        let stats = monthStatsCacheRef.current.get(row);
-        if (!stats) {
-          const mVals = [
-            Number(row.col_m1) || 0,
-            Number(row.col_m2) || 0,
-            Number(row.col_m3) || 0,
-            Number(row.col_m4) || 0,
-            Number(row.col_m5) || 0,
-            Number(row.col_m6) || 0,
-            Number(row.col_m7) || 0,
-            Number(row.col_m8) || 0,
-            Number(row.col_m9) || 0,
-            Number(row.col_m10) || 0,
-            Number(row.col_m11) || 0,
-            Number(row.col_m12) || 0,
-          ];
-          let minVal = Infinity;
-          let maxVal = -Infinity;
-          let minIdx = 0;
-          let maxIdx = 0;
-          let sumVal = 0;
-          for (let m = 0; m < 12; m++) {
-            const v = mVals[m];
-            sumVal += v;
-            if (v < minVal) {
-              minVal = v;
-              minIdx = m;
-            }
-            if (v > maxVal) {
-              maxVal = v;
-              maxIdx = m;
-            }
-          }
-          const avgVal = Math.round((sumVal / 12) * 100) / 100;
-          stats = { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal };
-          monthStatsCacheRef.current.set(row, stats);
-        }
-        const { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal } = stats;
+        const { mVals, minVal, maxVal, minIdx, maxIdx, sumVal, avgVal } =
+          getOrComputeMonthStats(row._baseRecord || row);
 
         // 3. Cột Biểu đồ 12 Tháng (Catmull-Rom SVG Sparkline)
         if (column.key === 'col_chart') {
@@ -1835,7 +1820,7 @@ export function App() {
         </span>
       );
     },
-    [handleToggleCheck, formulaMode, surfaceTheme, chartColumnWidth]
+    [handleToggleCheck, formulaMode, surfaceTheme, chartColumnWidth, getOrComputeMonthStats]
   );
 
   const handleGetRowId = useCallback(

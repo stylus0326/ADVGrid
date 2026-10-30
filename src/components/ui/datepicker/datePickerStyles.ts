@@ -3,14 +3,14 @@ const FALLBACK_STYLE_ID = 'agv-datepicker-core-styles';
 function ensureDatePickerStyles() {
   if (typeof document === 'undefined') return;
   let style = document.getElementById(FALLBACK_STYLE_ID) as HTMLStyleElement | null;
-  if (!style) {
-    style = document.createElement('style');
-    style.id = FALLBACK_STYLE_ID;
-    if (document.head.firstChild) {
-      document.head.insertBefore(style, document.head.firstChild);
-    } else {
-      document.head.appendChild(style);
-    }
+  if (style) return;
+
+  style = document.createElement('style');
+  style.id = FALLBACK_STYLE_ID;
+  if (document.head.firstChild) {
+    document.head.insertBefore(style, document.head.firstChild);
+  } else {
+    document.head.appendChild(style);
   }
 
   style.textContent = `

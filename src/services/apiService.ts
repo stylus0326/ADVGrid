@@ -108,6 +108,37 @@ export interface GridRecord {
   col_dec_sla: number;
 }
 
+export const STATUS_COMBO_OPTIONS = [
+  { value: 'Healthy', label: 'Healthy (Bình thường)' },
+  { value: 'Warning', label: 'Warning (Cảnh báo)' },
+  { value: 'Critical', label: 'Critical (Nguy cấp)' },
+  { value: 'Maintenance', label: 'Maintenance (Bảo trì)' },
+  { value: 'Pending', label: 'Pending (Đang chờ)' },
+];
+
+export interface RegionLookupItem {
+  id: string;
+  name: string;
+  country: string;
+  ping: string;
+}
+
+export const REGION_LOOKUP_DATA: RegionLookupItem[] = [
+  { id: 'VN-HAN-02', name: 'Hà Nội DC', country: 'Việt Nam', ping: '4ms' },
+  { id: 'VN-SGN-01', name: 'Sài Gòn DC', country: 'Việt Nam', ping: '16ms' },
+  { id: 'SG-SIN-01', name: 'Singapore DC', country: 'Singapore', ping: '38ms' },
+  { id: 'JP-TYO-03', name: 'Tokyo DC', country: 'Nhật Bản', ping: '65ms' },
+  { id: 'US-WST-02', name: 'Silicon Valley', country: 'Hoa Kỳ', ping: '160ms' },
+  { id: 'DE-FRA-01', name: 'Frankfurt DC', country: 'Đức', ping: '185ms' },
+];
+
+export const REGION_LOOKUP_COLUMNS = [
+  { key: 'id' as const, title: 'Mã Vùng', width: 105, className: 'agv-cell-code' },
+  { key: 'name' as const, title: 'Trung Tâm', width: 120 },
+  { key: 'country' as const, title: 'Quốc Gia', width: 90 },
+  { key: 'ping' as const, title: 'Độ Trễ', width: 65, align: ALIGNMENTS.RIGHT },
+];
+
 /**
  * Khai báo danh sách cột của Bảng theo chuẩn Data-Driven
  */
@@ -118,8 +149,34 @@ export const INITIAL_COLUMNS: ColumnDef<GridRecord>[] = [
   { key: 'col_id', title: 'Mã Dòng', defaultWidth: 120, align: ALIGNMENTS.LEFT, dataType: DATA_TYPES.TEXT },
   { key: 'col_chunk', title: 'Chunk #', defaultWidth: 95, align: ALIGNMENTS.CENTER, dataType: DATA_TYPES.NUMBER },
   { key: 'col_node', title: 'Mã Node', defaultWidth: 115, align: ALIGNMENTS.LEFT, dataType: DATA_TYPES.TEXT },
-  { key: 'col_status', title: 'Trạng Thái', defaultWidth: 120, align: ALIGNMENTS.CENTER, dataType: DATA_TYPES.TEXT, editorType: EDITOR_TYPES.COMBOBOX },
-  { key: 'col_region', title: 'Khu Vực', defaultWidth: 110, align: ALIGNMENTS.LEFT, dataType: DATA_TYPES.TEXT, editorType: EDITOR_TYPES.LOOKUP, className: 'agv-cell-code' },
+  {
+    key: 'col_status',
+    title: 'Trạng Thái',
+    defaultWidth: 120,
+    align: ALIGNMENTS.CENTER,
+    dataType: DATA_TYPES.TEXT,
+    editorType: EDITOR_TYPES.COMBOBOX,
+    editorOptions: {
+      options: STATUS_COMBO_OPTIONS,
+      allowCustomInput: true,
+    },
+  },
+  {
+    key: 'col_region',
+    title: 'Khu Vực',
+    defaultWidth: 110,
+    align: ALIGNMENTS.LEFT,
+    dataType: DATA_TYPES.TEXT,
+    editorType: EDITOR_TYPES.LOOKUP,
+    className: 'agv-cell-code',
+    editorOptions: {
+      valueMember: 'id',
+      displayMember: 'id',
+      dataSource: REGION_LOOKUP_DATA,
+      columns: REGION_LOOKUP_COLUMNS,
+      dropdownWidth: 420,
+    },
+  },
 
   // Cột Hạ Tầng
   { key: 'col_int_req', title: 'Request', defaultWidth: 120, align: ALIGNMENTS.RIGHT, dataType: DATA_TYPES.NUMBER },

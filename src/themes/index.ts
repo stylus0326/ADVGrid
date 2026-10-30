@@ -197,37 +197,6 @@ export function generateThemeCssVariables(
     '.agv-e-ink.dark',
   ]));
 
-  const scrollbarCss = `
-    /* Đồng bộ thanh cuộn (Scrollbar) theo biến màu theme */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1)) var(--agv-bg-root, transparent);
-    }
-
-    ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--agv-bg-root, transparent);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1));
-      border-radius: 6px;
-      border: 2px solid var(--agv-bg-root, transparent);
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--scroll-thumb-hover, var(--agv-text-muted, #94a3b8));
-    }
-
-    ::-webkit-scrollbar-corner {
-      background: var(--agv-bg-root, transparent);
-    }
-  `;
-
   const einkOptimizationCss = `
     .agv-e-ink,
     .theme-eink,
@@ -237,5 +206,5 @@ export function generateThemeCssVariables(
     }
   `;
 
-  return [...cssBlocks, scrollbarCss, einkOptimizationCss].join('\n');
+  return [...cssBlocks, einkOptimizationCss].join('\n');
 }

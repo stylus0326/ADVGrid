@@ -192,13 +192,13 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
           <span
             className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
-              isSorted ? 'text-primary' : ''
+              isSorted ? 'text-[var(--agv-accent)]' : ''
             }`}
           >
             {isSystemCol && !col.title ? '' : col.title}
           </span>
           {isSorted && (
-            <span className="shrink-0 inline-flex items-center text-primary">
+            <span className="shrink-0 inline-flex items-center text-[var(--agv-accent)]">
               <MorphSortIcon
                 direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC}
                 size={isTier2 ? 10 : 11}
@@ -226,8 +226,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                 isTier2 ? 'w-3.5 h-3.5' : 'w-4 h-4'
               } ${
                 isChecklistActive
-                  ? 'text-primary opacity-100'
-                  : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-primary'
+                  ? 'text-[var(--agv-accent)] opacity-100'
+                  : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-[var(--agv-accent)]'
               }`}
             >
               <Filter size={isTier2 ? 10 : 11} strokeWidth={2.5} />
@@ -313,7 +313,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             className={`group/th flex flex-col justify-center items-center text-center ${
               isSystemCol ? 'px-0.5' : 'px-1.5'
             } ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
-              isDragOver ? 'ring-2 ring-inset ring-ring' : ''
+              isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
             }`}
           >
             {renderHeaderCellContent(col)}
@@ -377,7 +377,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               className={`group/th flex flex-col justify-center items-center text-center px-1.5 ${headerBottomBorder} ${headerRightBorder} ${headerLeftBorder} ${
                 isDockedLeft || isDockedRight ? 'sticky z-40' : 'relative z-10'
               } shrink-0 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
-                isDragOver ? 'ring-2 ring-inset ring-ring' : ''
+                isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
               }`}
             >
               {renderHeaderCellContent(col)}
@@ -417,7 +417,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                   onBandContextMenu?.(group.id, childCols, e);
                 }}
                 className={`relative flex items-center justify-center text-center px-8 text-[10px] font-bold uppercase tracking-wider border-r border-b ${theme.tier1Border} ${theme.tier1Bg} shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] cursor-pointer ${
-                  isBandDragOver ? 'ring-2 ring-inset ring-ring' : ''
+                  isBandDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
                 }`}
               >
                 {group.isToggleable && (
@@ -505,7 +505,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                         color: 'var(--agv-text-header, var(--agv-text-main))',
                       }}
                       className={`group/th flex items-center justify-center text-center px-1 text-[10px] font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
-                        isChildDragOver ? 'ring-2 ring-inset ring-ring' : ''
+                        isChildDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
                       }`}
                     >
                       {renderHeaderCellContent(col, true)}
@@ -554,7 +554,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             }}
             className={`group/th flex flex-col justify-center items-center text-center px-1.5 ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
               isRightDivider ? getRightPinnedDividerClass(surfaceTheme) : ''
-            } relative ${isDragOver ? 'ring-2 ring-inset ring-ring' : ''}`}
+            } relative ${isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''}`}
           >
             {renderHeaderCellContent(col)}
           </div>

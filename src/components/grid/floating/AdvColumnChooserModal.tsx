@@ -365,7 +365,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
           }}
           className={`agv-chooser-item flex items-center justify-between rounded px-1.5 py-0.5 text-xs transition-colors select-none ${
             isThisItemDragging
-              ? 'scale-[1.01] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg opacity-95 border border-primary'
+              ? 'scale-[1.01] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg opacity-95 border border-[var(--agv-accent)]'
               : !isChecked
               ? 'opacity-60 hover:opacity-100 cursor-grab active:cursor-grabbing touch-none'
               : 'bg-[var(--agv-bg-item-active)] hover:bg-[var(--agv-bg-item-hover)] cursor-grab active:cursor-grabbing touch-none'
@@ -579,7 +579,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
         }}
         className={`agv-chooser-band-group mb-1 transition-all ${
           isThisItemDragging
-            ? 'scale-[1.01] rounded bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg opacity-95 border border-primary'
+            ? 'scale-[1.01] rounded bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg opacity-95 border border-[var(--agv-accent)]'
             : ''
         }`}
       >
@@ -757,7 +757,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
 
             <Layers
               className={`h-3.5 w-3.5 shrink-0 ${
-                depth === 0 ? 'text-primary' : 'text-[var(--agv-text-subtle)]'
+                depth === 0 ? 'text-[var(--agv-accent)]' : 'text-[var(--agv-text-subtle)]'
               }`}
             />
 
@@ -769,7 +769,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
           <span
             className={`py-0.5 shrink-0 rounded-full px-1.5 text-[10px] font-semibold ${
               isAllVisible
-                ? 'bg-[var(--agv-bg-item-active)] text-primary'
+                ? 'bg-[var(--agv-bg-item-active)] text-[var(--agv-accent)]'
                 : visibleCount > 0
                 ? 'bg-[var(--agv-warning-bg)] text-[var(--agv-warning)]'
                 : 'bg-[var(--agv-bg-control)] text-[var(--agv-text-subtle)]'
@@ -823,7 +823,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
         onPointerDown={(e) => handleResizeStart(e, 'left')}
         className="agv-chooser-resizer-left absolute -left-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
       >
-        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-primary group-active:bg-primary transition-colors" />
+        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
       </div>
 
       {/* Thanh kéo điều chỉnh chiều ngang ở mép phải */}
@@ -832,7 +832,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
         onPointerDown={(e) => handleResizeStart(e, 'right')}
         className="agv-chooser-resizer-right absolute -right-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
       >
-        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-primary group-active:bg-primary transition-colors" />
+        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
       </div>
 
       {/* Ô tìm kiếm cột nhanh & Nút phục hồi mặc định */}
@@ -845,7 +845,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
             onChange={(e) => setChooserSearch(e.target.value)}
             placeholder="Tìm kiếm tên cột..."
             {...NO_AUTOFILL_PROPS}
-            className="w-full min-h-[28px] h-7 pl-7 pr-7 text-xs rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] outline-none focus:border-primary transition-colors"
+            className="w-full min-h-[28px] h-7 pl-7 pr-7 text-xs rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] outline-none focus:border-[var(--agv-accent)] transition-colors"
           />
           {chooserSearch && (
             <button
@@ -867,7 +867,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
             setChooserSearch('');
             setWidth(240);
           }}
-          className="flex min-h-[28px] min-w-[28px] h-7 w-7 shrink-0 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] transition-colors hover:border-primary hover:bg-[var(--agv-bg-control-hover)] hover:text-[var(--agv-text-main)] cursor-pointer select-none"
+          className="flex min-h-[28px] min-w-[28px] h-7 w-7 shrink-0 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] transition-colors hover:border-[var(--agv-accent)] hover:bg-[var(--agv-bg-control-hover)] hover:text-[var(--agv-text-main)] cursor-pointer select-none"
         >
           <RotateCcw className="h-3.5 w-3.5" />
         </button>

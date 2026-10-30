@@ -65,7 +65,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
   max = '',
   placeholderFrom = 'Từ',
   placeholderTo = 'Đến',
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = '',
   dateAnalysis,
   bounds,
   size = 'default',
@@ -822,8 +822,8 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
             }}
             className={`agv-calendar-popover agv-daterange-popover ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-            } ${dualMonth ? 'is-dual' : ''} ${getThemeClass(theme)}`}
-            data-theme={theme}
+            } ${dualMonth ? 'is-dual' : ''} ${theme ? getThemeClass(theme) : ''}`}
+            data-theme={theme || undefined}
             data-agv-popup="true"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}

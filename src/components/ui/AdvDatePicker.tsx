@@ -134,7 +134,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   disabled = false,
   className = '',
   onDoubleClick,
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = '',
   size = 'default',
   showPreset = true,
   showTime = false,
@@ -586,8 +586,8 @@ export const AdvDatePicker = memo(function AdvDatePicker({
             }}
             className={`agv-calendar-popover ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-            } ${showPreset ? 'agv-has-preset agv-daterange-popover' : ''} ${getThemeClass(theme)}`}
-            data-theme={theme}
+            } ${showPreset ? 'agv-has-preset agv-daterange-popover' : ''} ${theme ? getThemeClass(theme) : ''}`}
+            data-theme={theme || undefined}
             data-agv-popup="true"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}

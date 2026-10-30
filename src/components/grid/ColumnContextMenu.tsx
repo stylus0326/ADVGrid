@@ -279,7 +279,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     onShowAllHiddenColumns?.();
                     onClose();
                   }}
-                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-muted text-primary"
+                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)]"
                 >
                   <span className="font-semibold">Hiện lại các cột đã ẩn</span>
                 </button>
@@ -312,7 +312,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
             style={{ color: 'var(--agv-text-muted)' }}
           >
             <span className="truncate">
-              Ghim: <span className="font-extrabold text-primary">{colDisplayName}</span>
+              Ghim: <span className="font-extrabold text-[var(--agv-accent)]">{colDisplayName}</span>
             </span>
             {isPinned && (
               <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
@@ -332,8 +332,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.LEFT
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Trái</span>
@@ -351,8 +351,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.CENTER
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Giữa</span>
@@ -370,8 +370,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.RIGHT
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Phải</span>
@@ -408,8 +408,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     }}
                     className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
                       isActive
-                        ? 'bg-primary text-primary-foreground font-semibold'
-                        : 'text-foreground hover:bg-muted'
+                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
+                        : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -448,8 +448,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       onClick={handleCycleSort}
                       className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
                         isMonthSort
-                          ? 'bg-primary text-primary-foreground font-semibold'
-                          : 'text-foreground hover:bg-muted'
+                          ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
+                          : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
                       }`}
                     >
                       <span>{label}</span>
@@ -475,8 +475,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition min-h-[28px] ${
                 isEmptyCol
                   ? 'opacity-40 cursor-not-allowed'
-                  : 'cursor-pointer hover:bg-muted'
-              } ${groupByColumnKey === column.key ? 'text-primary font-semibold' : 'text-foreground'}`}
+                  : 'cursor-pointer hover:bg-[var(--agv-bg-item-hover)]'
+              } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
             >
               <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
             </button>
@@ -492,7 +492,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     onHideBand?.(parentBand.id);
                     onClose();
                   }}
-                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-muted text-foreground"
+                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]"
                 >
                   <span>Ẩn nhóm {parentBand.title || parentBand.id || ''}</span>
                 </button>
@@ -506,7 +506,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                   onHideColumn?.(column.key);
                   onClose();
                 }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-muted text-foreground"
+                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]"
               >
                 <span>Ẩn cột này</span>
               </button>
@@ -520,7 +520,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                 onShowAllHiddenColumns?.();
                 onClose();
               }}
-              className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-muted text-primary"
+              className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)]"
             >
               <span className="font-semibold">Hiện lại các cột đã ẩn</span>
             </button>
@@ -548,8 +548,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     }}
                     className={`w-full flex items-center justify-center px-2.5 py-1.5 rounded-md text-center text-xs font-semibold transition cursor-pointer select-none min-h-[28px] ${
                       isCurrentColSorted
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground bg-card border border-border hover:bg-muted'
+                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                        : 'text-[var(--agv-text-main)] bg-[var(--agv-bg-popup)] border border-[var(--agv-border)] hover:bg-[var(--agv-bg-item-hover)]'
                     }`}
                   >
                     <span>{label}</span>
@@ -591,8 +591,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition min-h-[28px] ${
                         isEmptyCol
                           ? 'opacity-40 cursor-not-allowed'
-                          : 'cursor-pointer hover:bg-muted'
-                      } ${groupByColumnKey === column.key ? 'text-primary font-semibold' : 'text-foreground'}`}
+                          : 'cursor-pointer hover:bg-[var(--agv-bg-item-hover)]'
+                      } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
                     >
                       <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
                     </button>
@@ -681,7 +681,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
             style={{ color: 'var(--agv-text-muted)' }}
           >
             <span className="truncate">
-              Ghim tầng: <span className="font-extrabold text-primary">{groupDef.title}</span>
+              Ghim tầng: <span className="font-extrabold text-[var(--agv-accent)]">{groupDef.title}</span>
             </span>
             {isPinned && (
               <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
@@ -700,8 +700,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.LEFT
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Trái</span>
@@ -718,8 +718,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.CENTER
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Giữa</span>
@@ -736,8 +736,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
               }}
               className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
                 currentPin === PIN_POSITIONS.RIGHT
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background border-border text-foreground hover:bg-muted'
+                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >
               <span className="text-[10px] font-semibold">Phải</span>
@@ -826,7 +826,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
             onUngroup?.();
             onClose();
           }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-muted text-primary font-semibold"
+          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)] font-semibold"
         >
           <span>Hủy nhóm cột</span>
         </button>
@@ -989,8 +989,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     }}
                     className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
                       isActive
-                        ? 'bg-primary text-primary-foreground font-semibold'
-                        : 'text-foreground hover:bg-muted'
+                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
+                        : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -1029,8 +1029,8 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       onClick={handleCycleSort}
                       className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
                         isMonthSort
-                          ? 'bg-primary text-primary-foreground font-semibold'
-                          : 'text-foreground hover:bg-muted'
+                          ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
+                          : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
                       }`}
                     >
                       <span>{label}</span>
@@ -1092,7 +1092,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     onClose();
                   }}
                   className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)] ${
-                    isRowPinned ? 'text-primary font-semibold' : ''
+                    isRowPinned ? 'text-[var(--agv-accent)] font-semibold' : ''
                   }`}
                   style={isRowPinned ? undefined : { color: 'var(--agv-text-main)' }}
                 >

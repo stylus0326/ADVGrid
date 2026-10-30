@@ -370,7 +370,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   <div className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden">
-                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                       {groupText}
                     </span>
                     <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)]">
@@ -400,7 +400,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                       key={item.key}
                       className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden"
                     >
-                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                         {item.label}
                       </span>
                       <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)] max-w-[180px] truncate">
@@ -431,7 +431,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                       key={item.key}
                       className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden"
                     >
-                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                         {item.label}
                       </span>
                       <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)] max-w-[180px] truncate">
@@ -481,7 +481,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   <div className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden">
-                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                       {sortRowInfo.label}
                     </span>
                     <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)]">
@@ -507,7 +507,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   <div className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden">
-                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                    <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                       {sortGroupInfo.label}
                     </span>
                     <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)]">
@@ -562,7 +562,7 @@ export const AdvCriteriaSummaryPopup: React.FC<AdvCriteriaSummaryPopupProps> = (
                       key={String(item.rowKey)}
                       className="inline-flex items-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] overflow-hidden"
                     >
-                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs select-none">
+                      <span className="min-h-[28px] h-7 px-2.5 flex items-center justify-center bg-agv-accent text-agv-accent-text font-bold text-xs select-none">
                         {item.label}
                       </span>
                       <span className="min-h-[28px] h-7 px-2 flex items-center text-xs text-[var(--agv-text-main)] select-none border-l border-[var(--agv-border)] max-w-[180px] truncate">

@@ -50,7 +50,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
   onSelect,
   dateAnalysis,
   label = 'Mốc nhanh:',
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = '',
   size = 'default',
   hideClear = false,
   min = '',
@@ -452,7 +452,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
     [activeValue]
   );
 
-  const themeCls = getThemeClass(theme);
+  const themeCls = theme ? getThemeClass(theme) : '';
 
   return (
     <div className="agv-custom-select-wrap">
@@ -516,7 +516,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
             className={`agv-custom-select-dropdown agv-preset-dropdown-menu agv-portal-dropdown ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${themeCls}`}
-            data-theme={theme}
+            data-theme={theme || undefined}
             data-agv-popup="true"
           >
             {(dayItems.length > 0 || rangeItems.length > 0) && (

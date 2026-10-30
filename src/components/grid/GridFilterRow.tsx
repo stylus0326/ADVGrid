@@ -820,7 +820,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 >
                   {chkState === CHECK_FILTER_STATES.CHECKED ? (
                     /* Checkbox Đã chọn: Ô vuông màu chủ đạo có dấu tích trắng ✓ */
-                    <div className="w-[15px] h-[15px] rounded-[3px] bg-primary text-primary-foreground flex items-center justify-center">
+                    <div className="w-[15px] h-[15px] rounded-[3px] bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] flex items-center justify-center">
                       <Check size={11} strokeWidth={3} />
                     </div>
                   ) : chkState === CHECK_FILTER_STATES.UNCHECKED ? (
@@ -935,10 +935,10 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                       onClick={(e) => !isEmptyCol && handleOpenDropdown(col.key, e)}
                       className={`h-full pl-1.5 pr-0 flex items-center justify-center shrink-0 border-none bg-transparent transition-colors agv-filter-op-btn ${
                         isEmptyCol
-                          ? 'opacity-30 cursor-not-allowed text-muted-foreground'
+                          ? 'opacity-30 cursor-not-allowed text-[var(--agv-text-muted)]'
                           : isCellActive
-                          ? 'cursor-pointer text-primary'
-                          : 'cursor-pointer text-muted-foreground hover:text-primary'
+                          ? 'cursor-pointer text-[var(--agv-accent)]'
+                          : 'cursor-pointer text-[var(--agv-text-muted)] hover:text-[var(--agv-accent)]'
                       }`}
                     >
                       <FilterOpIcon op={currentOp} size={14} />
@@ -958,7 +958,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                             className="w-full h-full flex items-center justify-between px-1.5 cursor-pointer select-none"
                           >
                             <span
-                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 truncate max-w-[calc(100%-20px)] bg-primary text-primary-foreground"
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 truncate max-w-[calc(100%-20px)] bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]"
                             >
                               {isNegativeMulti ? 'AND: ' : 'OR: '}{filterVal?.multiRanges && filterVal.multiRanges.length > 0
                                 ? `${filterVal.multiRanges.length} khoảng`
@@ -1215,14 +1215,14 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                   onClick={() => handleSelectOp(openDropdownColKey, op)}
                   className={`w-full h-[28px] min-h-[28px] px-2.5 flex items-center gap-2 text-left transition cursor-pointer ${
                     isSelected
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground hover:bg-muted'
+                      ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
+                      : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
                   }`}
                 >
                   <FilterOpIcon op={op} size={14} className="shrink-0" />
                   <span className="flex-1 truncate">{opMeta.label}</span>
                   {isSelected && (
-                    <Check size={12} strokeWidth={2.5} className="shrink-0 text-primary-foreground" />
+                    <Check size={12} strokeWidth={2.5} className="shrink-0 text-[var(--agv-accent-text,#ffffff)]" />
                   )}
                 </button>
               );

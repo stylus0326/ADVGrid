@@ -51,7 +51,7 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   disabled = false,
   className = '',
   style = {},
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = '',
   onClose,
 }) => {
   const isControlled = value !== undefined;
@@ -72,7 +72,6 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const isJustOpenedRef = useRef(false);
 
   const normalizedOptions = useMemo<AdvComboBoxEditOption[]>(() => {
     return options.map((opt) => (typeof opt === 'string' ? { value: opt, label: opt } : opt));
@@ -96,13 +95,6 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
 
   const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
 
-  const syncHighlightedToSelected = useCallback(() => {
-    const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
-    const targetIdx = idx >= 0 ? idx : 0;
-    setHighlightedIndex(targetIdx);
-    return targetIdx;
-  }, [normalizedOptions, curVal]);
-
   useEffect(() => {
     if (isControlled && value !== undefined && !isUserTyping) {
       setInternalVal(value);
@@ -111,56 +103,10 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
 
   useEffect(() => {
     if (isOpen && !isUserTyping) {
-      syncHighlightedToSelected();
+      const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
+      setHighlightedIndex(idx >= 0 ? idx : 0);
     }
-  }, [isOpen, syncHighlightedToSelected, isUserTyping]);
-
-  // Tự động cuộn đến vị trí mục đã chọn sẵn khi mở dropdown
-  useLayoutEffect(() => {
-    if (!isOpen || !dropdownRef.current) return;
-    const container = dropdownRef.current;
-    const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
-    const targetIdx = idx >= 0 ? idx : 0;
-
-    const doScroll = () => {
-      if (!dropdownRef.current) return;
-      const targetEl =
-        (container.querySelector('[data-selected="true"]') as HTMLElement) ||
-        (container.querySelector(`[data-item-index="${targetIdx}"]`) as HTMLElement);
-
-      if (targetEl) {
-        const targetScroll = targetEl.offsetTop - container.clientHeight / 2 + targetEl.offsetHeight / 2;
-        container.scrollTop = Math.max(0, targetScroll);
-      }
-    };
-
-    doScroll();
-    const rafId = requestAnimationFrame(doScroll);
-    return () => cancelAnimationFrame(rafId);
-  }, [isOpen, curVal, normalizedOptions]);
-
-  // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
-  useEffect(() => {
-    if (!isOpen || !dropdownRef.current || highlightedIndex < 0) return;
-    if (isJustOpenedRef.current) {
-      isJustOpenedRef.current = false;
-      return;
-    }
-    const container = dropdownRef.current;
-    const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
-    if (el) {
-      const containerTop = container.scrollTop;
-      const containerBottom = containerTop + container.clientHeight;
-      const elTop = el.offsetTop;
-      const elBottom = elTop + el.offsetHeight;
-
-      if (elTop < containerTop) {
-        container.scrollTop = elTop;
-      } else if (elBottom > containerBottom) {
-        container.scrollTop = elBottom - container.clientHeight;
-      }
-    }
-  }, [highlightedIndex, isOpen]);
+  }, [isOpen, curVal, normalizedOptions, isUserTyping]);
 
   // Bộ lọc danh sách tức thì khi gõ
   const filteredOptions = useMemo<AdvComboBoxEditOption[]>(() => {
@@ -224,7 +170,6 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     setHighlightedIndex(0);
     if (!isOpen) {
       updateCoords();
-      isJustOpenedRef.current = true;
       setIsOpen(true);
     }
   };
@@ -244,9 +189,8 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
       if (!isOpen) {
         updateCoords();
         setIsUserTyping(false);
-        syncHighlightedToSelected();
-        isJustOpenedRef.current = true;
         setIsOpen(true);
+        setHighlightedIndex(0);
       } else if (filteredOptions.length > 0) {
         setHighlightedIndex((prev) => (prev + 1) % filteredOptions.length);
       }
@@ -297,14 +241,12 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     if (!isOpen) {
       updateCoords();
       setIsUserTyping(false);
-      syncHighlightedToSelected();
-      isJustOpenedRef.current = true;
       setIsOpen(true);
     }
     inputRef.current?.focus({ preventScroll: true });
   };
 
-  const themeClass = getThemeClass(theme);
+  const themeClass = theme ? getThemeClass(theme) : '';
   const sizeHeight = size === 'md' ? 'h-8' : 'h-7';
 
   return (
@@ -368,16 +310,16 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
                   const isSelected = opt.value === curVal || opt.label === curVal;
                   const isHighlighted = idx === highlightedIndex;
 
-                  let itemClass = 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-hover)]';
-                  if (isHighlighted || isSelected) {
-                    itemClass = 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-medium';
+                  let itemClass = 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]';
+                  if (isSelected) {
+                    itemClass = 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold';
+                  } else if (isHighlighted) {
+                    itemClass = 'bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]';
                   }
 
                   return (
                     <div
                       key={opt.value}
-                      data-item-index={idx}
-                      data-selected={isSelected ? 'true' : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(opt.value);

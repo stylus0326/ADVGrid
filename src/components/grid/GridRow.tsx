@@ -192,7 +192,7 @@ const CellEditor: React.FC<{
       onPaste={handlePaste}
       onBlur={commitValue}
       {...NO_AUTOFILL_PROPS}
-      className={`w-full h-full min-h-[28px] max-h-[30px] px-1.5 py-0 text-xs outline-none border-2 border-primary ${getGridControlRadiusClass()} bg-[var(--agv-bg-root)] text-[var(--agv-text-main)] font-sans tabular-nums ${getAlignTextClass(
+      className={`w-full h-full min-h-[28px] max-h-[30px] px-1.5 py-0 text-xs outline-none border-2 border-[var(--agv-accent)] ${getGridControlRadiusClass()} bg-[var(--agv-bg-root)] text-[var(--agv-text-main)] font-sans tabular-nums ${getAlignTextClass(
         align
       )}`}
     />
@@ -400,7 +400,7 @@ const TimeCellEditor: React.FC<{
       style={{ minHeight: '28px' }}
     >
       <div
-        className={`w-full h-full inline-flex items-center justify-center px-2 py-0 ${getGridControlRadiusClass()} border-2 border-primary`}
+        className={`w-full h-full inline-flex items-center justify-center px-2 py-0 ${getGridControlRadiusClass()} border-2 border-[var(--agv-accent)]`}
         style={{
           background: 'var(--agv-bg-root, var(--agv-bg-subtle, #ffffff))',
           minHeight: '28px',
@@ -613,15 +613,15 @@ export const GridRow = memo(
                   }`}
                 >
                   <span
-                    className="w-4 h-4 flex items-center justify-center shrink-0 select-none rounded transition-colors hover:bg-muted text-primary"
+                    className="w-4 h-4 flex items-center justify-center shrink-0 select-none rounded transition-colors hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)]"
                   >
                     <MorphChevronIcon expanded={!isCollapsed} size={14} spring="bouncy" />
                   </span>
-                  <span className="truncate font-bold text-primary">
+                  <span className="truncate font-bold text-[var(--agv-accent)]">
                     {g.groupValue || '(Trống)'}
                   </span>
                   <span
-                    className="text-[11px] font-normal px-2 py-0.5 rounded-full border shrink-0 bg-background border-border text-muted-foreground"
+                    className="text-[11px] font-normal px-2 py-0.5 rounded-full border shrink-0 bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-muted)]"
                   >
                     {g.count.toLocaleString('vi-VN')}
                   </span>

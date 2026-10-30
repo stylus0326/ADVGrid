@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import {
@@ -51,7 +51,6 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const isJustOpenedRef = useRef(false);
 
   const [coords, setCoords] = useState<{
     top: number;
@@ -82,10 +81,9 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   const openDropdown = useCallback(() => {
     if (disabled) return;
     updateCoords();
+    setIsOpen(true);
     const idx = normalizedOptions.findIndex((o) => o.value === curVal);
     setHighlightedIndex(idx >= 0 ? idx : 0);
-    isJustOpenedRef.current = true;
-    setIsOpen(true);
   }, [disabled, updateCoords, normalizedOptions, curVal]);
 
   const closeDropdown = useCallback(() => {
@@ -99,53 +97,6 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   }, [isOpen, closeDropdown, openDropdown]);
 
   useClickOutside(isOpen, closeDropdown, updateCoords, triggerRef, popupRef);
-
-  // Tự động cuộn đến vị trí mục đã chọn sẵn khi mở dropdown
-  useLayoutEffect(() => {
-    if (!isOpen || !popupRef.current) return;
-    const container = popupRef.current;
-    const idx = normalizedOptions.findIndex((o) => o.value === curVal);
-    const targetIdx = idx >= 0 ? idx : 0;
-
-    const doScroll = () => {
-      if (!popupRef.current) return;
-      const activeEl =
-        (container.querySelector('[data-selected="true"]') as HTMLElement) ||
-        (container.querySelector(`[data-item-index="${targetIdx}"]`) as HTMLElement);
-
-      if (activeEl) {
-        const targetScroll = activeEl.offsetTop - container.clientHeight / 2 + activeEl.offsetHeight / 2;
-        container.scrollTop = Math.max(0, targetScroll);
-      }
-    };
-
-    doScroll();
-    const rafId = requestAnimationFrame(doScroll);
-    return () => cancelAnimationFrame(rafId);
-  }, [isOpen, curVal, normalizedOptions]);
-
-  // Tự động cuộn theo phím điều hướng ArrowUp / ArrowDown
-  useEffect(() => {
-    if (!isOpen || !popupRef.current || highlightedIndex < 0) return;
-    if (isJustOpenedRef.current) {
-      isJustOpenedRef.current = false;
-      return;
-    }
-    const container = popupRef.current;
-    const el = container.querySelector(`[data-item-index="${highlightedIndex}"]`) as HTMLElement;
-    if (el) {
-      const containerTop = container.scrollTop;
-      const containerBottom = containerTop + container.clientHeight;
-      const elTop = el.offsetTop;
-      const elBottom = elTop + el.offsetHeight;
-
-      if (elTop < containerTop) {
-        container.scrollTop = elTop;
-      } else if (elBottom > containerBottom) {
-        container.scrollTop = elBottom - container.clientHeight;
-      }
-    }
-  }, [highlightedIndex, isOpen]);
 
   const handleSelect = useCallback(
     (optVal: string) => {
@@ -265,8 +216,6 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
                       <button
                         key={opt.value}
                         type="button"
-                        data-item-index={idx}
-                        data-selected={isSelected ? 'true' : undefined}
                         disabled={opt.disabled}
                         onClick={() => !opt.disabled && handleSelect(opt.value)}
                         onMouseEnter={() => !opt.disabled && setHighlightedIndex(idx)}

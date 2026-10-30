@@ -368,5 +368,35 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       assert.strictEqual(slot2.initialOpacity, 1);
     });
   });
-});
 
+  describe('9. Zero-Conflict Custom CSS Theme Engine & Portal Inheritance', () => {
+    it('generateCustomThemeCssBlock should generate 100% complete --agv-* tokens including subtle and popup', async () => {
+      const { generateCustomThemeCssBlock, DEFAULT_TEST_CSS_SNIPPET } = await import('../src/themes/customCssBridge');
+      const css = generateCustomThemeCssBlock(DEFAULT_TEST_CSS_SNIPPET);
+      assert.ok(css.includes('--agv-accent:'), 'Must contain --agv-accent');
+      assert.ok(css.includes('--agv-bg-subtle:'), 'Must contain --agv-bg-subtle');
+      assert.ok(css.includes('--agv-bg-popup:'), 'Must contain --agv-bg-popup');
+      assert.ok(css.includes('--agv-border:'), 'Must contain --agv-border');
+      assert.ok(css.includes('--agv-text-main:'), 'Must contain --agv-text-main');
+    });
+
+    it('getThemeTokens should return dynamic custom tokens when custom theme is set', async () => {
+      const { generateCustomThemeCssBlock } = await import('../src/themes/customCssBridge');
+      const { getThemeTokens } = await import('../src/themes');
+      
+      const customCode = ':root { --primary: 0 100% 50%; --background: 0 0% 100%; }';
+      generateCustomThemeCssBlock(customCode);
+      const tokens = getThemeTokens('custom');
+      assert.ok(tokens.accent.includes('hsl(0 100% 50%)') || tokens.accent.includes('hsl(0, 100%, 50%)') || tokens.accent === 'hsl(0 100% 50%)');
+    });
+
+    it('getPortalThemeVars should return empty object for custom or unspecified theme to ensure clean CSS inheritance', async () => {
+      const { getPortalThemeVars } = await import('../src/components/ui/enterpriseEditorUtils');
+      const customVars = getPortalThemeVars('custom');
+      assert.strictEqual(Object.keys(customVars).length, 0);
+
+      const emptyVars = getPortalThemeVars('');
+      assert.strictEqual(Object.keys(emptyVars).length, 0);
+    });
+  });
+});

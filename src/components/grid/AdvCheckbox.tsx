@@ -46,13 +46,13 @@ export const AdvCheckbox: React.FC<AdvCheckboxProps> = ({
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
       } ${
         isChecked || indeterminate
-          ? 'border-primary bg-primary text-primary-foreground is-checked'
-          : 'border-border bg-background hover:border-primary'
+          ? 'border-agv-accent bg-agv-accent text-agv-accent-text is-checked'
+          : 'border-agv-border-strong bg-agv-bg-root hover:border-agv-accent'
       } ${className}`}
     >
       {isChecked && <Check className="h-2.5 w-2.5 stroke-[3.5]" />}
       {indeterminate && (
-        <span className="block h-0.5 w-2 rounded-full bg-primary-foreground" />
+        <span className="block h-0.5 w-2 rounded-full bg-agv-accent-text" />
       )}
     </div>
   );

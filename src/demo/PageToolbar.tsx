@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { AnimateUIPrimitivesDemoModal } from './AnimateUIPrimitivesDemoModal';
 import {
   Layers,
@@ -9,17 +9,16 @@ import {
   Zap,
   Search,
   Filter,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   MorphIcon,
   Play,
   Pause,
-  Sun,
-  Moon,
   Monitor,
   Palette,
   BookOpen,
-  SparklesIcon,
   ColumnsIcon,
   BarChart2,
 } from '../components/ui/MorphIcons';
@@ -34,8 +33,16 @@ import {
   SORT_DIRECTIONS,
   MONTH_ANALYTICS_MODES,
 } from '../components/grid/types';
-import { REGISTERED_THEMES, normalizeThemeId, getAllPresetOptions } from '../themes';
-import { AdvComboBoxEdit } from '../components/ui/AdvComboBoxEdit';
+import { REGISTERED_THEMES, normalizeThemeId } from '../themes';
+import { AdvComboBoxEdit, AdvComboBoxEditOption } from '../components/ui/AdvComboBoxEdit';
+
+const THEME_OPTIONS: AdvComboBoxEditOption[] = [
+  { value: 'light', label: 'Sáng' },
+  { value: 'dark', label: 'Balham Dark' },
+  { value: 'bezier-arthouse', label: 'Bezier Art House' },
+  { value: 'e-ink', label: 'Giấy E-Ink' },
+  { value: 'custom', label: 'CSS Tùy Biến' },
+];
 
 export interface PageToolbarProps {
   monthAnalyticsMode: MonthAnalyticsMode;
@@ -65,10 +72,9 @@ export interface PageToolbarProps {
   onJumpToRowSubmit: () => void;
   surfaceTheme: SurfaceTheme;
   onThemeChange: (theme: SurfaceTheme) => void;
-  themeMode?: 'light' | 'dark';
-  onToggleThemeMode?: () => void;
-  onOpenThemeImportModal?: () => void;
-  customThemeVersion?: number;
+  onOpenCustomCssModal?: () => void;
+  isDark?: boolean;
+  onToggleColorScheme?: (isDark: boolean) => void;
   autoScrolling: boolean;
   onToggleAutoScroll: () => void;
 }
@@ -101,16 +107,13 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
   onJumpToRowSubmit,
   surfaceTheme,
   onThemeChange,
-  themeMode = 'light',
-  onToggleThemeMode,
-  onOpenThemeImportModal,
-  customThemeVersion = 0,
+  onOpenCustomCssModal,
+  isDark = false,
+  onToggleColorScheme,
   autoScrolling,
   onToggleAutoScroll,
 }) => {
   const [showPrimitivesDemo, setShowPrimitivesDemo] = useState(false);
-  const presetOptions = useMemo(() => getAllPresetOptions(), [customThemeVersion, surfaceTheme]);
-  const isDark = themeMode === 'dark';
 
   return (
     <header
@@ -484,7 +487,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
             })}
           </div>
 
-          {/* Surface Theme switcher: ComboBox 42 Themes + Nút Ngày / Đêm */}
+          {/* Surface Theme switcher: ComboBox 4 themes + Nhập CSS */}
           <div className="flex items-center gap-1.5">
             <div
               className="flex items-center gap-1 rounded-lg border p-1"
@@ -503,39 +506,19 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
                 <AdvComboBoxEdit
                   value={surfaceTheme}
                   onChange={(val) => onThemeChange(val as SurfaceTheme)}
-                  options={presetOptions}
+                  options={THEME_OPTIONS}
                   placeholder="Chọn theme..."
                   size="sm"
                   theme={surfaceTheme}
+                  allowCustomInput={false}
                 />
               </div>
             </div>
 
-            {/* Nút chuyển đổi Ngày / Đêm (Day/Night Toggle) */}
-            <button
-              type="button"
-              onClick={onToggleThemeMode}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer min-h-[28px] hover:opacity-85"
-              style={{
-                backgroundColor: 'var(--agv-bg-root)',
-                borderColor: 'var(--agv-border-strong)',
-                color: 'var(--agv-text-main)',
-              }}
-            >
-              <MorphIcon
-                icon={isDark ? Moon : Sun}
-                size={14}
-                spring="bouncy"
-                className={isDark ? 'text-[var(--agv-accent)]' : 'text-[var(--agv-warning,#eab308)]'}
-              />
-              <span>{isDark ? 'Đêm' : 'Ngày'}</span>
-            </button>
-
-            {/* Nút mở Modal Nhập Theme Tùy Biến (Community Theme) */}
-            {onOpenThemeImportModal && (
+            {onOpenCustomCssModal && (
               <button
                 type="button"
-                onClick={onOpenThemeImportModal}
+                onClick={onOpenCustomCssModal}
                 className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer min-h-[28px] hover:opacity-85"
                 style={{
                   backgroundColor: 'var(--agv-bg-root)',
@@ -543,8 +526,59 @@ export const PageToolbar: React.FC<PageToolbarProps> = React.memo(({
                   color: 'var(--agv-text-main)',
                 }}
               >
-                <span>Nhập Theme</span>
+                <span>Nhập CSS</span>
               </button>
+            )}
+
+            {onToggleColorScheme && (
+              <div
+                className="flex items-center rounded-lg border p-0.5 min-h-[28px]"
+                style={{
+                  backgroundColor: 'var(--agv-bg-root)',
+                  borderColor: 'var(--agv-border-strong)',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onToggleColorScheme(false)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer min-h-[24px]"
+                  style={
+                    !isDark
+                      ? {
+                          backgroundColor: 'var(--agv-accent)',
+                          color: 'var(--agv-accent-text, #ffffff)',
+                          fontWeight: 600,
+                        }
+                      : {
+                          backgroundColor: 'transparent',
+                          color: 'var(--agv-text-muted)',
+                        }
+                  }
+                >
+                  <Sun size={13} />
+                  <span>Ngày</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleColorScheme(true)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer min-h-[24px]"
+                  style={
+                    isDark
+                      ? {
+                          backgroundColor: 'var(--agv-accent)',
+                          color: 'var(--agv-accent-text, #ffffff)',
+                          fontWeight: 600,
+                        }
+                      : {
+                          backgroundColor: 'transparent',
+                          color: 'var(--agv-text-muted)',
+                        }
+                  }
+                >
+                  <Moon size={13} />
+                  <span>Đêm</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

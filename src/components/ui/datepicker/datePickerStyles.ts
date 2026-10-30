@@ -1,10 +1,3 @@
-import {
-  LIGHT_THEME_TOKENS,
-  DARK_THEME_TOKENS,
-  BEZIER_ARTHOUSE_THEME_TOKENS,
-  EINK_PAPER_THEME_TOKENS,
-} from '../../../themes';
-
 const FALLBACK_STYLE_ID = 'agv-datepicker-core-styles';
 
 function ensureDatePickerStyles() {
@@ -21,72 +14,6 @@ function ensureDatePickerStyles() {
   }
 
   style.textContent = `
-    :root,
-    .agv-theme-light,
-    .agv-light,
-    [data-theme="light"],
-    [data-theme="daylight"] {
-      --agv-bg-popup: ${LIGHT_THEME_TOKENS.bgPopup};
-      --agv-bg-subtle: ${LIGHT_THEME_TOKENS.bgRowAlt};
-      --agv-bg-item-hover: ${LIGHT_THEME_TOKENS.bgItemHover};
-      --agv-border: ${LIGHT_THEME_TOKENS.border};
-      --agv-text-main: ${LIGHT_THEME_TOKENS.textMain};
-      --agv-text-muted: ${LIGHT_THEME_TOKENS.textMuted};
-      --agv-text-subtle: ${LIGHT_THEME_TOKENS.textSubtle};
-      --agv-accent: ${LIGHT_THEME_TOKENS.accent};
-      --agv-accent-soft: color-mix(in srgb, ${LIGHT_THEME_TOKENS.accent} 16%, transparent);
-      --agv-accent-text: ${LIGHT_THEME_TOKENS.accentText};
-      --agv-weekend: ${LIGHT_THEME_TOKENS.danger};
-    }
-    .agv-theme-dark,
-    .agv-dark,
-    [data-theme="dark"],
-    [data-theme="calibrated-dark"],
-    [data-theme="deep-dark"] {
-      --agv-bg-popup: ${DARK_THEME_TOKENS.bgPopup};
-      --agv-bg-subtle: ${DARK_THEME_TOKENS.bgRowAlt};
-      --agv-bg-item-hover: ${DARK_THEME_TOKENS.bgItemHover};
-      --agv-border: ${DARK_THEME_TOKENS.border};
-      --agv-text-main: ${DARK_THEME_TOKENS.textMain};
-      --agv-text-muted: ${DARK_THEME_TOKENS.textMuted};
-      --agv-text-subtle: ${DARK_THEME_TOKENS.textSubtle};
-      --agv-accent: ${DARK_THEME_TOKENS.accent};
-      --agv-accent-soft: color-mix(in srgb, ${DARK_THEME_TOKENS.accent} 22%, transparent);
-      --agv-accent-text: ${DARK_THEME_TOKENS.accentText};
-      --agv-weekend: ${DARK_THEME_TOKENS.danger};
-    }
-    .agv-theme-bezier,
-    .agv-bezier-arthouse,
-    [data-theme="bezier-arthouse"] {
-      --agv-bg-popup: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgPopup};
-      --agv-bg-subtle: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgRowAlt};
-      --agv-bg-item-hover: ${BEZIER_ARTHOUSE_THEME_TOKENS.bgItemHover};
-      --agv-border: ${BEZIER_ARTHOUSE_THEME_TOKENS.borderStrong};
-      --agv-text-main: ${BEZIER_ARTHOUSE_THEME_TOKENS.textMain};
-      --agv-text-muted: ${BEZIER_ARTHOUSE_THEME_TOKENS.textMuted};
-      --agv-text-subtle: ${BEZIER_ARTHOUSE_THEME_TOKENS.textSubtle};
-      --agv-accent: ${BEZIER_ARTHOUSE_THEME_TOKENS.accent};
-      --agv-accent-soft: color-mix(in srgb, ${BEZIER_ARTHOUSE_THEME_TOKENS.accent} 25%, transparent);
-      --agv-accent-text: ${BEZIER_ARTHOUSE_THEME_TOKENS.accentText};
-      --agv-weekend: ${BEZIER_ARTHOUSE_THEME_TOKENS.danger};
-    }
-    .agv-theme-eink,
-    .agv-e-ink,
-    .theme-eink,
-    [data-theme="e-ink"],
-    [data-theme="eink"] {
-      --agv-bg-popup: ${EINK_PAPER_THEME_TOKENS.bgPopup};
-      --agv-bg-subtle: ${EINK_PAPER_THEME_TOKENS.bgRowAlt};
-      --agv-bg-item-hover: ${EINK_PAPER_THEME_TOKENS.bgItemHover};
-      --agv-border: ${EINK_PAPER_THEME_TOKENS.border};
-      --agv-text-main: ${EINK_PAPER_THEME_TOKENS.textMain};
-      --agv-text-muted: ${EINK_PAPER_THEME_TOKENS.textMuted};
-      --agv-text-subtle: ${EINK_PAPER_THEME_TOKENS.textSubtle};
-      --agv-accent: ${EINK_PAPER_THEME_TOKENS.accent};
-      --agv-accent-soft: color-mix(in srgb, ${EINK_PAPER_THEME_TOKENS.accent} 18%, transparent);
-      --agv-accent-text: ${EINK_PAPER_THEME_TOKENS.accentText};
-      --agv-weekend: ${EINK_PAPER_THEME_TOKENS.danger};
-    }
     .agv-datepicker-container,
     .agv-daterange-picker-wrap,
     .agv-custom-select-wrap {

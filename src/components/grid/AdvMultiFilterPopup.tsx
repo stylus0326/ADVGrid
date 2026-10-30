@@ -455,7 +455,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 ref={opBtnRef}
                 type="button"
                 onClick={handleToggleOpMenu}
-                className="flex items-center gap-1.5 px-2 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] bg-[var(--agv-bg-popup)] hover:border-primary text-xs text-[var(--agv-text-main)] transition cursor-pointer"
+                className="flex items-center gap-1.5 px-2 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] bg-[var(--agv-bg-popup)] hover:border-agv-accent text-xs text-[var(--agv-text-main)] transition cursor-pointer"
               >
                 <FilterOpIcon op={selectedOp} size={13} />
                 <span className="font-medium">{FILTER_OP_META[selectedOp]?.label || selectedOp}</span>
@@ -494,7 +494,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               placeholder="VD:&#10;VN123&#10;VJ456&#10;QH789&#10;(hỗ trợ phân tách bằng xuống dòng, dấu phẩy, tab)"
               {...NO_AUTOFILL_PROPS}
               rows={6}
-              className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-primary focus:ring-1 focus:ring-ring resize-y min-h-[120px] max-h-[220px]"
+              className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent focus:ring-1 focus:ring-agv-accent resize-y min-h-[120px] max-h-[220px]"
             />
           </div>
         )}
@@ -522,7 +522,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         onKeyDown={handleNumericKeyDown}
                         placeholder="Từ..."
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-primary tabular-nums"
+                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent tabular-nums"
                       />
                       <RangeArrowSeparator className="mx-0.5" />
                       <input
@@ -539,7 +539,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         onKeyDown={handleNumericKeyDown}
                         placeholder="Đến..."
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-primary tabular-nums"
+                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent tabular-nums"
                       />
                       <button
                         type="button"
@@ -559,7 +559,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 <button
                   type="button"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-primary text-[11px] font-medium text-primary hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
                 >
                   + Thêm khoảng số
                 </button>
@@ -586,7 +586,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   placeholder="Nhập hoặc dán các số (VD: 10, 25, 50, 100)..."
                   {...NO_AUTOFILL_PROPS}
                   rows={5}
-                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-primary resize-y min-h-[100px] max-h-[200px]"
+                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
                 />
               </div>
             )}
@@ -643,7 +643,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 <button
                   type="button"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-primary text-[11px] font-medium text-primary hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
                 >
                   + Thêm khoảng ngày
                 </button>
@@ -699,7 +699,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 </div>
                 {discreteDates.length > 0 && (
                   <div className="flex justify-between items-center text-[11px] text-[var(--agv-text-muted)]">
-                    <span>Đã chọn: <strong className="text-primary">{discreteDates.length}</strong> ngày</span>
+                    <span>Đã chọn: <strong className="text-agv-accent">{discreteDates.length}</strong> ngày</span>
                     <button
                       type="button"
                       onClick={() => setDiscreteDates([])}
@@ -736,7 +736,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         }}
                         placeholder="HH:mm"
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
+                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
                       />
                       <RangeArrowSeparator className="mx-0.5" />
                       <input
@@ -752,7 +752,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         }}
                         placeholder="HH:mm"
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-primary"
+                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
                       />
                       <button
                         type="button"
@@ -772,7 +772,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 <button
                   type="button"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-primary text-[11px] font-medium text-primary hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
                 >
                   + Thêm khoảng giờ
                 </button>
@@ -799,7 +799,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   placeholder="VD:&#10;08:30&#10;12:00&#10;17:45"
                   {...NO_AUTOFILL_PROPS}
                   rows={5}
-                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-primary resize-y min-h-[100px] max-h-[200px]"
+                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
                 />
               </div>
             )}
@@ -812,7 +812,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
         <div className="text-[11px] text-[var(--agv-text-muted)]">
           {totalConditionsCount > 0 ? (
             <span>
-              Tổng cộng: <strong className="text-primary">{totalConditionsCount}</strong> điều kiện ({isNegativeOp ? 'AND' : 'OR'})
+              Tổng cộng: <strong className="text-agv-accent">{totalConditionsCount}</strong> điều kiện ({isNegativeOp ? 'AND' : 'OR'})
             </span>
           ) : (
             <span className="italic">Chưa có điều kiện</span>
@@ -832,7 +832,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
           <button
             type="button"
             onClick={handleApply}
-            className="px-3 h-[28px] min-h-[28px] rounded font-medium text-xs bg-primary hover:opacity-90 text-primary-foreground transition cursor-pointer flex items-center gap-1"
+            className="px-3 h-[28px] min-h-[28px] rounded font-medium text-xs bg-agv-accent hover:opacity-90 text-agv-accent-text transition cursor-pointer flex items-center gap-1"
           >
             Áp dụng
           </button>
@@ -880,7 +880,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               }}
               className={`flex items-center justify-between px-2.5 h-[28px] min-h-[28px] cursor-pointer text-xs transition ${
                 isSel
-                  ? 'bg-primary text-primary-foreground font-semibold'
+                  ? 'bg-agv-accent text-agv-accent-text font-semibold'
                   : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
               }`}
             >

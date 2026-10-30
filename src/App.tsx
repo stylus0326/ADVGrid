@@ -51,8 +51,13 @@ const DEFAULT_ROW_HEIGHT = 32;
 import { TwelveMonthChartCell } from './demo/TwelveMonthChartCell';
 import { PageToolbar } from './demo/PageToolbar';
 import { PageFooter } from './demo/PageFooter';
-import { AdvThemeImportModal } from './demo/AdvThemeImportModal';
-import { generateThemeCssVariables, getThemeClass, getPresetById, generatePresetCssVariables, DEFAULT_PRESET_ID } from './themes';
+import { AdvCustomCssModal } from './demo/AdvCustomCssModal';
+import {
+  generateThemeCssVariables,
+  getThemeClass,
+  generateCustomThemeCssBlock,
+  DEFAULT_TEST_CSS_SNIPPET,
+} from './themes';
 import { QueryGroup, hasActiveQueryRules, evaluateQueryTreeNode } from './components/grid/floating';
 import { copyTextToClipboard, formatGridNumber } from './components/grid/gridUtils';
 
@@ -67,7 +72,6 @@ interface PersistedGridConfig {
   groupByColumnKey?: string | null;
   groupSortConfig?: GroupSortConfig | null;
   surfaceTheme?: SurfaceTheme;
-  themeMode?: 'light' | 'dark';
   rowSnapMode?: boolean;
 }
 
@@ -121,57 +125,61 @@ export function App() {
   }, []);
 
   const [surfaceTheme, setSurfaceTheme] = useState<SurfaceTheme>(() => {
-    return persisted?.surfaceTheme || DEFAULT_PRESET_ID;
+    return persisted?.surfaceTheme || SURFACE_THEMES.LIGHT;
   });
 
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
-    return persisted?.themeMode || 'light';
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('agv_color_scheme');
+    if (saved) return saved === 'dark';
+    return (persisted?.surfaceTheme || SURFACE_THEMES.LIGHT) === SURFACE_THEMES.DARK;
   });
+
+  const handleToggleColorScheme = useCallback((dark: boolean) => {
+    setIsDark(dark);
+    localStorage.setItem('agv_color_scheme', dark ? 'dark' : 'light');
+  }, []);
 
   const handleSurfaceThemeChange = useCallback((nextTheme: SurfaceTheme) => {
     setSurfaceTheme(nextTheme);
     savePersistedGridConfig({ surfaceTheme: nextTheme });
-  }, []);
-
-  const [isThemeImportOpen, setIsThemeImportOpen] = useState<boolean>(false);
-  const [customThemeVersion, setCustomThemeVersion] = useState<number>(0);
-
-  const handleOpenThemeImportModal = useCallback(() => {
-    setIsThemeImportOpen(true);
-  }, []);
-
-  const handleCloseThemeImportModal = useCallback(() => {
-    setIsThemeImportOpen(false);
-  }, []);
-
-  const handleThemeApplied = useCallback((newThemeId: string) => {
-    setCustomThemeVersion((v) => v + 1);
-    handleSurfaceThemeChange(newThemeId as SurfaceTheme);
-  }, [handleSurfaceThemeChange]);
-
-  const handleToggleThemeMode = useCallback(() => {
-    setThemeMode((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      savePersistedGridConfig({ themeMode: next });
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (themeMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (nextTheme === SURFACE_THEMES.DARK || nextTheme === 'dark' || nextTheme === 'calibrated-dark') {
+      setIsDark(true);
+      localStorage.setItem('agv_color_scheme', 'dark');
+    } else if (nextTheme === SURFACE_THEMES.LIGHT || nextTheme === 'light') {
+      setIsDark(false);
+      localStorage.setItem('agv_color_scheme', 'light');
     }
-  }, [themeMode]);
+  }, []);
 
-  const activePresetCss = useMemo(() => {
-    const preset = getPresetById(surfaceTheme);
-    const styles = themeMode === 'dark' ? preset.styles.dark : preset.styles.light;
-    const themeCls = getThemeClass(surfaceTheme);
-    const selector = `:root, .agv-app-container, .agv-app-container.${themeCls}, .agv-app-container[data-theme="${surfaceTheme}"], [data-theme="${surfaceTheme}"]`;
-    return generatePresetCssVariables(styles, selector);
-  }, [surfaceTheme, themeMode, customThemeVersion]);
+  const [isCustomCssModalOpen, setIsCustomCssModalOpen] = useState<boolean>(false);
+  const [customCssCode, setCustomCssCode] = useState<string>(() => {
+    return localStorage.getItem('agv_custom_test_css') || DEFAULT_TEST_CSS_SNIPPET;
+  });
+
+  const customCssStyleBlock = useMemo(() => {
+    if (!customCssCode) return '';
+    return generateCustomThemeCssBlock(customCssCode);
+  }, [customCssCode]);
+
+  const handleApplyCustomCss = useCallback((code: string) => {
+    setCustomCssCode(code);
+    setSurfaceTheme('custom' as SurfaceTheme);
+    savePersistedGridConfig({ surfaceTheme: 'custom' as SurfaceTheme });
+  }, []);
+
+  // Đồng bộ class Theme và Dark Mode lên document.documentElement để mọi Portal (render vào body) tự động hưởng 100% theme
+  useEffect(() => {
+    const themeClass = getThemeClass(surfaceTheme);
+    const rootEl = document.documentElement;
+    rootEl.classList.remove('agv-light', 'agv-dark', 'agv-bezier-arthouse', 'agv-e-ink', 'theme-eink', 'agv-theme-custom');
+    const tokens = themeClass.split(' ').filter(Boolean);
+    tokens.forEach((t) => rootEl.classList.add(t));
+    if (isDark) {
+      rootEl.classList.add('dark');
+    } else {
+      rootEl.classList.remove('dark');
+    }
+  }, [surfaceTheme, isDark]);
 
   const [editMode, setEditMode] = useState<GridEditMode>(GRID_EDIT_MODES.DOUBLE_CLICK);
   const [dataVersion, setDataVersion] = useState<number>(0);
@@ -1924,8 +1932,7 @@ export function App() {
   return (
     <div
       data-theme={surfaceTheme}
-      data-theme-mode={themeMode}
-      className={`agv-app-container ${getThemeClass(surfaceTheme)} ${themeMode === 'dark' ? 'dark' : ''} w-screen h-screen flex flex-col overflow-hidden select-none`}
+      className={`agv-app-container ${getThemeClass(surfaceTheme)} ${isDark ? 'dark' : ''} w-screen h-screen flex flex-col overflow-hidden select-none`}
       style={{
         backgroundColor: 'var(--agv-bg-root)',
         color: 'var(--agv-text-main)',
@@ -1940,7 +1947,7 @@ export function App() {
       }}
     >
       <style>{themeCss}</style>
-      <style id="agv-active-preset-vars">{activePresetCss}</style>
+      {customCssStyleBlock && <style id="agv-custom-css-theme">{customCssStyleBlock}</style>}
 
       {/* 1. Page Header Toolbar */}
       <PageToolbar
@@ -1971,10 +1978,9 @@ export function App() {
         onJumpToRowSubmit={handleJumpToRowSubmit}
         surfaceTheme={surfaceTheme}
         onThemeChange={handleSurfaceThemeChange}
-        themeMode={themeMode}
-        onToggleThemeMode={handleToggleThemeMode}
-        onOpenThemeImportModal={handleOpenThemeImportModal}
-        customThemeVersion={customThemeVersion}
+        onOpenCustomCssModal={() => setIsCustomCssModalOpen(true)}
+        isDark={isDark}
+        onToggleColorScheme={handleToggleColorScheme}
         autoScrolling={autoScrolling}
         onToggleAutoScroll={handleToggleAutoScroll}
       />
@@ -2072,11 +2078,12 @@ export function App() {
         onToggleFilterCheckedOnly={handleToggleFilterCheckedOnly}
       />
 
-      {/* 4. Modal Nhập Theme Tùy Biến (Tweakcn Community) */}
-      <AdvThemeImportModal
-        isOpen={isThemeImportOpen}
-        onClose={handleCloseThemeImportModal}
-        onThemeApplied={handleThemeApplied}
+      {/* 4. Modal Nhập CSS Test Màu */}
+      <AdvCustomCssModal
+        isOpen={isCustomCssModalOpen}
+        onClose={() => setIsCustomCssModalOpen(false)}
+        onApply={handleApplyCustomCss}
+        initialCss={customCssCode}
       />
     </div>
   );

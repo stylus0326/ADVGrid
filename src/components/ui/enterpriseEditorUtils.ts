@@ -4,50 +4,11 @@ export { getThemeClass, SURFACE_THEMES };
 export type { GridTheme };
 
 /**
- * Trích xuất biến CSS Theme Variables để bảo vệ Dropdown Portal và Control luôn đồng bộ 100% theme
+ * Kế thừa tự nhiên 100% biến CSS Theme từ document.documentElement.
+ * Luôn trả về {} rỗng để tránh sinh Inline Style đè lên CSS variables của theme và chế độ Ngày/Đêm.
  */
-export function getPortalThemeVars(theme: string = SURFACE_THEMES.BEZIER_ARTHOUSE): React.CSSProperties {
-  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-  const tokens = getThemeTokens(theme as GridTheme, isDark ? 'dark' : 'light');
-  return {
-    '--agv-bg-root': tokens.bgRoot,
-    '--agv-bg-header': tokens.bgHeader,
-    '--agv-bg-row': tokens.bgRow,
-    '--agv-bg-row-alt': tokens.bgRowAlt,
-    '--agv-bg-hover': tokens.bgHover,
-    '--agv-bg-selected': tokens.bgSelected,
-    '--agv-bg-popup': tokens.bgPopup,
-    '--agv-bg-panel': tokens.bgPopup,
-    '--agv-bg-surface': tokens.bgPopup,
-    '--agv-bg-subtle': tokens.bgRowAlt,
-    '--agv-bg-item-hover': tokens.bgItemHover,
-    '--agv-bg-item-active': tokens.bgItemActive,
-    '--agv-bg-control': tokens.bgControl,
-    '--agv-bg-control-hover': tokens.bgControlHover,
-    '--agv-border': tokens.border,
-    '--agv-border-strong': tokens.borderStrong,
-    '--agv-border-popup': tokens.borderPopup,
-    '--agv-border-subtle': tokens.border,
-    '--agv-text-main': tokens.textMain,
-    '--agv-text-header': tokens.textHeader,
-    '--agv-text-muted': tokens.textMuted,
-    '--agv-text-subtle': tokens.textSubtle,
-    '--agv-text-active': tokens.accent,
-    '--agv-accent': tokens.accent,
-    '--agv-accent-soft': `color-mix(in srgb, ${tokens.accent} 18%, transparent)`,
-    '--agv-accent-hover': tokens.accent,
-    '--agv-accent-hover-border': tokens.accentHoverBorder || `color-mix(in srgb, ${tokens.accent} 55%, ${tokens.borderStrong})`,
-    '--agv-accent-text': tokens.accentText,
-    '--agv-focus-ring': tokens.accent,
-    '--agv-btn-default-bg': tokens.btnDefaultBg,
-    '--agv-btn-default-border': tokens.btnDefaultBorder,
-    '--agv-btn-default-text': tokens.btnDefaultText,
-    '--agv-btn-default-hover': tokens.btnDefaultHover,
-    '--agv-trend-up': tokens.trendUp,
-    '--agv-trend-down': tokens.trendDown,
-    '--agv-danger': tokens.danger,
-    '--agv-weekend': tokens.danger,
-  } as React.CSSProperties;
+export function getPortalThemeVars(_theme?: string, _isDark?: boolean): React.CSSProperties {
+  return {};
 }
 
 export interface EditorCoords {

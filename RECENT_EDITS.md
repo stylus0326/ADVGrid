@@ -4,7 +4,27 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
+## 🕒 Lần 3 (Mới nhất): Loại Bỏ Khung Tĩnh Square Vẽ Sẵn & Đồng Bộ Hoàn Hảo Checkbox Hệ Thống Sang MorphIcons Lò Xo Đơn Tầng Single-Layer (`Square` <-> `Check` <-> `Minus`) (`MorphIcons.tsx`, `AdvCheckbox.tsx`, `GridFilterRow.tsx`)
+- **Thời gian**: 2026-10-30 15:38
+- **Files thay đổi**:
+  - `src/components/ui/MorphIcons.tsx` (200 dòng):
+    - Khắc phục triệt để lỗi 2 ô vuông chồng đè nhau (`ERR_CHECKBOX_STATIC_SQUARE`): Xóa bỏ hoàn toàn khung vuông tĩnh vẽ sẵn (`SquareCheckBig` và `SquareMinus` vốn chứa 2 paths gồm khung viền + nét phụ khiến thư viện `morphicons` phải nhân đôi shape dẫn tới 2 ô lồng lệch nhau khi chuyển đổi).
+    - Chuyển sang cơ chế **Single-Layer Morphing** với 1 path duy nhất:
+      + Chưa chọn (Unchecked): `Square` (1 ô vuông rỗng thanh mảnh duy nhất, màu `var(--agv-text-muted)`).
+      + Đã chọn (Checked): Biến hình lò xo mượt mà sang `Check` (dấu tích ✓ bung nở, màu `var(--agv-accent)`).
+      + Bán chọn / Chọn tất cả (Indeterminate): Biến hình lò xo sang `Minus` (dấu gạch ngang `-`, màu `var(--agv-accent)`).
+    - Hỗ trợ đầy đủ props: `checked`, `indeterminate`, `size`, `spring="bouncy"`, `disabled`, `title`, `style`.
+  - `src/components/grid/AdvCheckbox.tsx` (56 dòng):
+    - Tái cấu trúc chuẩn hóa: `AdvCheckbox` wrap trực tiếp `MorphCheckbox` đơn tầng lò xo (`Square` <-> `Check` <-> `Minus`), bảo toàn 100% API cho toàn bộ các modal, filter popup và popover trong hệ thống.
+  - `src/components/grid/GridFilterRow.tsx` (1304 dòng):
+    - Đồng bộ ô lọc STT/Chọn trên Dòng Lọc: Tích hợp `MorphCheckbox` 3 trạng thái với hoạt ảnh lò xo nảy:
+      + `ALL` ➔ `indeterminate={true}`, `checked={false}` (`Minus` lò xo).
+      + `CHECKED` ➔ `checked={true}`, `indeterminate={false}` (`Check` lò xo).
+      + `UNCHECKED` ➔ `checked={false}`, `indeterminate={false}` (`Square` lò xo).
+
+---
+
+## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi Giật Dòng Sau Mỗi Lần Cuộn & Đồng Bộ 100% Theme Tokens Cho ComboBox, DatePicker & Toàn Bộ Portals (`index.css`, `App.tsx`, `themes/index.ts`, `customCssBridge.ts`, `AdvComboBoxEdit.tsx`, `AdvSearchLookUpEdit.tsx`, `datePickerStyles.ts`, `AdvGridQueryBuilderModal.tsx`)
 - **Thời gian**: 2026-10-30 14:40
 - **Files thay đổi**:
   - `src/index.css` (784 dòng):
@@ -22,7 +42,7 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 2: Tối Ưu Toàn Diện Hiệu Năng 0% CPU Idle, Độ Mượt Cuộn Cao Tốc & Tái Cấu Trúc Module Chuẩn Data-Driven (`VirtualizedGrid.tsx`, `App.tsx`, `GridRow.tsx`, `apiService.ts`, `useColumnResize.ts`, `useGridKeyboardNav.ts`, `useGridSortFlipAnimation.ts`, `datePickerStyles.ts`, `index.css`, `themes/index.ts`)
+## 🕒 Lần 1: Tối Ưu Toàn Diện Hiệu Năng 0% CPU Idle, Độ Mượt Cuộn Cao Tốc & Tái Cấu Trúc Module Chuẩn Data-Driven (`VirtualizedGrid.tsx`, `App.tsx`, `GridRow.tsx`, `apiService.ts`, `useColumnResize.ts`, `useGridKeyboardNav.ts`, `useGridSortFlipAnimation.ts`, `datePickerStyles.ts`, `index.css`, `themes/index.ts`)
 - **Thời gian**: 2026-10-30 14:15
 - **Files thay đổi**:
   - `src/components/grid/VirtualizedGrid.tsx` (2260 dòng):
@@ -44,18 +64,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Tối ưu `ensureDatePickerStyles()` thoát sớm $O(1)$ (`if (style) return;`) khi thẻ `#agv-datepicker-core-styles` đã tồn tại, không ghi đè lại 600+ dòng CSS mỗi lần mở DatePicker.
   - `src/themes/index.ts` (211 dòng):
     - Xóa khối `scrollbarCss` trùng lặp trong `src/themes/index.ts`.
-
----
-
-## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi Gắn Class CSS & Inline Style Khiến ComboBox Bị Trắng Toát Trên Theme Dark (`enterpriseEditorUtils.ts`, `themes/index.ts`)
-- **Thời gian**: 2026-10-30 12:45
-- **Files thay đổi**:
-  - `src/components/ui/enterpriseEditorUtils.ts` (114 dòng):
-    - Khắc phục lỗi gốc: `getPortalThemeVars()` trước đó gọi `getThemeTokens(theme)` với `isDark = false` mặc định, sinh ra 30 biến CSS của Balham Light (`--agv-bg-popup: #ffffff`, `--agv-bg-control: #ffffff`, `--agv-text-main: #182230`) gắn thẳng vào `style={{ ...getPortalThemeVars(theme) }}` đè bẹp CSS variables của theme và dark mode.
-    - Cập nhật `getPortalThemeVars` luôn trả về `{}` rỗng 100%, xóa bỏ triệt để việc inline style đè biến CSS. Cho phép tất cả controls và portals kế thừa tự nhiên từ `document.documentElement`.
-  - `src/themes/index.ts` (242 dòng):
-    - Sửa lỗi gắn class CSS: xóa bỏ hoàn toàn các selector sai ngữ nghĩa `.agv-dark:not(.dark)` và `.agv-bezier-arthouse:not(.dark)`. Những selector này vốn tác động sai lên chính các phần tử con (như `agv-comboboxedit-wrapper` hay `agv-comboboxedit-dropdown`) vì phần tử con không mang class `.dark` dù thẻ `<html>` cha đang ở chế độ Đêm.
-    - Chuẩn hóa toàn bộ selector Ngày/Đêm gắn chặt với trạng thái của thẻ gốc:
-      - Ngày: `html:not(.dark) .agv-dark`, `html:not(.dark).agv-dark`, `body:not(.dark) .agv-dark`...
-      - Đêm: `html.dark .agv-dark`, `html.dark.agv-dark`, `body.dark .agv-dark`, `body.dark.agv-dark`, `.dark .agv-dark`, `.dark.agv-dark`...
-    - Giúp Theme ComboBox (`AdvComboBoxEdit`) hiển thị đúng 100% màu nền và chữ của Balham Dark (nền `#182230`, viền `#2e3d4f`, chữ `#f0f4f8`), tự động chuyển đổi hoàn hảo giữa 5 theme và 2 chế độ Ngày/Đêm.

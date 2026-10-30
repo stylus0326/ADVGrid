@@ -39,6 +39,7 @@ import {
 import { getThemeClass } from '../../themes';
 import { AdvMultiFilterPopup } from './AdvMultiFilterPopup';
 import { AdvCriteriaSummaryPopup } from './AdvCriteriaSummaryPopup';
+import { MorphCheckbox } from '../ui/MorphIcons';
 import { hasActiveQueryRules } from './floating/queryUtils';
 import {
   formatSmartInputText,
@@ -791,7 +792,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
             );
           }
 
-          // 2. CỘT CHỌN: Checkbox 3 trạng thái (ALL ➔ CHECKED ➔ UNCHECKED), bỏ viền ngoài giữ checkbox thuần
+          // 2. CỘT CHỌN: Checkbox 3 trạng thái (ALL ➔ CHECKED ➔ UNCHECKED) biến hình lò xo MorphIcons
           if (isSelectionColumn(col)) {
             const chkState = filterVal?.val || CHECK_FILTER_STATES.ALL;
             const nextState =
@@ -801,6 +802,9 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 ? CHECK_FILTER_STATES.UNCHECKED
                 : CHECK_FILTER_STATES.ALL;
 
+            const isAll = chkState === CHECK_FILTER_STATES.ALL;
+            const isChecked = chkState === CHECK_FILTER_STATES.CHECKED;
+
             return (
               <div
                 key={`filter_${col.key}`}
@@ -808,31 +812,25 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 style={stickyFilterStyle}
                 className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border-strong)] shrink-0 box-border h-[34px]`}
               >
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     onColumnFilterChange?.(
                       col.key,
                       createEqualsFilter(nextState === CHECK_FILTER_STATES.ALL ? '' : nextState)
                     );
                   }}
-                  className="w-full h-[28px] min-h-[28px] bg-transparent border-0 border-none outline-none flex items-center justify-center transition cursor-pointer hover:opacity-80 p-0"
+                  className="w-full h-[28px] min-h-[28px] bg-transparent flex items-center justify-center cursor-pointer select-none p-0 outline-none"
                 >
-                  {chkState === CHECK_FILTER_STATES.CHECKED ? (
-                    /* Checkbox Đã chọn: Ô vuông màu chủ đạo có dấu tích trắng ✓ */
-                    <div className="w-[15px] h-[15px] rounded-[3px] bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] flex items-center justify-center">
-                      <Check size={11} strokeWidth={3} />
-                    </div>
-                  ) : chkState === CHECK_FILTER_STATES.UNCHECKED ? (
-                    /* Checkbox Chưa chọn: Ô vuông viền cam/vàng ☐ */
-                    <div className="w-[15px] h-[15px] rounded-[3px] border-2 border-[var(--agv-warning,#f59e0b)] bg-transparent flex items-center justify-center" />
-                  ) : (
-                    /* Checkbox Tất cả (Indeterminate / All): Ô vuông viền xám có gạch ngang - */
-                    <div className="w-[15px] h-[15px] rounded-[3px] border border-[var(--agv-border-strong,var(--agv-border))] bg-transparent flex items-center justify-center">
-                      <span className="w-2 h-0.5 rounded-full bg-[var(--agv-text-muted)] opacity-60" />
-                    </div>
-                  )}
-                </button>
+                  <MorphCheckbox
+                    checked={isChecked}
+                    indeterminate={isAll}
+                    size={16}
+                    spring="bouncy"
+                    className="pointer-events-none"
+                  />
+                </div>
               </div>
             );
           }

@@ -4,6 +4,7 @@ import { SortDirection, SORT_DIRECTIONS } from '../grid/types';
 import {
   Square,
   Check,
+  Minus,
   CheckSquare,
   Play,
   Pause,
@@ -31,32 +32,57 @@ import {
 export { MorphIcon };
 
 export interface MorphCheckboxProps {
-  checked: boolean;
-  onChange?: (e: React.MouseEvent) => void;
+  checked?: boolean;
+  indeterminate?: boolean;
+  onChange?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   size?: number;
   className?: string;
   spring?: 'bouncy' | 'snappy' | 'smooth';
+  disabled?: boolean;
+  title?: string;
+  style?: React.CSSProperties;
 }
 
 export const MorphCheckbox: React.FC<MorphCheckboxProps> = ({
-  checked,
+  checked = false,
+  indeterminate = false,
   onChange,
+  onClick,
   size = 16,
   className = '',
   spring = 'bouncy',
+  disabled = false,
+  title,
+  style,
 }) => {
+  const isSelected = checked && !indeterminate;
+  const activeIcon = indeterminate ? Minus : isSelected ? Check : Square;
+  const isAccent = isSelected || indeterminate;
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    onClick?.(e);
+    onChange?.(e);
+  };
+
   return (
     <div
-      onClick={onChange}
-      className={`inline-flex items-center justify-center cursor-pointer transition-colors border-none bg-transparent p-0 select-none ${className}`}
+      role="checkbox"
+      aria-checked={indeterminate ? 'mixed' : isSelected}
+      aria-disabled={disabled || undefined}
+      onClick={handleClick}
+      title={title}
+      className={`agv-morph-checkbox inline-flex items-center justify-center transition-colors border-none bg-transparent p-0 select-none ${
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-85'
+      } ${className}`}
       style={{
-        color: checked
-          ? 'var(--agv-accent, #2563eb)'
-          : 'var(--agv-text-muted, #94a3b8)',
+        color: isAccent ? 'var(--agv-accent)' : 'var(--agv-text-muted)',
+        ...style,
       }}
     >
       <MorphIcon
-        icon={checked ? Check : Square}
+        icon={activeIcon}
         size={size}
         spring={spring}
       />
@@ -147,6 +173,7 @@ export const MorphChevronIcon: React.FC<MorphChevronIconProps> = ({
 export {
   Square,
   Check,
+  Minus,
   CheckSquare,
   Play,
   Pause,

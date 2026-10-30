@@ -4,7 +4,20 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Khắc Phục Triệt Để Lỗi Màu Custom Theme Bị Ghi Đè Bởi Modern Minimal: Nhận Diện Custom Id & Tăng Cường Độ Ưu Tiên CSS Variables Tuyệt Đối (`src/themes/common.ts`, `src/themes/presets/converter.ts`, `src/App.tsx`, `src/components/ui/enterpriseEditorUtils.ts`, `code_index.js`)
+## 🕒 Lần 3 (Mới nhất): Xây Dựng Hàm Kiểm Tra Tính Đối Xứng `checkThemeSymmetry` Giữa 2 Bên `:root` & `.dark` Và Ánh Xạ Chuẩn Sang 32 Tokens Grid Engine (`src/themes/presets/customThemes.ts`, `code_index.js`)
+- **Thời gian**: 2026-10-30 09:35
+- **Files thay đổi**:
+  - `src/themes/presets/customThemes.ts` (339 dòng):
+    - Xây dựng hàm `checkThemeSymmetry(rawCss: string): ThemeSymmetryReport` tự động bóc tách 2 khối `:root` và `.dark`.
+    - Đối chiếu tính đối xứng 100% giữa các biến màu của 2 bên (Light vs Dark).
+    - Cung cấp ma trận ánh xạ trực tiếp sang 32 tokens `--agv-*` của Grid Engine (`--agv-accent`, `--agv-bg-root`, `--agv-border`, `--agv-text-main`, v.v.).
+    - Trả về báo cáo chi tiết: số lượng biến, danh sách biến thiếu ở mỗi bên, và bảng đối chiếu giá trị Light/Dark.
+  - `code_index.js` (1093 dòng):
+    - Cập nhật số dòng `src/themes/presets/customThemes.ts` (339 dòng) và đăng ký hàm `checkThemeSymmetry`.
+
+---
+
+## 🕒 Lần 2: Khắc Phục Triệt Để Lỗi Màu Custom Theme Bị Ghi Đè Bởi Modern Minimal: Nhận Diện Custom Id & Tăng Cường Độ Ưu Tiên CSS Variables Tuyệt Đối (`src/themes/common.ts`, `src/themes/presets/converter.ts`, `src/App.tsx`, `src/components/ui/enterpriseEditorUtils.ts`, `code_index.js`)
 - **Thời gian**: 2026-10-30 09:20
 - **Files thay đổi**:
   - `src/themes/common.ts` (350 dòng):
@@ -17,12 +30,10 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Bổ sung `customThemeVersion` vào dependency của `activePresetCss` để làm mới biến màu tức thì khi người dùng nạp theme mới.
   - `src/components/ui/enterpriseEditorUtils.ts` (154 dòng):
     - Đồng bộ chế độ dark/light động trong `getPortalThemeVars` để các portal dropdown của theme tùy biến hiển thị đúng màu theo chế độ Ngày/Đêm.
-  - `code_index.js` (1092 dòng):
-    - Cập nhật số dòng `src/themes/common.ts` (350 dòng), `src/themes/presets/converter.ts` (126 dòng), `src/App.tsx` (2086 dòng) và `enterpriseEditorUtils.ts` (154 dòng).
 
 ---
 
-## 🕒 Lần 2: Triển Khai Modal Nhập Theme Tùy Biến (Tweakcn Community) Hỗ Trợ Dán Raw CSS & JSON, Bền Vững LocalStorage (`src/demo/AdvThemeImportModal.tsx`, `src/themes/presets/customThemes.ts`, `src/themes/presets/index.ts`, `src/demo/PageToolbar.tsx`, `src/App.tsx`)
+## 🕒 Lần 1: Triển Khai Modal Nhập Theme Tùy Biến (Tweakcn Community) Hỗ Trợ Dán Raw CSS & JSON, Bền Vững LocalStorage (`src/demo/AdvThemeImportModal.tsx`, `src/themes/presets/customThemes.ts`, `src/themes/presets/index.ts`, `src/demo/PageToolbar.tsx`, `src/App.tsx`)
 - **Thời gian**: 2026-10-30 09:12
 - **Files thay đổi**:
   - `src/themes/presets/customThemes.ts` (260 dòng):
@@ -34,14 +45,3 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
     - Tạo Modal "Nhập Theme Tùy Biến (Tweakcn Community)" đúng 100% bản vẽ mô phỏng: ô nhập tên theme, textarea dán mã CSS/JSON, danh sách theme đã lưu kèm nút [Xóa], nút [Hủy] và [Áp Dụng].
   - `src/demo/PageToolbar.tsx` (591 dòng):
     - Bổ sung nút bấm `[Nhập Theme]` cạnh cụm ComboBox và nút Ngày/Đêm.
-
----
-
-## 🕒 Lần 1: Khắc Phục Triệt Để Lỗi Cuộn Bị Reset Về Đầu Khi Mở ComboBox/Select & Đồng Bộ Đồng Thời `isJustOpenedRef` + `requestAnimationFrame` (`src/components/ui/AdvComboBoxEdit.tsx`, `src/components/ui/AdvSelect.tsx`)
-- **Thời gian**: 2026-10-30 00:54
-- **Files thay đổi**:
-  - `src/components/ui/AdvComboBoxEdit.tsx` (405 dòng):
-    - Bổ sung `isJustOpenedRef` và đồng bộ `syncHighlightedToSelected()` ngay tức thì trong `handleTriggerClick` và phím mũi tên `ArrowDown` trước khi mount portal.
-    - Bổ sung `requestAnimationFrame` kép trong `useLayoutEffect` để bảo toàn vị trí căn giữa ngay cả khi CSS Spring Animation (`agv-spring-down` / `agv-spring-up`) đang co giãn kích thước DOM.
-  - `src/components/ui/AdvSelect.tsx` (317 dòng):
-    - Đồng bộ cơ chế bảo vệ `isJustOpenedRef` và `requestAnimationFrame` tương tự cho primitive Select thuần túy.

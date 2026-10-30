@@ -20,6 +20,12 @@ export interface GridChunkBlockProps<T = any> {
   colWidths: Record<string, number>;
   rowHeight: number;
   chunkSize: number;
+  topOffset?: number;
+  chunkHeight?: number;
+  phoneExpandedRows?: Map<string | number, number>;
+  onToggleExpandPhoneCard?: (rowKey: string | number, rowIndex: number) => void;
+  showRowNumber?: boolean;
+  showSelectionCol?: boolean;
   selectedRowIndex: number | null;
   selectedRowKey?: string | number | null;
   checkedRowIndices?: Set<number | string>;
@@ -58,6 +64,12 @@ export const GridChunkBlock = memo(
     colWidths,
     rowHeight,
     chunkSize,
+    topOffset,
+    chunkHeight,
+    phoneExpandedRows,
+    onToggleExpandPhoneCard,
+    showRowNumber,
+    showSelectionCol,
     selectedRowIndex,
     selectedRowKey,
     checkedRowIndices,
@@ -87,8 +99,8 @@ export const GridChunkBlock = memo(
     activeMode = 'pc',
   }: GridChunkBlockProps<T>) => {
     const isResponsiveCard = activeMode === 'tablet' || activeMode === 'phone';
-    const chunkHeight = rows.length * rowHeight;
-    const topOffset = Math.round(chunkIndex * chunkSize * rowHeight);
+    const effectiveChunkHeight = chunkHeight !== undefined ? chunkHeight : rows.length * rowHeight;
+    const effectiveTopOffset = topOffset !== undefined ? topOffset : Math.round(chunkIndex * chunkSize * rowHeight);
     const totalGridWidth = columns.reduce(
       (acc, col) => acc + (colWidths[col.key] || col.defaultWidth),
       0
@@ -97,6 +109,12 @@ export const GridChunkBlock = memo(
 
     const chkCol = columns.find((c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title));
     const chkColKey = chkCol?.key;
+    const effectiveShowSelectionCol = showSelectionCol !== undefined ? showSelectionCol : Boolean(chkCol);
+
+    const isRowNumberCol = (col: ColumnDef<any> | undefined | null) =>
+      Boolean(col?.isRowNumber || col?.key === 'col_stt' || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)));
+    const hasRowNumberCol = columns.some(isRowNumberCol);
+    const effectiveShowRowNumber = showRowNumber !== undefined ? showRowNumber : hasRowNumberCol;
 
     return (
       <div
@@ -107,11 +125,11 @@ export const GridChunkBlock = memo(
           left: 0,
           width: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
           minWidth: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-          height: `${chunkHeight}px`,
-          transform: `translate3d(0px, ${topOffset}px, 0px)`,
+          height: `${effectiveChunkHeight}px`,
+          transform: `translate3d(0px, ${effectiveTopOffset}px, 0px)`,
           willChange: antiGhostMode ? 'transform' : undefined,
           backfaceVisibility: antiGhostMode ? 'hidden' : undefined,
-          contain: antiGhostMode ? 'strict' : undefined,
+          contain: antiGhostMode ? (isResponsiveCard ? 'layout paint' : 'strict') : undefined,
         }}
         className={`agv-chunk-block ${theme.chunkBg}`}
       >
@@ -146,6 +164,8 @@ export const GridChunkBlock = memo(
                 rowHeight={rowHeight}
                 isSelected={isSelected}
                 isChecked={isChecked}
+                showRowNumber={effectiveShowRowNumber}
+                showSelectionCol={effectiveShowSelectionCol}
                 onSelectRow={onSelectRow}
                 onToggleCheck={onToggleCheck}
                 surfaceTheme={surfaceTheme}
@@ -155,6 +175,7 @@ export const GridChunkBlock = memo(
           }
 
           if (activeMode === 'phone') {
+            const isCardExpanded = Boolean(phoneExpandedRows?.has(rowKey));
             return (
               <GridPhoneCard
                 key={key}
@@ -164,6 +185,10 @@ export const GridChunkBlock = memo(
                 rowHeight={rowHeight}
                 isSelected={isSelected}
                 isChecked={isChecked}
+                isExpanded={isCardExpanded}
+                showRowNumber={effectiveShowRowNumber}
+                showSelectionCol={effectiveShowSelectionCol}
+                onToggleExpand={onToggleExpandPhoneCard}
                 onSelectRow={onSelectRow}
                 onToggleCheck={onToggleCheck}
                 surfaceTheme={surfaceTheme}
@@ -220,6 +245,25 @@ export const GridChunkBlock = memo(
     if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
     if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
     if (prev.rows !== next.rows) return false;
+    if (prev.showRowNumber !== next.showRowNumber) return false;
+    if (prev.showSelectionCol !== next.showSelectionCol) return false;
+    if (prev.topOffset !== next.topOffset) return false;
+    if (prev.chunkHeight !== next.chunkHeight) return false;
+    if (prev.activeMode === 'phone' || next.activeMode === 'phone') {
+      if (prev.phoneExpandedRows !== next.phoneExpandedRows) {
+        const start = next.startRowIndex;
+        for (let i = 0; i < next.rows.length; i++) {
+          const r = next.rows[i] as any;
+          const actualIdx = start + i;
+          const rKey = next.getRowId
+            ? next.getRowId(r, actualIdx)
+            : r?.originalIndex ?? r?.id ?? actualIdx;
+          const wasExp = Boolean(prev.phoneExpandedRows?.has(rKey));
+          const nowExp = Boolean(next.phoneExpandedRows?.has(rKey));
+          if (wasExp !== nowExp) return false;
+        }
+      }
+    }
     if (prev.checkedRowIndices !== next.checkedRowIndices) {
       if (!prev.checkedRowIndices || !next.checkedRowIndices) return false;
       const start = next.startRowIndex;
@@ -303,7 +347,10 @@ export const GridChunkBlock = memo(
       prev.antiGhostMode === next.antiGhostMode &&
       prev.surfaceTheme === next.surfaceTheme &&
       prev.rows === next.rows &&
-      prev.colWidths === next.colWidths
+      prev.colWidths === next.colWidths &&
+      prev.activeMode === next.activeMode &&
+      prev.showRowNumber === next.showRowNumber &&
+      prev.showSelectionCol === next.showSelectionCol
     );
   }
 ) as <T = any>(props: GridChunkBlockProps<T>) => React.ReactElement | null;

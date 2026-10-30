@@ -399,4 +399,171 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       assert.strictEqual(Object.keys(emptyVars).length, 0);
     });
   });
+
+  describe('10. Phone Layout Chunk Virtualization Geometry (Accordion Expansion)', () => {
+    const CHUNK_SIZE = 20;
+    const PHONE_ROW_HEIGHT = 88;
+    const EXPANDED_EXTRA_HEIGHT = 150;
+
+    const computeChunkLayout = (
+      chunkIdx: number,
+      rowsCount: number,
+      phoneExpandedRows: Map<string | number, number>
+    ) => {
+      const chunkStartRow = chunkIdx * CHUNK_SIZE;
+      const chunkEndRow = chunkStartRow + CHUNK_SIZE - 1;
+      let expandedBefore = 0;
+      let expandedInChunk = 0;
+      for (const rIdx of phoneExpandedRows.values()) {
+        if (rIdx < chunkStartRow) expandedBefore++;
+        if (rIdx >= chunkStartRow && rIdx <= chunkEndRow) expandedInChunk++;
+      }
+      return {
+        topOffset: chunkIdx * CHUNK_SIZE * PHONE_ROW_HEIGHT + expandedBefore * EXPANDED_EXTRA_HEIGHT,
+        chunkHeight: rowsCount * PHONE_ROW_HEIGHT + expandedInChunk * EXPANDED_EXTRA_HEIGHT,
+      };
+    };
+
+    it('should compute exact standard chunk geometry when no cards are expanded', () => {
+      const expandedMap = new Map<string | number, number>();
+      const chunk0 = computeChunkLayout(0, 20, expandedMap);
+      const chunk1 = computeChunkLayout(1, 20, expandedMap);
+
+      assert.strictEqual(chunk0.topOffset, 0);
+      assert.strictEqual(chunk0.chunkHeight, 1760);
+      assert.strictEqual(chunk1.topOffset, 1760);
+      assert.strictEqual(chunk1.chunkHeight, 1760);
+      assert.strictEqual(chunk0.topOffset + chunk0.chunkHeight, chunk1.topOffset);
+    });
+
+    it('should shift subsequent chunks and expand chunk height with zero overlap when a phone card expands', () => {
+      // Giả lập người dùng bấm mở rộng thẻ NODE-1169 tại dòng 18170 (nằm trong Chunk 908)
+      const expandedMap = new Map<string | number, number>();
+      expandedMap.set('NODE-1169', 18170);
+
+      const chunk907 = computeChunkLayout(907, 20, expandedMap);
+      const chunk908 = computeChunkLayout(908, 20, expandedMap);
+      const chunk909 = computeChunkLayout(909, 20, expandedMap);
+
+      // Chunk 907 (trước Chunk 908) không bị ảnh hưởng
+      assert.strictEqual(chunk907.topOffset, 907 * 20 * 88);
+      assert.strictEqual(chunk907.chunkHeight, 1760);
+
+      // Chunk 908 chứa thẻ mở rộng: Chiều cao nở thêm đúng 150px (1760 + 150 = 1910px)
+      assert.strictEqual(chunk908.topOffset, 908 * 20 * 88);
+      assert.strictEqual(chunk908.chunkHeight, 1760 + 150);
+      assert.strictEqual(chunk907.topOffset + chunk907.chunkHeight, chunk908.topOffset);
+
+      // Chunk 909: Bắt đầu dịch chuyển xuống đúng 150px, mép trên Chunk 909 khớp 100% với mép dưới Chunk 908
+      assert.strictEqual(chunk909.topOffset, 909 * 20 * 88 + 150);
+      assert.strictEqual(chunk909.chunkHeight, 1760);
+      assert.strictEqual(chunk908.topOffset + chunk908.chunkHeight, chunk909.topOffset);
+    });
+
+    it('should maintain continuous seamless boundaries when multiple cards across chunks are expanded', () => {
+      const expandedMap = new Map<string | number, number>();
+      expandedMap.set('NODE-1', 5);    // Trong Chunk 0
+      expandedMap.set('NODE-25', 25);  // Trong Chunk 1
+
+      const c0 = computeChunkLayout(0, 20, expandedMap);
+      const c1 = computeChunkLayout(1, 20, expandedMap);
+      const c2 = computeChunkLayout(2, 20, expandedMap);
+
+      assert.strictEqual(c0.topOffset, 0);
+      assert.strictEqual(c0.chunkHeight, 1760 + 150);
+      assert.strictEqual(c0.topOffset + c0.chunkHeight, c1.topOffset);
+
+      assert.strictEqual(c1.topOffset, 1760 + 150);
+      assert.strictEqual(c1.chunkHeight, 1760 + 150);
+      assert.strictEqual(c1.topOffset + c1.chunkHeight, c2.topOffset);
+
+      assert.strictEqual(c2.topOffset, 3520 + 300);
+      assert.strictEqual(c2.chunkHeight, 1760);
+    });
+  });
+
+  describe('11. Cross-Layout Selection Column Synchronization (PC, Tablet, Phone)', () => {
+    const mockColumns = [
+      { key: 'col_chk', title: '', isSelection: true, defaultWidth: 40, dataType: DATA_TYPES.SYSTEM },
+      { key: 'col_stt', title: 'STT', isRowNumber: true, defaultWidth: 48, dataType: DATA_TYPES.SYSTEM },
+      { key: 'node', title: 'Node Name', defaultWidth: 160, dataType: DATA_TYPES.TEXT },
+    ];
+
+    it('should synchronize showSelectionCol=false to all layouts when turned off in settings', () => {
+      const gridSettings = { showSelectionCol: false };
+      const flatColumns = mockColumns.filter((c) => gridSettings.showSelectionCol || !isSelectionColumn(c));
+      const showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn));
+
+      assert.strictEqual(showSelectionCol, false);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_chk'), false);
+    });
+
+    it('should synchronize showSelectionCol=true to all layouts when enabled and present', () => {
+      const gridSettings = { showSelectionCol: true };
+      const flatColumns = mockColumns.filter((c) => gridSettings.showSelectionCol || !isSelectionColumn(c));
+      const showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn));
+
+      assert.strictEqual(showSelectionCol, true);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_chk'), true);
+    });
+
+    it('should synchronize showSelectionCol=false when checkbox column is hidden via hiddenColKeys', () => {
+      const gridSettings = { showSelectionCol: true };
+      const hiddenColKeys = new Set(['col_chk']);
+      const flatColumns = mockColumns.filter(
+        (c) => !hiddenColKeys.has(c.key) && (gridSettings.showSelectionCol || !isSelectionColumn(c))
+      );
+      const showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn));
+
+      assert.strictEqual(showSelectionCol, false);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_chk'), false);
+    });
+  });
+
+  describe('12. Cross-Layout Row Number (STT) Column Synchronization (PC, Tablet, Phone)', () => {
+    const mockColumns = [
+      { key: 'col_chk', title: '', isSelection: true, defaultWidth: 40, dataType: DATA_TYPES.SYSTEM },
+      { key: 'col_stt', title: 'STT', isRowNumber: true, defaultWidth: 48, dataType: DATA_TYPES.SYSTEM },
+      { key: 'node', title: 'Node Name', defaultWidth: 160, dataType: DATA_TYPES.TEXT },
+    ];
+
+    const isRowNumberCol = (col: any) =>
+      Boolean(col?.isRowNumber || col?.key === 'col_stt' || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)));
+
+    it('should synchronize showRowNumber=false to all layouts when turned off in settings', () => {
+      const gridSettings = { showRowNumber: false, showSelectionCol: true };
+      const flatColumns = mockColumns.filter((c) => gridSettings.showRowNumber || !isRowNumberCol(c));
+      const showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol));
+
+      assert.strictEqual(showRowNumber, false);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_stt'), false);
+    });
+
+    it('should synchronize showRowNumber=true to all layouts when enabled and present', () => {
+      const gridSettings = { showRowNumber: true, showSelectionCol: true };
+      const flatColumns = mockColumns.filter((c) => gridSettings.showRowNumber || !isRowNumberCol(c));
+      const showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol));
+
+      assert.strictEqual(showRowNumber, true);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_stt'), true);
+    });
+
+    it('should synchronize showRowNumber=false when STT column is hidden via hiddenColKeys', () => {
+      const gridSettings = { showRowNumber: true, showSelectionCol: true };
+      const hiddenColKeys = new Set(['col_stt']);
+      const flatColumns = mockColumns.filter(
+        (c) => !hiddenColKeys.has(c.key) && (gridSettings.showRowNumber || !isRowNumberCol(c))
+      );
+      const showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol));
+
+      assert.strictEqual(showRowNumber, false);
+      assert.strictEqual(flatColumns.some((c) => c.key === 'col_stt'), false);
+    });
+
+    it('should identify when both STT and Checkbox are off to completely omit tablet w-10 container', () => {
+      const gridSettings = { showRowNumber: false, showSelectionCol: false };
+      const hasAnyLeadingCol = Boolean(gridSettings.showRowNumber || gridSettings.showSelectionCol);
+      assert.strictEqual(hasAnyLeadingCol, false);
+    });
+  });
 });

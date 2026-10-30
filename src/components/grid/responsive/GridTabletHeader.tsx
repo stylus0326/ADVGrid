@@ -3,9 +3,15 @@ import { SurfaceTheme } from '../types';
 
 export interface GridTabletHeaderProps {
   surfaceTheme: SurfaceTheme;
+  showRowNumber?: boolean;
+  showSelectionCol?: boolean;
 }
 
-export const GridTabletHeader = memo(({ surfaceTheme: _surfaceTheme }: GridTabletHeaderProps) => {
+export const GridTabletHeader = memo(({
+  surfaceTheme: _surfaceTheme,
+  showRowNumber = true,
+  showSelectionCol = true,
+}: GridTabletHeaderProps) => {
   return (
     <div
       style={{
@@ -16,9 +22,11 @@ export const GridTabletHeader = memo(({ surfaceTheme: _surfaceTheme }: GridTable
       }}
       className="flex items-center border-b px-3 text-[11px] font-bold uppercase tracking-wider select-none shrink-0"
     >
-      <div className="w-10 shrink-0 text-center mr-2" style={{ color: 'var(--agv-text-muted)' }}>
-        TT
-      </div>
+      {(showRowNumber || showSelectionCol) && (
+        <div className="w-10 shrink-0 text-center mr-2" style={{ color: 'var(--agv-text-muted)' }}>
+          {showRowNumber ? 'TT' : ''}
+        </div>
+      )}
       <div className="flex-1 min-w-[190px] pr-3">
         Thông tin Node
       </div>

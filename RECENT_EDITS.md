@@ -4,32 +4,39 @@ Tài liệu này lưu trữ thông tin chi tiết về file, vị trí dòng, ph
 
 ---
 
-## 🕒 Lần 3 (Mới nhất): Triển Khai Tính Năng Thu Gọn Toolbar Thành Strip Bar 34px Tinh Gọn Để Tối Ưu Diện Tích Test Grid (`PageToolbar.tsx`)
-- **Thời gian**: 2026-10-30 20:36
+## 🕒 Lần 3 (Mới nhất): Sửa Lỗi Hiển Thị Mã Dòng Chuẩn Xác (`r.col_id`) Trên Bố Cục Phone & Tablet Thay Vì Hiển Thị Số Index Thô (`GridPhoneCard.tsx`, `GridTabletRow.tsx`)
+- **Thời gian**: 2026-10-30 23:18
 - **Files thay đổi**:
-  - `src/demo/PageToolbar.tsx` (804 dòng):
-    - Triển khai **Phương án 1 (Dải Strip Bar 34px khi thu gọn)** theo đúng lựa chọn của người dùng:
-      + Bổ sung state `isCollapsed` kết hợp lưu trữ `localStorage` (`agv_page_toolbar_collapsed`).
-      + Khi thu gọn (`isCollapsed === true`): Thu nhỏ toàn bộ thanh điều khiển từ ~300px xuống chỉ còn đúng **34px** (tiết kiệm hơn 90% diện tích màn hình).
-      + Trên thanh Strip Bar 34px: Giữ lại Segmented Control `Bố cục: [ Tự động | PC | Tablet | Phone ]` (min-h >= 28px, active nền màu chữ trắng chuẩn `AGENTS.md`) giúp người dùng chuyển đổi thử nghiệm nhanh giữa các chế độ màn hình mà không bị che khuất không gian Grid.
-      + Trang bị nút `[ Hiện Toolbar ▼ ]` để bung mở lại toàn bộ thanh điều khiển bất kỳ lúc nào.
-      + Khi thanh mở (`isCollapsed === false`): Bố trí nút `[ Ẩn Toolbar ▲ ]` (chuẩn theme, min-h 28px) ở cả 2 vị trí thuận tiện: cạnh khối Telemetry Metrics ở trên và cạnh nút Test Cuộn Cao Tốc ở dưới.
+  - `src/components/grid/responsive/GridPhoneCard.tsx` (253 dòng):
+    + Cập nhật logic trích xuất `rowId`: Ưu tiên đọc trực tiếp trường `r.col_id` từ dataset thay vì fallback vào `rowKey` (vốn là số index `1, 2, 3...` dẫn đến việc dòng 1 hiện `ROW-000001` nhưng dòng 2-5 bị hiện số `1, 2, 3, 4`).
+    + Cập nhật trích xuất đồng bộ các trường dữ liệu chuẩn của Grid: `col_node`, `col_region`, `col_status`, `col_dec_cpu`, `col_dec_sla`, `col_date`, `col_time`.
+  - `src/components/grid/responsive/GridTabletRow.tsx` (187 dòng):
+    + Cập nhật logic trích xuất `rowId` tương tự: Ưu tiên đọc `r.col_id`, giải quyết triệt để tình trạng lệch định dạng mã dòng trên Tablet.
+    + Trích xuất đồng bộ `col_node`, `col_region`, `col_status`, `col_dec_cpu`, `col_dec_sla`, `col_date`, `col_time`.
 
 ---
 
-## 🕒 Lần 2: Triển Khai Bố Cục Thẻ Tài Chính 2 Cột Cho Biểu Đồ 12T Trên Phone & Triệt Tiêu Hoàn Toàn Lỗi Méo Mó Chấm Tròn Cực Trị (`TwelveMonthChartCell.tsx`, `GridPhoneCard.tsx`)
-- **Thời gian**: 2026-10-30 20:28
+## 🕒 Lần 2: Đồng Bộ Hóa Cột Số Thứ Tự (STT) Giữa 3 Bố Cục PC, Tablet & Phone Qua Biến Chung `showRowNumber` (`GridTabletHeader.tsx`, `GridTabletRow.tsx`, `GridPhoneCard.tsx`, `GridChunkBlock.tsx`, `VirtualizedGrid.tsx`, `test/core_logic.test.ts`)
+- **Thời gian**: 2026-10-30 23:11
 - **Files thay đổi**:
-  - `src/demo/TwelveMonthChartCell.tsx` (382 dòng): Tích hợp `ResizeObserver` tự động đo chiều rộng pixel container thực tế (`measuredWidth`), đồng bộ 1:1 giữa `viewBox` và khung hiển thị. Triệt tiêu 100% hiện tượng elip méo mó của chấm tròn cực đại Max (xanh lá) và cực tiểu Min (đỏ); đảm bảo đốm tròn luôn tròn xoe hoàn hảo.
-  - `src/components/grid/responsive/GridPhoneCard.tsx` (236 dòng): Triển khai **Ý tưởng A (Bố cục Thẻ tài chính 2 Cột)**: Cột trái Biểu đồ 12T Catmull-Rom spline cao 50px thoáng đãng, vạch ngăn cách 1px, Cột phải Bảng tóm tắt số liệu cực trị xếp tầng dọc gọn gàng (Cao nhất, Thấp nhất, Trung bình).
+  - `src/components/grid/VirtualizedGrid.tsx` (2389 dòng):
+    + Xác định biến chung duy nhất toàn hệ thống `showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol))` phản ánh tức thì trạng thái bật/tắt trong Cài đặt bảng (`AdvGridSettingsPopup`) cũng như ẩn cột STT qua Menu ngữ cảnh / Column Chooser (`hiddenColKeys`).
+    + Truyền `showRowNumber` trực tiếp xuống `<GridTabletHeader>` và `<GridChunkBlock>`.
+  - `src/components/grid/GridChunkBlock.tsx` (357 dòng):
+    + Tiếp nhận prop `showRowNumber?: boolean`, tính `effectiveShowRowNumber` và chuyển tiếp vào `<GridTabletRow>` và `<GridPhoneCard>`. Memo comparator kiểm tra `prev.showRowNumber !== next.showRowNumber`.
+  - `src/components/grid/responsive/GridTabletHeader.tsx` (47 dòng) & `GridTabletRow.tsx` (187 dòng):
+    + Tiếp nhận `showRowNumber`, ẩn STT khi tắt. Khi cả STT và Checkbox cùng tắt, ẩn luôn khối `w-10` đầu để nội dung tràn sát mép trái.
+  - `src/components/grid/responsive/GridPhoneCard.tsx` (253 dòng):
+    + Ẩn hoàn toàn thẻ STT pill ở Header của Phone Card khi `showRowNumber === false`.
+  - `test/core_logic.test.ts` (570 dòng):
+    + Bổ sung Unit Test Suite 12 (40/40 unit tests pass).
 
 ---
 
-## 🕒 Lần 1: Đồng Bộ Hóa Toàn Diện Biểu Đồ 12 Tháng Catmull-Rom Spline Giữa 3 Kiểu Hiển Thị PC, Tablet & Phone (`TwelveMonthChartCell.tsx`, `GridPhoneCard.tsx`, `GridTabletRow.tsx`, `GridTabletHeader.tsx`, `gridUtils.ts`)
-- **Thời gian**: 2026-10-30 20:12
+## 🕒 Lần 1: Đồng Bộ Hóa Cột Chọn Dòng (Checkbox Column) Giữa 3 Bố Cục PC, Tablet & Phone Qua Biến Chung `showSelectionCol` (`GridTabletRow.tsx`, `GridPhoneCard.tsx`, `GridChunkBlock.tsx`, `VirtualizedGrid.tsx`, `test/core_logic.test.ts`)
+- **Thời gian**: 2026-10-30 23:04
 - **Files thay đổi**:
-  - `src/components/grid/gridUtils.ts` (1117 dòng): Bổ sung hàm `getOrComputeMonthStats(recordObj)` dùng chung toàn hệ thống kết hợp bộ đệm `globalMonthStatsCache` (WeakMap $O(1)$) tránh cấp phát rác, trích xuất chính xác 12 tháng `mVals`, `minVal`, `maxVal`, `minIdx`, `maxIdx`, `avgVal`.
-  - `src/demo/TwelveMonthChartCell.tsx`: Bổ sung prop tùy chọn `height?: number` (mặc định 24px) giúp component biểu đồ co giãn linh hoạt trên mọi kích thước.
-  - `src/components/grid/responsive/GridPhoneCard.tsx`: Thay thế hoàn toàn đường polyline đơn điệu cũ bằng `TwelveMonthChartCell` chuẩn hệ thống: đầy đủ đường sóng Catmull-Rom spline, bóng gradient theo theme, chấm cực đại/cực tiểu, mốc trung bình và Animate UI Tooltip.
-  - `src/components/grid/responsive/GridTabletRow.tsx` (177 dòng): Tích hợp biểu đồ 12T mini (`TwelveMonthChartCell` cao 22px, rộng 140px) trực tiếp vào Cụm 3 bên trên thông số AVG và giờ GD.
-  - `src/components/grid/responsive/GridTabletHeader.tsx` (39 dòng): Cập nhật tiêu đề Cụm 3 thành "Biểu đồ 12T & AVG".
+  - `src/components/grid/VirtualizedGrid.tsx`: Xác định biến chung duy nhất `showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn))`, truyền xuống GridChunkBlock.
+  - `src/components/grid/GridChunkBlock.tsx`: Tiếp nhận `showSelectionCol`, chuyển tiếp sang `GridTabletRow` và `GridPhoneCard`, memo comparator kiểm tra thay đổi.
+  - `src/components/grid/responsive/GridTabletRow.tsx`: Ẩn `<MorphCheckbox>` khi `showSelectionCol === false`.
+  - `src/components/grid/responsive/GridPhoneCard.tsx`: Ẩn `<MorphCheckbox>` trên Header của Phone Card khi `showSelectionCol === false`.

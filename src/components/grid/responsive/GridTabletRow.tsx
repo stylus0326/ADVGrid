@@ -11,6 +11,8 @@ export interface GridTabletRowProps<T = any> {
   rowHeight: number;
   isSelected: boolean;
   isChecked: boolean;
+  showRowNumber?: boolean;
+  showSelectionCol?: boolean;
   onSelectRow?: (rowIndex: number, row: any) => void;
   onToggleCheck?: (rowIndex: number, row: any, e: React.MouseEvent) => void;
   surfaceTheme: SurfaceTheme;
@@ -24,6 +26,8 @@ export const GridTabletRow = memo(<T extends any>({
   rowHeight,
   isSelected,
   isChecked,
+  showRowNumber = true,
+  showSelectionCol = true,
   onSelectRow,
   onToggleCheck,
   surfaceTheme,
@@ -32,14 +36,14 @@ export const GridTabletRow = memo(<T extends any>({
 
   // Trích xuất dữ liệu thân thiện
   const r = row as any;
-  const nodeTitle = r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
-  const rowId = r.id || rowKey || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
-  const region = r.region || 'US-East';
-  const status = (r.status || 'ONLINE').toUpperCase();
-  const cpu = typeof r.cpu === 'number' ? r.cpu : 45.5;
-  const sla = typeof r.sla === 'number' ? r.sla : 99.8;
-  const ngaygd = r.ngaygd || r.date || '28/10/2026';
-  const thoigian = r.thoigian || r.time || '15:30';
+  const nodeTitle = r.col_node || r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
+  const rowId = r.col_id || r.id || (typeof rowKey === 'string' && isNaN(Number(rowKey)) ? rowKey : undefined) || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
+  const region = r.col_region || r.region || 'US-East';
+  const status = (r.col_status || r.status || 'ONLINE').toUpperCase();
+  const cpu = typeof r.col_dec_cpu === 'number' ? r.col_dec_cpu : typeof r.cpu === 'number' ? r.cpu : 45.5;
+  const sla = typeof r.col_dec_sla === 'number' ? r.col_dec_sla : typeof r.sla === 'number' ? r.sla : 99.8;
+  const ngaygd = r.col_date || r.ngaygd || r.date || '28/10/2026';
+  const thoigian = r.col_time || r.thoigian || r.time || '15:30';
   const formulaVal = r.col_formula !== undefined ? r.col_formula : 78.4;
 
   // Thống kê 12 tháng chuẩn hệ thống (tái sử dụng O(1) qua WeakMap)
@@ -85,26 +89,32 @@ export const GridTabletRow = memo(<T extends any>({
       className="agv-grid-row flex items-center border-b px-3 text-xs cursor-default select-none transition-colors"
     >
       {/* 1. Ô Chọn & STT */}
-      <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-1 mr-2">
-        <span
-          data-cell-role="stt"
-          className="text-[10px] tabular-nums font-mono font-medium px-1 rounded transition-colors"
-          style={{
-            backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
-            color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
-          }}
-        >
-          {String(rowIndex + 1).padStart(2, '0')}
-        </span>
-        <div onClick={(e) => e.stopPropagation()}>
-          <MorphCheckbox
-            checked={isChecked}
-            onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
-            size={16}
-            spring="snappy"
-          />
+      {(showRowNumber || showSelectionCol) && (
+        <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-1 mr-2">
+          {showRowNumber && (
+            <span
+              data-cell-role="stt"
+              className="text-[10px] tabular-nums font-mono font-medium px-1 rounded transition-colors"
+              style={{
+                backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
+                color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
+              }}
+            >
+              {String(rowIndex + 1).padStart(2, '0')}
+            </span>
+          )}
+          {showSelectionCol && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <MorphCheckbox
+                checked={isChecked}
+                onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
+                size={16}
+                spring="snappy"
+              />
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* 2. Cột 1: Thông tin Node & Định danh (Bỏ avatar tròn theo yêu cầu) */}
       <div className="flex-1 min-w-[190px] pr-3 flex flex-col justify-center">

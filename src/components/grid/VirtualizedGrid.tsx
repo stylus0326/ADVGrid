@@ -462,6 +462,37 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       ? 28
       : rowHeight;
 
+    // Chiều cao nở thêm chuẩn từng pixel khi mở rộng thẻ Phone Card (biểu đồ 12T + thông tin chi tiết: 150px)
+    const EXPANDED_CARD_EXTRA_HEIGHT = 150;
+
+    // Quản lý danh sách thẻ Phone Card đang mở rộng (Map: rowKey -> rowIndex để tính toán topOffset và chunkHeight O(1))
+    const [phoneExpandedRows, setPhoneExpandedRows] = useState<Map<string | number, number>>(() => new Map());
+
+    const handleToggleExpandPhoneCard = useCallback((rowKey: string | number, rowIndex: number) => {
+      setPhoneExpandedRows((prev) => {
+        const next = new Map(prev);
+        if (next.has(rowKey)) {
+          next.delete(rowKey);
+        } else {
+          next.set(rowKey, rowIndex);
+        }
+        return next;
+      });
+    }, []);
+
+    // Tự động giải phóng khi chuyển khỏi bố cục Phone hoặc khi tập dữ liệu bị lọc/sắp xếp
+    useEffect(() => {
+      if (activeMode !== 'phone' && phoneExpandedRows.size > 0) {
+        setPhoneExpandedRows(new Map());
+      }
+    }, [activeMode, phoneExpandedRows.size]);
+
+    useEffect(() => {
+      if (phoneExpandedRows.size > 0) {
+        setPhoneExpandedRows(new Map());
+      }
+    }, [dataVersion, totalRows]);
+
     // Hidden columns state (controlled or uncontrolled)
     const [internalHiddenColKeys, setInternalHiddenColKeys] = useState<Set<string>>(
       () => defaultHiddenColKeys ?? new Set()
@@ -1275,7 +1306,36 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     const totalChunks = Math.ceil(totalRows / chunkSize);
     const chunkPixelHeight = chunkSize * actualRowHeight;
-    const totalContentHeight = totalRows * actualRowHeight;
+    const totalPhoneExtraHeight = isPhoneMode ? phoneExpandedRows.size * EXPANDED_CARD_EXTRA_HEIGHT : 0;
+    const totalContentHeight = totalRows * actualRowHeight + totalPhoneExtraHeight;
+
+    // Helpers O(1) tính toán số thẻ mở rộng trước và trong từng Chunk để dịch chuyển tọa độ GPU translate3d
+    const getExpandedBeforeChunk = useCallback(
+      (chunkIdx: number): number => {
+        if (!isPhoneMode || phoneExpandedRows.size === 0) return 0;
+        const chunkStartRow = chunkIdx * chunkSize;
+        let count = 0;
+        for (const rIdx of phoneExpandedRows.values()) {
+          if (rIdx < chunkStartRow) count++;
+        }
+        return count;
+      },
+      [isPhoneMode, phoneExpandedRows, chunkSize]
+    );
+
+    const getExpandedInChunk = useCallback(
+      (chunkIdx: number): number => {
+        if (!isPhoneMode || phoneExpandedRows.size === 0) return 0;
+        const chunkStartRow = chunkIdx * chunkSize;
+        const chunkEndRow = chunkStartRow + chunkSize - 1;
+        let count = 0;
+        for (const rIdx of phoneExpandedRows.values()) {
+          if (rIdx >= chunkStartRow && rIdx <= chunkEndRow) count++;
+        }
+        return count;
+      },
+      [isPhoneMode, phoneExpandedRows, chunkSize]
+    );
 
     const [chunkWindow, setChunkWindow] = useState<{ start: number; end: number }>(() => {
       if (totalRows === 0) return { start: 0, end: -1 };
@@ -1880,6 +1940,10 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     );
 
     const theme = getThemeClasses(surfaceTheme);
+    const isRowNumberCol = (col: ColumnDef<any> | undefined | null) =>
+      Boolean(col?.isRowNumber || col?.key === 'col_stt' || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)));
+    const showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol));
+    const showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn));
 
     return (
       <div
@@ -1910,7 +1974,11 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {/* Header & Filter Row */}
           {isTabletMode ? (
             <div className="sticky top-0 z-30 w-full">
-              <GridTabletHeader surfaceTheme={surfaceTheme} />
+              <GridTabletHeader
+                surfaceTheme={surfaceTheme}
+                showRowNumber={showRowNumber}
+                showSelectionCol={showSelectionCol}
+              />
             </div>
           ) : isPhoneMode ? (
             <div
@@ -2148,6 +2216,14 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
               const chunkRows = visibleChunksMap.get(chunkIdx);
               if (!chunkRows) return null;
 
+              const beforeCount = getExpandedBeforeChunk(chunkIdx);
+              const inChunkCount = getExpandedInChunk(chunkIdx);
+              const chunkTopOffset = Math.round(
+                chunkIdx * chunkSize * actualRowHeight + beforeCount * EXPANDED_CARD_EXTRA_HEIGHT
+              );
+              const effectiveChunkHeight =
+                chunkRows.length * actualRowHeight + inChunkCount * EXPANDED_CARD_EXTRA_HEIGHT;
+
               return (
                 <GridChunkBlock
                   key={`chunk_${chunkSize}_${chunkIdx}`}
@@ -2158,6 +2234,12 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                   colWidths={colWidths}
                   rowHeight={actualRowHeight}
                   chunkSize={chunkSize}
+                  topOffset={chunkTopOffset}
+                  chunkHeight={effectiveChunkHeight}
+                  phoneExpandedRows={phoneExpandedRows}
+                  onToggleExpandPhoneCard={handleToggleExpandPhoneCard}
+                  showRowNumber={showRowNumber}
+                  showSelectionCol={showSelectionCol}
                   selectedRowIndex={selectedRowIndex ?? null}
                   selectedRowKey={selectedRowKey}
                   checkedRowIndices={checkedRowIndices}

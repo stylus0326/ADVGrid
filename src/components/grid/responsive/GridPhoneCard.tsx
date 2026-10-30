@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo } from 'react';
 import { SurfaceTheme } from '../types';
 import { MorphCheckbox, MorphChevronIcon } from '../../ui/MorphIcons';
 import { formatGridNumber, getOrComputeMonthStats } from '../gridUtils';
@@ -11,6 +11,10 @@ export interface GridPhoneCardProps<T = any> {
   rowHeight: number;
   isSelected: boolean;
   isChecked: boolean;
+  isExpanded?: boolean;
+  showRowNumber?: boolean;
+  showSelectionCol?: boolean;
+  onToggleExpand?: (rowKey: string | number, rowIndex: number) => void;
   onSelectRow?: (rowIndex: number, row: any) => void;
   onToggleCheck?: (rowIndex: number, row: any, e: React.MouseEvent) => void;
   surfaceTheme: SurfaceTheme;
@@ -23,21 +27,24 @@ export const GridPhoneCard = memo(<T extends any>({
   rowHeight: _rowHeight,
   isSelected,
   isChecked,
+  isExpanded = false,
+  showRowNumber = true,
+  showSelectionCol = true,
+  onToggleExpand,
   onSelectRow,
   onToggleCheck,
   surfaceTheme,
 }: GridPhoneCardProps<T>) => {
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const r = row as any;
-  const nodeTitle = r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
-  const rowId = r.id || rowKey || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
-  const region = r.region || 'US-East';
-  const status = (r.status || 'ONLINE').toUpperCase();
-  const cpu = typeof r.cpu === 'number' ? r.cpu : 45.5;
-  const sla = typeof r.sla === 'number' ? r.sla : 99.8;
-  const ngaygd = r.ngaygd || r.date || '28/10/2026';
-  const thoigian = r.thoigian || r.time || '15:30:00';
+  const nodeTitle = r.col_node || r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
+  const rowId = r.col_id || r.id || (typeof rowKey === 'string' && isNaN(Number(rowKey)) ? rowKey : undefined) || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
+  const region = r.col_region || r.region || 'US-East';
+  const status = (r.col_status || r.status || 'ONLINE').toUpperCase();
+  const cpu = typeof r.col_dec_cpu === 'number' ? r.col_dec_cpu : typeof r.cpu === 'number' ? r.cpu : 45.5;
+  const sla = typeof r.col_dec_sla === 'number' ? r.col_dec_sla : typeof r.sla === 'number' ? r.sla : 99.8;
+  const ngaygd = r.col_date || r.ngaygd || r.date || '28/10/2026';
+  const thoigian = r.col_time || r.thoigian || r.time || '15:30:00';
   const formulaVal = r.col_formula !== undefined ? r.col_formula : 78.4;
 
   let statusBadgeStyle: React.CSSProperties = {
@@ -76,24 +83,28 @@ export const GridPhoneCard = memo(<T extends any>({
       {/* Header của Card: Checkbox + STT + Tên + Badge Status (Gỡ bỏ avatar theo yêu cầu) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-            <MorphCheckbox
-              checked={isChecked}
-              onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
-              size={16}
-              spring="snappy"
-            />
-          </div>
-          <span
-            data-cell-role="stt"
-            className="text-[10px] tabular-nums font-mono font-medium px-1 rounded shrink-0 transition-colors"
-            style={{
-              backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
-              color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
-            }}
-          >
-            {String(rowIndex + 1).padStart(2, '0')}
-          </span>
+          {showSelectionCol && (
+            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+              <MorphCheckbox
+                checked={isChecked}
+                onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
+                size={16}
+                spring="snappy"
+              />
+            </div>
+          )}
+          {showRowNumber && (
+            <span
+              data-cell-role="stt"
+              className="text-[10px] tabular-nums font-mono font-medium px-1 rounded shrink-0 transition-colors"
+              style={{
+                backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
+                color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
+              }}
+            >
+              {String(rowIndex + 1).padStart(2, '0')}
+            </span>
+          )}
           <div className="min-w-0">
             <div className="font-bold text-[13px] truncate" style={{ color: 'var(--agv-text-main)' }}>
               {nodeTitle}
@@ -141,9 +152,9 @@ export const GridPhoneCard = memo(<T extends any>({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setIsExpanded((prev) => !prev);
+            onToggleExpand?.(rowKey, rowIndex);
           }}
-          className="p-1 rounded-md transition-colors hover:bg-[var(--agv-bg-hover)]"
+          className="p-1 rounded-md transition-colors hover:bg-[var(--agv-bg-hover)] cursor-pointer"
           style={{ color: 'var(--agv-text-muted)' }}
           aria-label={isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
         >
@@ -151,26 +162,32 @@ export const GridPhoneCard = memo(<T extends any>({
         </button>
       </div>
 
-      {/* Phần Mở Rộng Chi Tiết (Accordion Drawer) */}
+      {/* Phần Mở Rộng Chi Tiết (Accordion Drawer) - Chiều cao cố định chính xác 150px (height 140px + marginTop 10px) */}
       {isExpanded && (
         <div
-          className="mt-2.5 pt-2 border-t space-y-2 text-[11px]"
-          style={{ borderColor: 'var(--agv-border)' }}
+          style={{
+            height: '140px',
+            maxHeight: '140px',
+            marginTop: '10px',
+            boxSizing: 'border-box',
+            borderColor: 'var(--agv-border)',
+          }}
+          className="pt-2 border-t flex flex-col justify-between text-[11px] overflow-hidden"
         >
           {/* Khối Biểu đồ 12T dạng Thẻ tài chính 2 Cột (Financial Card Layout) */}
           <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider mb-1.5" style={{ color: 'var(--agv-text-muted)' }}>
+            <div className="text-[10px] uppercase font-bold tracking-wider mb-1" style={{ color: 'var(--agv-text-muted)' }}>
               Biểu đồ biến thiên 12 tháng:
             </div>
             <div
-              className="p-2.5 rounded-xl border flex items-center gap-2.5 overflow-hidden"
+              className="p-2 rounded-xl border flex items-center gap-2.5 overflow-hidden"
               style={{
                 backgroundColor: 'var(--agv-bg-subtle, var(--agv-bg-root))',
                 borderColor: 'var(--agv-border)',
               }}
             >
-              {/* Cột trái: Sóng Catmull-Rom spline uốn lượn sâu (cao 50px) */}
-              <div className="flex-1 min-w-0 h-[50px] flex items-center">
+              {/* Cột trái: Sóng Catmull-Rom spline uốn lượn sâu (cao 48px) */}
+              <div className="flex-1 min-w-0 h-[48px] flex items-center">
                 <TwelveMonthChartCell
                   values={monthStats.mVals}
                   minIdx={monthStats.minIdx}
@@ -179,12 +196,12 @@ export const GridPhoneCard = memo(<T extends any>({
                   maxVal={monthStats.maxVal}
                   avgVal={monthStats.avgVal}
                   surfaceTheme={surfaceTheme}
-                  height={50}
+                  height={48}
                 />
               </div>
 
               {/* Vạch ngăn cách dọc nhẹ giữa 2 cột */}
-              <div className="w-[1px] h-[46px] shrink-0" style={{ backgroundColor: 'var(--agv-border)' }} />
+              <div className="w-[1px] h-[44px] shrink-0" style={{ backgroundColor: 'var(--agv-border)' }} />
 
               {/* Cột phải: Bảng số liệu tóm tắt xếp tầng dọc gọn gàng */}
               <div className="w-[140px] shrink-0 flex flex-col justify-center gap-1 text-[11px] tabular-nums">

@@ -257,3 +257,83 @@ export function deleteCustomPreset(id: string): void {
     console.error('Không thể xóa theme tùy biến khỏi localStorage:', err);
   }
 }
+
+export interface ThemeSymmetryReport {
+  isSymmetric: boolean;
+  rootVarCount: number;
+  darkVarCount: number;
+  missingInDark: string[];
+  missingInRoot: string[];
+  matchedVars: {
+    name: string;
+    lightValue: string;
+    darkValue: string;
+    gridTokenTarget?: string;
+  }[];
+}
+
+/**
+ * Hàm kiểm tra tính đối xứng của biến CSS giữa :root (Light) và .dark (Dark),
+ * đồng thời đối chiếu ánh xạ sang các token Grid Engine.
+ */
+export function checkThemeSymmetry(rawCss: string): ThemeSymmetryReport {
+  const rootMatch = rawCss.match(/:root\s*\{([^}]+)\}/i);
+  const darkMatch = rawCss.match(/\.dark\s*\{([^}]+)\}/i) || rawCss.match(/\[data-theme-mode=["']?dark["']?\]\s*\{([^}]+)\}/i);
+
+  const rootVars = rootMatch ? extractCssVariables(rootMatch[1]) : {};
+  const darkVars = darkMatch ? extractCssVariables(darkMatch[1]) : {};
+
+  const allKeys = Array.from(new Set([...Object.keys(rootVars), ...Object.keys(darkVars)]));
+  const missingInDark: string[] = [];
+  const missingInRoot: string[] = [];
+  const matchedVars: ThemeSymmetryReport['matchedVars'] = [];
+
+  const TOKEN_MAP: Record<string, string> = {
+    background: '--agv-bg-root / --agv-bg-row',
+    foreground: '--agv-text-main',
+    card: '--agv-bg-header / --agv-bg-row-alt',
+    'card-foreground': '--agv-text-header',
+    popover: '--agv-bg-popup',
+    primary: '--agv-accent',
+    'primary-foreground': '--agv-accent-text',
+    secondary: '--agv-bg-selected',
+    muted: '--agv-bg-hover',
+    'muted-foreground': '--agv-text-muted',
+    accent: '--agv-bg-item-hover',
+    destructive: '--agv-danger',
+    border: '--agv-border',
+    input: '--agv-border-strong',
+    'chart-1': '--agv-success',
+    'chart-2': '--agv-warning',
+    'chart-3': '--agv-trend-up',
+  };
+
+  for (const k of allKeys) {
+    const hasInRoot = k in rootVars;
+    const hasInDark = k in darkVars;
+
+    if (!hasInDark) missingInDark.push(`--${k}`);
+    if (!hasInRoot) missingInRoot.push(`--${k}`);
+
+    if (hasInRoot && hasInDark) {
+      matchedVars.push({
+        name: `--${k}`,
+        lightValue: rootVars[k],
+        darkValue: darkVars[k],
+        gridTokenTarget: TOKEN_MAP[k],
+      });
+    }
+  }
+
+  const colorMissingInDark = missingInDark.filter(k => !k.includes('font') && !k.includes('shadow') && !k.includes('tracking') && !k.includes('spacing') && !k.includes('radius'));
+  const colorMissingInRoot = missingInRoot.filter(k => !k.includes('font') && !k.includes('shadow') && !k.includes('tracking') && !k.includes('spacing') && !k.includes('radius'));
+
+  return {
+    isSymmetric: colorMissingInDark.length === 0 && colorMissingInRoot.length === 0,
+    rootVarCount: Object.keys(rootVars).length,
+    darkVarCount: Object.keys(darkVars).length,
+    missingInDark,
+    missingInRoot,
+    matchedVars,
+  };
+}

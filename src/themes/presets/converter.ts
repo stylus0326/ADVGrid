@@ -106,8 +106,8 @@ ${selector} {
   --agv-border-strong: ${styles.border};
   --agv-bg-header: ${styles.card};
   --agv-bg-row: ${styles.background};
-  --agv-bg-row-alt: ${styles.card};
-  --agv-bg-hover: ${styles.muted};
+  --agv-bg-row-alt: ${styles.muted || styles.card};
+  --agv-bg-hover: ${styles.accent || styles.muted};
   --agv-bg-selected: ${styles.secondary};
   --agv-bg-popup: ${styles.popover};
   --agv-bg-control: ${styles.card};
@@ -118,6 +118,15 @@ ${selector} {
   --agv-text-muted: ${styles['muted-foreground'] || styles.foreground};
   --agv-text-subtle: ${styles['muted-foreground'] || styles.foreground};
   --agv-text-active: ${styles.primary};
+  --agv-success: ${styles['chart-1'] || styles.primary};
+  --agv-success-bg: color-mix(in srgb, ${styles['chart-1'] || styles.primary} 16%, transparent);
+  --agv-warning: ${styles['chart-2'] || styles.secondary};
+  --agv-warning-bg: color-mix(in srgb, ${styles['chart-2'] || styles.secondary} 16%, transparent);
+  --agv-danger: ${styles.destructive};
+  --agv-danger-bg: color-mix(in srgb, ${styles.destructive} 16%, transparent);
+  --agv-danger-hover: ${styles.destructive};
+  --agv-trend-up: ${styles['chart-3'] || styles.accent};
+  --agv-trend-down: ${styles.destructive};
   --scroll-thumb: ${styles.border};
   --scroll-thumb-hover: ${styles.primary};
 }

@@ -56,7 +56,7 @@ import {
 import { getDefaultFilterOpForColumn } from './FilterIcons';
 import { GridFloatingToolbar } from './GridFloatingToolbar';
 import { GridSettingsState, QueryGroup, DENSITY_MODES } from './floating/types';
-import { useGridLayoutMode, GridTabletHeader } from './responsive';
+import { useGridLayoutMode, GridTabletHeader, ResponsiveSortFilterModal } from './responsive';
 import {
   useColumnResize,
   useColumnAutoFit,
@@ -457,7 +457,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const actualRowHeight = isTabletMode
       ? 68
       : isPhoneMode
-      ? 88
+      ? 104
       : gridSettings.densityMode === DENSITY_MODES.COMPACT
       ? 28
       : rowHeight;
@@ -980,6 +980,14 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     // Checklist Popup Ref
     const checklistPopupRef = useRef<AdvChecklistFilterPopupRef | null>(null);
+
+    // Responsive Sort & Filter Modal cho Tablet & Phone
+    const [isSortFilterModalOpen, setIsSortFilterModalOpen] = useState(false);
+    const hasActiveFilterOrSort = Boolean(
+      sortConfig ||
+      (currentQuickFilterText && currentQuickFilterText.trim().length > 0) ||
+      (columnFilters && Object.values(columnFilters).some((f) => f && f.val !== undefined && f.val !== ''))
+    );
 
     // Mở popup lọc checklist cho cột (Zero re-render: chỉ popup mở độc lập)
     // Lắng nghe đóng tất cả popups để đảm bảo chỉ có duy nhất 1 popup hiển thị trên Grid
@@ -1908,6 +1916,50 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       autoScrolling,
     });
 
+    // Anchor Row Preservation: Tự động bảo toàn vị trí dòng đang đọc khi chuyển đổi qua lại giữa PC, Tablet và Phone
+    const prevActiveModeRef = useRef<string>(activeMode);
+    const prevActualRowHeightRef = useRef<number>(actualRowHeight);
+
+    useLayoutEffect(() => {
+      const prevMode = prevActiveModeRef.current;
+      const prevRowH = prevActualRowHeightRef.current;
+
+      if (prevMode !== activeMode && prevRowH > 0 && actualRowHeight > 0) {
+        const scrollEl = scrollContainerRef.current;
+        const currentScrollTop = scrollEl ? scrollEl.scrollTop : lastScrollTopRef.current;
+
+        // 1. Xác định chỉ số dòng đang ở đỉnh khung nhìn trước khi đổi mode
+        const anchorRowIndex = Math.max(0, Math.floor(currentScrollTop / prevRowH));
+
+        if (anchorRowIndex > 0) {
+          // 2. Tính toán vị trí cuộn tương ứng với chiều cao dòng của mode mới
+          const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || 600));
+          const targetScrollTop = Math.min(maxScroll, anchorRowIndex * actualRowHeight);
+
+          // 3. Khôi phục ngay lập tức trước khi paint (zero flicker)
+          if (scrollEl) {
+            scrollEl.scrollTop = targetScrollTop;
+          }
+          lastScrollTopRef.current = targetScrollTop;
+
+          // 4. Đồng bộ hóa ChunkWindow để render đúng các chunk chứa dòng anchor
+          if (totalChunks > 0) {
+            const chunkPixelHeight = chunkSize * actualRowHeight;
+            const rawStart = Math.floor(targetScrollTop / chunkPixelHeight);
+            const rawEnd = Math.floor((targetScrollTop + (viewportHeight || 600)) / chunkPixelHeight);
+            const start = Math.max(0, rawStart - overscanChunks);
+            const end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
+
+            activeChunkWindowRef.current = { start, end };
+            setChunkWindow({ start, end });
+          }
+        }
+      }
+
+      prevActiveModeRef.current = activeMode;
+      prevActualRowHeightRef.current = actualRowHeight;
+    }, [activeMode, actualRowHeight, chunkSize, overscanChunks, totalChunks, totalContentHeight, viewportHeight]);
+
     // Imperative Ref API
     useImperativeHandle(
       ref,
@@ -1978,6 +2030,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                 surfaceTheme={surfaceTheme}
                 showRowNumber={showRowNumber}
                 showSelectionCol={showSelectionCol}
+                onOpenSortFilter={() => setIsSortFilterModalOpen(true)}
+                hasActiveFilterOrSort={hasActiveFilterOrSort}
               />
             </div>
           ) : isPhoneMode ? (
@@ -1990,9 +2044,27 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
               }}
             >
               <span>DANH SÁCH DỮ LIỆU ({totalRows.toLocaleString()} DÒNG)</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--agv-bg-subtle)', color: 'var(--agv-accent)' }}>
-                Phone View
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSortFilterModalOpen(true)}
+                  className="min-h-[28px] px-2.5 py-0.5 rounded border text-[11px] font-semibold cursor-pointer transition-colors"
+                  style={{
+                    backgroundColor: hasActiveFilterOrSort
+                      ? 'var(--agv-accent)'
+                      : 'var(--agv-bg-root)',
+                    color: hasActiveFilterOrSort
+                      ? 'var(--agv-accent-text, #ffffff)'
+                      : 'var(--agv-text-main)',
+                    borderColor: 'var(--agv-border)',
+                  }}
+                >
+                  Lọc & Sắp Xếp
+                </button>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--agv-bg-subtle)', color: 'var(--agv-accent)' }}>
+                  Phone View
+                </span>
+              </div>
             </div>
           ) : (
             <>
@@ -2335,6 +2407,22 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           matchFilterValue={effectiveMatchFilterValue}
           onApply={handleApplyChecklistFilter}
           onClear={handleClearChecklistFilter}
+        />
+
+        {/* Responsive Sort & Filter Modal cho Tablet & Phone */}
+        <ResponsiveSortFilterModal
+          isOpen={isSortFilterModalOpen}
+          onClose={() => setIsSortFilterModalOpen(false)}
+          columns={flatColumns}
+          totalRows={totalRows}
+          sortConfig={sortConfig}
+          onSortChange={onSortChange}
+          searchQuery={currentQuickFilterText}
+          onSearchQueryChange={handleQuickFilterChange}
+          columnFilters={columnFilters}
+          onColumnFilterChange={onColumnFilterChange}
+          onClearAllColumnFilters={onClearAllColumnFilters}
+          surfaceTheme={surfaceTheme}
         />
 
         {/* Floating Toolbar (Right-docked, 6 Buttons, 4 Popups, strictly bounded inside Grid) */}

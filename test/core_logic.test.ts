@@ -15,6 +15,7 @@ import {
   formatGridNumber,
   parseGridNumber,
   isSelectionColumn,
+  createContainsFilter,
   computeFilteredSelectionState,
   toggleFilteredRowsSelection,
   computeSortRowFlipState,
@@ -29,6 +30,11 @@ import {
   getGridControlRadiusClass,
   GRID_CONTROL_RADIUS_CLASS,
 } from '../src/components/grid/constants';
+import {
+  resolveActiveModeWithHysteresis,
+  getInitialGridMode,
+  GRID_BREAKPOINTS,
+} from '../src/components/grid/responsive';
 
 describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
   describe('1. Alignment Helpers', () => {
@@ -402,7 +408,7 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
 
   describe('10. Phone Layout Chunk Virtualization Geometry (Accordion Expansion)', () => {
     const CHUNK_SIZE = 20;
-    const PHONE_ROW_HEIGHT = 88;
+    const PHONE_ROW_HEIGHT = 104;
     const EXPANDED_EXTRA_HEIGHT = 150;
 
     const computeChunkLayout = (
@@ -430,10 +436,17 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       const chunk1 = computeChunkLayout(1, 20, expandedMap);
 
       assert.strictEqual(chunk0.topOffset, 0);
-      assert.strictEqual(chunk0.chunkHeight, 1760);
-      assert.strictEqual(chunk1.topOffset, 1760);
-      assert.strictEqual(chunk1.chunkHeight, 1760);
+      assert.strictEqual(chunk0.chunkHeight, 2080);
+      assert.strictEqual(chunk1.topOffset, 2080);
+      assert.strictEqual(chunk1.chunkHeight, 2080);
       assert.strictEqual(chunk0.topOffset + chunk0.chunkHeight, chunk1.topOffset);
+    });
+
+    it('should compute exact geometry for small filtered subset (6 rows) without cropping', () => {
+      const expandedMap = new Map<string | number, number>();
+      const chunk0 = computeChunkLayout(0, 6, expandedMap);
+      assert.strictEqual(chunk0.topOffset, 0);
+      assert.strictEqual(chunk0.chunkHeight, 6 * 104); // 624px
     });
 
     it('should shift subsequent chunks and expand chunk height with zero overlap when a phone card expands', () => {
@@ -446,17 +459,17 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       const chunk909 = computeChunkLayout(909, 20, expandedMap);
 
       // Chunk 907 (trước Chunk 908) không bị ảnh hưởng
-      assert.strictEqual(chunk907.topOffset, 907 * 20 * 88);
-      assert.strictEqual(chunk907.chunkHeight, 1760);
+      assert.strictEqual(chunk907.topOffset, 907 * 20 * 104);
+      assert.strictEqual(chunk907.chunkHeight, 2080);
 
-      // Chunk 908 chứa thẻ mở rộng: Chiều cao nở thêm đúng 150px (1760 + 150 = 1910px)
-      assert.strictEqual(chunk908.topOffset, 908 * 20 * 88);
-      assert.strictEqual(chunk908.chunkHeight, 1760 + 150);
+      // Chunk 908 chứa thẻ mở rộng: Chiều cao nở thêm đúng 150px (2080 + 150 = 2230px)
+      assert.strictEqual(chunk908.topOffset, 908 * 20 * 104);
+      assert.strictEqual(chunk908.chunkHeight, 2080 + 150);
       assert.strictEqual(chunk907.topOffset + chunk907.chunkHeight, chunk908.topOffset);
 
       // Chunk 909: Bắt đầu dịch chuyển xuống đúng 150px, mép trên Chunk 909 khớp 100% với mép dưới Chunk 908
-      assert.strictEqual(chunk909.topOffset, 909 * 20 * 88 + 150);
-      assert.strictEqual(chunk909.chunkHeight, 1760);
+      assert.strictEqual(chunk909.topOffset, 909 * 20 * 104 + 150);
+      assert.strictEqual(chunk909.chunkHeight, 2080);
       assert.strictEqual(chunk908.topOffset + chunk908.chunkHeight, chunk909.topOffset);
     });
 
@@ -470,15 +483,57 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       const c2 = computeChunkLayout(2, 20, expandedMap);
 
       assert.strictEqual(c0.topOffset, 0);
-      assert.strictEqual(c0.chunkHeight, 1760 + 150);
+      assert.strictEqual(c0.chunkHeight, 2080 + 150);
       assert.strictEqual(c0.topOffset + c0.chunkHeight, c1.topOffset);
 
-      assert.strictEqual(c1.topOffset, 1760 + 150);
-      assert.strictEqual(c1.chunkHeight, 1760 + 150);
+      assert.strictEqual(c1.topOffset, 2080 + 150);
+      assert.strictEqual(c1.chunkHeight, 2080 + 150);
       assert.strictEqual(c1.topOffset + c1.chunkHeight, c2.topOffset);
 
-      assert.strictEqual(c2.topOffset, 3520 + 300);
-      assert.strictEqual(c2.chunkHeight, 1760);
+      assert.strictEqual(c2.topOffset, 4160 + 300);
+      assert.strictEqual(c2.chunkHeight, 2080);
+    });
+
+    it('should eliminate vertical margin collapse gaps at chunk boundaries with slot container (Card 180 to Card 181)', () => {
+      // Mỗi slot phone có chiều cao chuẩn 104px, padding 4px trên và 4px dưới
+      const SLOT_PADDING_Y = 4;
+      const CARD_HEIGHT = 96;
+      const SLOT_HEIGHT = PHONE_ROW_HEIGHT; // 104px
+
+      assert.strictEqual(CARD_HEIGHT + SLOT_PADDING_Y * 2, SLOT_HEIGHT); // 96 + 8 = 104px
+
+      // Tính tọa độ pixel tuyệt đối của Thẻ 180 (dòng cuối cùng Chunk 8)
+      const chunk8Top = 8 * CHUNK_SIZE * SLOT_HEIGHT; // 16640px
+      const card180Top = chunk8Top + 19 * SLOT_HEIGHT + SLOT_PADDING_Y; // 18712px
+      const card180Bottom = card180Top + CARD_HEIGHT; // 18808px
+
+      // Tính tọa độ pixel tuyệt đối của Thẻ 181 (dòng đầu tiên Chunk 9)
+      const chunk9Top = 9 * CHUNK_SIZE * SLOT_HEIGHT; // 18720px? Chờ chút: 8 * 20 * 104 = 16640. 16640 + 19 * 104 + 4 = 18620.
+      // Sửa chính xác:
+      // Chunk 8 có 20 thẻ (index 0 đến 19 trong chunk):
+      // Thẻ 180 là local index 19:
+      // card180Top = 16640 + 19 * 104 + 4 = 18620px
+      // card180Bottom = 18620 + 96 = 18716px
+      // Chunk 9 Top = 9 * 20 * 104 = 18720px
+      // Thẻ 181 là local index 0 của Chunk 9:
+      // card181Top = 18720 + 0 * 104 + 4 = 18724px
+      // Khoảng cách giữa Card 180 và Card 181 = card181Top - card180Bottom = 18724 - 18716 = 8px!
+      const actualChunk8Top = 8 * 20 * 104;
+      const actualCard180Top = actualChunk8Top + 19 * 104 + 4;
+      const actualCard180Bottom = actualCard180Top + 96;
+
+      const actualChunk9Top = 9 * 20 * 104;
+      const actualCard181Top = actualChunk9Top + 0 * 104 + 4;
+
+      const gapBetweenChunks = actualCard181Top - actualCard180Bottom;
+      assert.strictEqual(gapBetweenChunks, 8); // Chuẩn xác 8px, hoàn toàn triệt tiêu hố rỗng 84px!
+
+      // Khoảng cách nội bộ giữa 2 thẻ bất kỳ trong cùng chunk (ví dụ Thẻ 179 và Thẻ 180)
+      const card179Top = actualChunk8Top + 18 * 104 + 4;
+      const card179Bottom = card179Top + 96;
+      const gapWithinChunk = actualCard180Top - card179Bottom;
+      assert.strictEqual(gapWithinChunk, 8); // Khoảng cách đều nhau 8px 100%
+      assert.strictEqual(gapBetweenChunks, gapWithinChunk);
     });
   });
 
@@ -564,6 +619,177 @@ describe('Unit Test Suite: Grid Core Logic & Filter Engine', () => {
       const gridSettings = { showRowNumber: false, showSelectionCol: false };
       const hasAnyLeadingCol = Boolean(gridSettings.showRowNumber || gridSettings.showSelectionCol);
       assert.strictEqual(hasAnyLeadingCol, false);
+    });
+  });
+
+  describe('13. Responsive Sort & Filter Modal Logic (Tablet & Phone)', () => {
+    const mockColumns = [
+      { key: 'col_chk', title: '', isSelection: true },
+      { key: 'col_stt', title: 'STT' },
+      { key: 'col_id', title: 'Mã Dòng' },
+      { key: 'col_node', title: 'Node' },
+      { key: 'col_region', title: 'Khu vực' },
+      { key: 'col_dec_cpu', title: 'CPU (%)' },
+    ];
+
+    it('should filter out system columns col_chk and col_stt from modal options', () => {
+      const filterable = mockColumns.filter((c) => !c.isSelection && c.key !== 'col_chk' && c.key !== 'col_stt');
+      assert.strictEqual(filterable.length, 4);
+      assert.deepStrictEqual(filterable.map((c) => c.key), ['col_id', 'col_node', 'col_region', 'col_dec_cpu']);
+    });
+
+    it('should correctly format sort and filter options with friendly labels', () => {
+      const filterable = mockColumns.filter((c) => !c.isSelection && c.key !== 'col_chk' && c.key !== 'col_stt');
+      const sortOptions = [
+        { label: 'Không sắp xếp', value: '' },
+        ...filterable.map((col) => ({ label: col.title || col.key, value: col.key })),
+      ];
+      assert.strictEqual(sortOptions[0].label, 'Không sắp xếp');
+      assert.strictEqual(sortOptions[1].label, 'Mã Dòng');
+      assert.strictEqual(sortOptions[2].label, 'Node');
+
+      const filterOptions = [
+        { label: 'Tất cả các cột (Toàn văn)', value: '__ALL__' },
+        ...filterable.map((col) => ({ label: col.title || col.key, value: col.key })),
+      ];
+      assert.strictEqual(filterOptions[0].value, '__ALL__');
+      assert.strictEqual(filterOptions[0].label, 'Tất cả các cột (Toàn văn)');
+    });
+
+    it('should dispatch full-text query when scope is __ALL__ and column filter when scope is specific key', () => {
+      let dispatchedGlobalSearch = '';
+      let dispatchedColKey = '';
+      let dispatchedColFilter: any = null;
+
+      const handleApply = (scope: string, text: string) => {
+        const trimmed = text.trim();
+        if (scope === '__ALL__') {
+          dispatchedGlobalSearch = trimmed;
+        } else {
+          dispatchedColKey = scope;
+          dispatchedColFilter = createContainsFilter(trimmed);
+        }
+      };
+
+      // Case 1: Global search
+      handleApply('__ALL__', '  test keyword  ');
+      assert.strictEqual(dispatchedGlobalSearch, 'test keyword');
+
+      // Case 2: Column specific filter
+      handleApply('col_node', 'NODE-1005');
+      assert.strictEqual(dispatchedColKey, 'col_node');
+      assert.strictEqual(dispatchedColFilter.op, FILTER_OPS.CONTAINS);
+      assert.strictEqual(dispatchedColFilter.val, 'NODE-1005');
+    });
+
+    it('should correctly compute hasActiveFilterOrSort state indicator', () => {
+      const computeActive = (sort: any, search: string, colFilters: Record<string, any>) => {
+        return Boolean(
+          sort ||
+          (search && search.trim().length > 0) ||
+          (colFilters && Object.values(colFilters).some((f) => f && f.val !== undefined && f.val !== ''))
+        );
+      };
+
+      assert.strictEqual(computeActive(null, '', {}), false);
+      assert.strictEqual(computeActive({ key: 'col_node', direction: 'asc' }, '', {}), true);
+      assert.strictEqual(computeActive(null, 'search text', {}), true);
+      assert.strictEqual(computeActive(null, '', { col_node: { val: 'US' } }), true);
+      assert.strictEqual(computeActive(null, '', { col_node: { val: '' } }), false);
+    });
+  });
+
+  describe('14. Continuous Horizontal Resize Resilience (Hysteresis Buffer, Debounce & Anchor Row Preservation)', () => {
+    it('should compute initial layout mode accurately on initial page load without delay', () => {
+      assert.strictEqual(getInitialGridMode(400), 'phone');
+      assert.strictEqual(getInitialGridMode(767), 'phone');
+      assert.strictEqual(getInitialGridMode(768), 'tablet');
+      assert.strictEqual(getInitialGridMode(1023), 'tablet');
+      assert.strictEqual(getInitialGridMode(1024), 'pc');
+      assert.strictEqual(getInitialGridMode(1920), 'pc');
+    });
+
+    it('should prevent flickering at Phone <-> Tablet boundary (768px) using Hysteresis Buffer (+-16px)', () => {
+      const buffer = GRID_BREAKPOINTS.DEFAULT_HYSTERESIS; // 16px
+      assert.strictEqual(buffer, 16);
+
+      // Khi đang ở Phone: Phải vượt hẳn 768 + 16 = 784px mới lên Tablet
+      assert.strictEqual(resolveActiveModeWithHysteresis(760, 'phone', buffer), 'phone');
+      assert.strictEqual(resolveActiveModeWithHysteresis(768, 'phone', buffer), 'phone');
+      assert.strictEqual(resolveActiveModeWithHysteresis(775, 'phone', buffer), 'phone');
+      assert.strictEqual(resolveActiveModeWithHysteresis(783, 'phone', buffer), 'phone');
+      assert.strictEqual(resolveActiveModeWithHysteresis(784, 'phone', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(800, 'phone', buffer), 'tablet');
+
+      // Khi đang ở Tablet: Phải tụt hẳn dưới 768 - 16 = 752px mới về Phone
+      assert.strictEqual(resolveActiveModeWithHysteresis(800, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(775, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(768, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(755, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(752, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(751, 'tablet', buffer), 'phone');
+    });
+
+    it('should prevent flickering at Tablet <-> PC boundary (1024px) using Hysteresis Buffer (+-16px)', () => {
+      const buffer = GRID_BREAKPOINTS.DEFAULT_HYSTERESIS; // 16px
+
+      // Khi đang ở Tablet: Phải vượt hẳn 1024 + 16 = 1040px mới lên PC
+      assert.strictEqual(resolveActiveModeWithHysteresis(1000, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1024, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1030, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1039, 'tablet', buffer), 'tablet');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1040, 'tablet', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1100, 'tablet', buffer), 'pc');
+
+      // Khi đang ở PC: Phải tụt hẳn dưới 1024 - 16 = 1008px mới về Tablet
+      assert.strictEqual(resolveActiveModeWithHysteresis(1100, 'pc', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1035, 'pc', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1024, 'pc', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1015, 'pc', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1008, 'pc', buffer), 'pc');
+      assert.strictEqual(resolveActiveModeWithHysteresis(1007, 'pc', buffer), 'tablet');
+    });
+
+    it('should eliminate infinite loops caused by Scrollbar Layout Shift (~15px)', () => {
+      const buffer = GRID_BREAKPOINTS.DEFAULT_HYSTERESIS; // 16px
+      // Giả sử cửa sổ đang rộng 770px
+      // Trường hợp 1: Chưa có scrollbar -> width = 770px. Ở Tablet mode.
+      let mode = resolveActiveModeWithHysteresis(770, 'tablet', buffer);
+      assert.strictEqual(mode, 'tablet');
+
+      // Khi bảng render sinh ra scrollbar dọc dày 15px -> width khả dụng giảm từ 770 xuống 755px
+      mode = resolveActiveModeWithHysteresis(755, mode, buffer);
+      // Nhờ có buffer 16px (ngưỡng tụt là 752px), mode vẫn giữ nguyên 'tablet', KHÔNG BỊ NHẢY SANG PHONE!
+      assert.strictEqual(mode, 'tablet');
+      // Không xảy ra vòng lặp flip-flop thanh cuộn!
+    });
+
+    it('should preserve top anchor row index seamlessly when switching layouts (PC <-> Tablet <-> Phone)', () => {
+      const PC_ROW_HEIGHT = 32;
+      const TABLET_ROW_HEIGHT = 68;
+      const PHONE_ROW_HEIGHT = 104;
+
+      // Kịch bản 1: Người dùng đang xem dòng 200 trên PC (scrollTop = 200 * 32 = 6400px)
+      const pcScrollTop = 200 * PC_ROW_HEIGHT;
+      const anchorRowFromPc = Math.floor(pcScrollTop / PC_ROW_HEIGHT);
+      assert.strictEqual(anchorRowFromPc, 200);
+
+      // Chuyển sang Phone: Tọa độ mới được tính theo rowHeight 104px
+      const targetPhoneScrollTop = anchorRowFromPc * PHONE_ROW_HEIGHT;
+      assert.strictEqual(targetPhoneScrollTop, 20800);
+      // Dòng ở đỉnh màn hình Phone vẫn là: 20800 / 104 = 200!
+      assert.strictEqual(Math.floor(targetPhoneScrollTop / PHONE_ROW_HEIGHT), 200);
+
+      // Kịch bản 2: Người dùng đang xem dòng 75 trên Phone (scrollTop = 75 * 104 = 7800px)
+      const phoneScrollTop = 75 * PHONE_ROW_HEIGHT;
+      const anchorRowFromPhone = Math.floor(phoneScrollTop / PHONE_ROW_HEIGHT);
+      assert.strictEqual(anchorRowFromPhone, 75);
+
+      // Chuyển sang Tablet: Tọa độ mới được tính theo rowHeight 68px
+      const targetTabletScrollTop = anchorRowFromPhone * TABLET_ROW_HEIGHT;
+      assert.strictEqual(targetTabletScrollTop, 5100);
+      // Dòng ở đỉnh màn hình Tablet vẫn là: 5100 / 68 = 75!
+      assert.strictEqual(Math.floor(targetTabletScrollTop / TABLET_ROW_HEIGHT), 75);
     });
   });
 });

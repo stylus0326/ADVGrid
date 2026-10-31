@@ -24,7 +24,7 @@ export const GridPhoneCard = memo(<T extends any>({
   row,
   rowIndex,
   rowKey,
-  rowHeight: _rowHeight,
+  rowHeight = 104,
   isSelected,
   isChecked,
   isExpanded = false,
@@ -72,14 +72,31 @@ export const GridPhoneCard = memo(<T extends any>({
   // Thống kê 12 tháng chuẩn hệ thống (tái sử dụng O(1) qua WeakMap)
   const monthStats = getOrComputeMonthStats(row);
 
+  const slotHeight = isExpanded ? rowHeight + 150 : rowHeight;
+  const cardHeight = slotHeight - 8;
+
   return (
-    <article
-      onClick={() => onSelectRow?.(rowIndex, row)}
-      data-row-idx={rowIndex}
-      data-card-focused={isSelected ? 'true' : undefined}
-      data-card-checked={isChecked ? 'true' : undefined}
-      className="agv-phone-card m-2 rounded-xl border p-3 text-xs select-none shadow-2xs transition-colors cursor-default"
+    <div
+      style={{
+        height: `${slotHeight}px`,
+        maxHeight: `${slotHeight}px`,
+        padding: '4px 8px',
+        boxSizing: 'border-box',
+      }}
+      className="agv-phone-card-slot w-full shrink-0"
     >
+      <article
+        onClick={() => onSelectRow?.(rowIndex, row)}
+        data-row-idx={rowIndex}
+        data-card-focused={isSelected ? 'true' : undefined}
+        data-card-checked={isChecked ? 'true' : undefined}
+        style={{
+          height: `${cardHeight}px`,
+          maxHeight: `${cardHeight}px`,
+          boxSizing: 'border-box',
+        }}
+        className="agv-phone-card w-full rounded-xl border px-3 py-2 text-xs select-none shadow-2xs transition-colors cursor-default flex flex-col justify-between overflow-hidden"
+      >
       {/* Header của Card: Checkbox + STT + Tên + Badge Status (Gỡ bỏ avatar theo yêu cầu) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -130,7 +147,7 @@ export const GridPhoneCard = memo(<T extends any>({
 
       {/* Dòng Tóm tắt Chỉ số (Key Metrics Summary) */}
       <div
-        className="mt-2.5 pt-2 border-t flex items-center justify-between tabular-nums text-[11px]"
+        className="mt-1 pt-1.5 border-t flex items-center justify-between tabular-nums text-[11px]"
         style={{ borderColor: 'var(--agv-border)' }}
       >
         <div className="flex items-center gap-2">
@@ -246,6 +263,7 @@ export const GridPhoneCard = memo(<T extends any>({
         </div>
       )}
     </article>
+    </div>
   );
 });
 

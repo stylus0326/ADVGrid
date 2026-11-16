@@ -6,8 +6,11 @@ import React, {
   useCallback,
   memo,
 } from 'react';
-import { createPortal } from 'react-dom';
-import { Check, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { MorphChevronIcon } from '../MorphIcons';
+import { AdvOverlayScroll } from '../AdvOverlayScroll';
+import { AdvButton } from '../AdvButton';
+import { AdvAnchoredPopover, DEFAULT_POPOVER_IGNORE_SELECTORS } from '../AdvPopover';
 import { ensureDatePickerStyles } from './datePickerStyles';
 import { getGridControlRadiusClass } from '../../grid/constants';
 import { SURFACE_THEMES, GridTheme } from '../../../themes';
@@ -21,11 +24,10 @@ import {
   ROMAN_QUARTERS,
   parseDMYToDate,
   parseDateToTimestamp,
-  computePresetDateRange,
+  getISOWeekAndYear,
+  getISOWeekDateRange,
   normalizePresetList,
   getPresetLabel,
-  usePopupDismiss,
-  computeDropdownMenuCoords,
   resolveMinYearFromContext,
 } from './datePickerUtils';
 
@@ -44,12 +46,14 @@ export interface AdvDatePresetSelectProps {
   maxYear?: number;
 }
 
+const DEFAULT_VISIBLE_WEEKS = 16;
+
 export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
   value,
   defaultOpen = false,
   onSelect,
   dateAnalysis,
-  label = 'Mốc nhanh:',
+  label = 'Mốc thời gian:',
   theme = '',
   size = 'default',
   hideClear = false,
@@ -63,21 +67,15 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
   }, []);
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [weeksExpanded, setWeeksExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setWeeksExpanded(false);
+    }
+  }, [isOpen]);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
-    bottom?: number;
-    width: number;
-    maxHeight: number;
-    isFlipUp?: boolean;
-  }>({
-    top: 0,
-    left: 0,
-    width: 320,
-    maxHeight: 360,
-  });
 
   const [internalValue, setInternalValue] = useState<string>(value || '');
 
@@ -99,39 +97,54 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
     );
   }, [activeValue]);
 
-  const updateCoords = useCallback(() => {
-    const next = computeDropdownMenuCoords(triggerRef.current, 360, 320);
-    setCoords((prev) =>
-      prev.top === next.top &&
-      prev.left === next.left &&
-      prev.width === next.width &&
-      prev.maxHeight === next.maxHeight
-        ? prev
-        : next
-    );
-  }, []);
-
   const closeMenu = useCallback(() => setIsOpen(false), []);
 
   const toggleOpen = useCallback(() => {
     setIsOpen((prev) => {
       if (!prev) {
-        setCoords(computeDropdownMenuCoords(triggerRef.current, 360, 320));
-        const isNested = Boolean(triggerRef.current?.closest('.agv-multi-filter-popup'));
-        window.dispatchEvent(
-          new CustomEvent('agv-close-all-popups', {
-            detail: {
-              except: isNested ? 'multi-filter' : 'datepicker',
-              source: 'datepicker-preset',
-            },
-          })
+        // Khi nằm trong portal của DatePicker/DateRangePicker, popup cha đã xử lý đóng các popup ngoài trước đó;
+        // phát lại `except: 'datepicker'` từ trong portal (ngoài DOM của .agv-multi-filter-popup) sẽ làm đóng mất AdvMultiFilterPopup.
+        const isInsideCalendarPopover = Boolean(
+          triggerRef.current?.closest('.agv-calendar-popover, .agv-daterange-popover')
         );
+        if (!isInsideCalendarPopover) {
+          const isNested = Boolean(triggerRef.current?.closest('.agv-multi-filter-popup'));
+          window.dispatchEvent(
+            new CustomEvent('agv-close-all-popups', {
+              detail: {
+                except: isNested ? 'multi-filter' : 'datepicker',
+                source: 'datepicker-preset',
+              },
+            })
+          );
+        }
       }
       return !prev;
     });
   }, []);
 
-  usePopupDismiss(isOpen, closeMenu, updateCoords, triggerRef, dropdownRef);
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleCloseAll = (e: Event) => {
+      const ce = e as CustomEvent;
+      const isNested = Boolean(triggerRef.current?.closest('.agv-multi-filter-popup'));
+      if (isNested && ce.detail?.except === 'multi-filter') {
+        return;
+      }
+      if (ce.detail?.except === 'datepicker') {
+        return;
+      }
+      if (ce.detail?.except === 'focus-cell' && triggerRef.current) {
+        const cellBox = triggerRef.current.closest('.agv-filter-cell-box');
+        if (cellBox && (cellBox.contains(document.activeElement) || cellBox === document.activeElement)) {
+          return;
+        }
+      }
+      setIsOpen(false);
+    };
+    window.addEventListener('agv-close-all-popups', handleCloseAll);
+    return () => window.removeEventListener('agv-close-all-popups', handleCloseAll);
+  }, [isOpen]);
 
   const currentRealYear = useMemo(() => new Date().getFullYear(), []);
 
@@ -159,7 +172,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
 
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
 
-  const toggleExpandYear = useCallback((y: number, e: React.MouseEvent) => {
+  const toggleExpandYear = useCallback((y: number, e: React.SyntheticEvent) => {
     e.stopPropagation();
     setExpandedYears((prev) => ({ ...prev, [y]: !prev[y] }));
   }, []);
@@ -190,7 +203,8 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
         (id) =>
           id.startsWith('data_year_') ||
           id.startsWith('data_quarter_') ||
-          id.startsWith('data_month_')
+          id.startsWith('data_month_') ||
+          id.startsWith('data_week_')
       );
 
       let baseList =
@@ -281,7 +295,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
     [activeValue, onSelect]
   );
 
-  const { dayItems, rangeItems, yearsData } = useMemo(() => {
+  const { weekItems, yearsData } = useMemo(() => {
     const yearCounts = dateAnalysis?.yearCounts || {};
     const yearMonthCounts = dateAnalysis?.yearMonthCounts || {};
     const yearQuarterCounts = dateAnalysis?.yearQuarterCounts || {};
@@ -293,48 +307,18 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
           Object.keys(presetCounts).length > 0)
     );
 
-    const rawDays = [
-      { id: 'today', label: 'Hôm nay', count: presetCounts.today },
-      { id: 'yesterday', label: 'Hôm qua', count: presetCounts.yesterday },
-      { id: 'mon', label: 'Thứ 2', count: presetCounts.mon },
-      {
-        id: 'sat_prev_week',
-        label: 'Thứ 7 tuần trước',
-        count: presetCounts.sat_prev_week,
-      },
-      {
-        id: 'sun_prev_week',
-        label: 'Chủ nhật tuần trước',
-        count: presetCounts.sun_prev_week,
-      },
-    ];
-    const filteredDays = rawDays.filter((item) => {
-      const r = computePresetDateRange(item.id);
+    const { week: currentIsoWeek, year: currentIsoYear } = getISOWeekAndYear(
+      new Date()
+    );
+    const weeks: Array<{ id: string; label: string }> = [];
+    for (let w = currentIsoWeek; w >= 1; w--) {
+      const id = `data_week_${currentIsoYear}_w${w}`;
+      const r = getISOWeekDateRange(currentIsoYear, w);
       const fromTs = r.from ? parseDateToTimestamp(r.from, false) : null;
       const toTs = r.to ? parseDateToTimestamp(r.to, true) : null;
-      if (!isRangeOverlapping(fromTs, toTs)) return false;
-      if (hasAnalysis) {
-        return selectedIds.has(item.id) || (item.count || 0) > 0;
-      }
-      return true;
-    });
-
-    const rawRanges = [
-      { id: 'this_week', label: 'Tuần này', count: presetCounts.this_week },
-      { id: 'last_week', label: 'Tuần trước', count: presetCounts.last_week },
-      { id: 'this_month', label: 'Tháng này', count: presetCounts.this_month },
-      { id: 'this_quarter', label: 'Quý này', count: presetCounts.this_quarter },
-    ];
-    const filteredRanges = rawRanges.filter((item) => {
-      const r = computePresetDateRange(item.id);
-      const fromTs = r.from ? parseDateToTimestamp(r.from, false) : null;
-      const toTs = r.to ? parseDateToTimestamp(r.to, true) : null;
-      if (!isRangeOverlapping(fromTs, toTs)) return false;
-      if (hasAnalysis) {
-        return selectedIds.has(item.id) || (item.count || 0) > 0;
-      }
-      return true;
-    });
+      if (!isRangeOverlapping(fromTs, toTs)) continue;
+      weeks.push({ id, label: String(w) });
+    }
 
     let yearsList: number[] = [];
     if (dateAnalysis && Object.keys(yearCounts).length > 0) {
@@ -418,8 +402,7 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
       .filter((yItem) => yItem.quarters.length > 0 || yItem.months.length > 0);
 
     return {
-      dayItems: filteredDays,
-      rangeItems: filteredRanges,
+      weekItems: weeks,
       yearsData: years,
     };
   }, [
@@ -460,15 +443,20 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
       <button
         ref={triggerRef}
         type="button"
+        data-agv-popover-trigger="true"
         onClick={toggleOpen}
         className={`agv-custom-select-trigger agv-preset-trigger ${getGridControlRadiusClass()} ${
           isOpen ? 'is-open' : ''
-        } ${size === 'sm' ? 'is-sm' : ''} ${
+        } ${size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm'} ${
           activeValue ? 'has-selected' : ''
         } ${themeCls}`}
       >
         <div className="agv-custom-select-trigger-content min-w-0 flex-1 text-left">
-          <span className="agv-custom-select-trigger-label block truncate font-medium">
+          <span
+            className={`agv-custom-select-trigger-label block truncate font-normal ${
+              activeValue ? 'text-foreground' : 'text-muted-foreground'
+            }`}
+          >
             {currentItemLabel || 'Chọn mốc...'}
           </span>
         </div>
@@ -497,117 +485,100 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
         </div>
       </button>
 
-      {isOpen &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            style={{
-              position: 'fixed',
-              ...(coords.isFlipUp
-                ? { bottom: `${coords.bottom}px`, top: 'auto' }
-                : { top: `${coords.top}px`, bottom: 'auto' }),
-              left: `${coords.left}px`,
-              minWidth: '320px',
-              width: `${Math.max(coords.width, 320)}px`,
-              maxHeight: `${coords.maxHeight}px`,
-              zIndex: 999999999,
-              boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
+      <AdvAnchoredPopover
+        isOpen={isOpen}
+        anchorEl={triggerRef.current}
+        onClose={closeMenu}
+        placement="bottom-start"
+        showArrow={true}
+        offset={10}
+        width={Math.max(triggerRef.current?.offsetWidth || 0, 320)}
+        minWidth={320}
+        paddingClassName="p-0"
+        contentClassName="text-xs agv-preset-dropdown-menu agv-portal-dropdown"
+        zIndex={999999999}
+        theme={theme || SURFACE_THEMES.LIGHT}
+        ignoreClickOutsideSelectors={DEFAULT_POPOVER_IGNORE_SELECTORS}
+      >
+        <div
+          ref={dropdownRef}
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`flex flex-col rounded-md overflow-hidden ${themeCls}`}
+          data-theme={theme || undefined}
+        >
+          <AdvOverlayScroll
+            className="flex-initial min-h-0"
+            viewportClassName="overflow-y-auto overflow-x-hidden p-1.5 overscroll-contain"
+            viewportStyle={{
+              maxHeight:
+                selectedIds.size > 0
+                  ? 'min(316px, calc(100vh - 140px))'
+                  : 'min(358px, calc(100vh - 100px))',
             }}
-            className={`agv-custom-select-dropdown agv-preset-dropdown-menu agv-portal-dropdown ${
-              coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-            } ${themeCls}`}
-            data-theme={theme || undefined}
-            data-agv-popup="true"
+            contentSignature={`${weeksExpanded ? weekItems.length : DEFAULT_VISIBLE_WEEKS}-${selectedIds.size}`}
           >
-            {(dayItems.length > 0 || rangeItems.length > 0) && (
+            {weekItems.length > 0 && (
               <div className="agv-preset-group agv-preset-matrix-group">
-                <div className="agv-preset-columns-grid">
-                  {dayItems.length > 0 && (
-                    <div className="agv-preset-col">
-                      <div className="agv-preset-col-title">Ngày gần đây</div>
-                      <div className="agv-preset-col-items">
-                        {dayItems.map((item) => {
-                          const isSelected = selectedIds.has(item.id);
-                          return (
-                            <div
-                              key={item.id}
-                              onClick={() => {
-                                setInternalValue(item.id);
-                                onSelect?.(item.id, false);
-                                setIsOpen(false);
-                              }}
-                              className={`agv-preset-item agv-preset-col-item ${
-                                isSelected ? 'is-active' : ''
-                              }`}
-                            >
-                              <span className="agv-preset-item-text truncate">
-                                {item.label}
-                              </span>
-                              <div className="flex flex-shrink-0 items-center gap-1">
-                                {item.count !== undefined && item.count > 0 && (
-                                  <span className="agv-preset-item-count has-data">
-                                    {item.count.toLocaleString('vi-VN')}
-                                  </span>
-                                )}
-                                {isSelected && (
-                                  <Check className="h-3 w-3 flex-shrink-0 text-[var(--agv-accent-text)]" />
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {dayItems.length > 0 && rangeItems.length > 0 && (
-                    <div className="agv-preset-col-divider" />
-                  )}
-
-                  {rangeItems.length > 0 && (
-                    <div className="agv-preset-col">
-                      <div className="agv-preset-col-title">Khoảng chu kỳ</div>
-                      <div className="agv-preset-col-items">
-                        {rangeItems.map((item) => {
-                          const isSelected = selectedIds.has(item.id);
-                          return (
-                            <div
-                              key={item.id}
-                              onClick={() => {
-                                setInternalValue(item.id);
-                                onSelect?.(item.id, false);
-                                setIsOpen(false);
-                              }}
-                              className={`agv-preset-item agv-preset-col-item ${
-                                isSelected ? 'is-active' : ''
-                              }`}
-                            >
-                              <span className="agv-preset-item-text truncate">
-                                {item.label}
-                              </span>
-                              <div className="flex flex-shrink-0 items-center gap-1">
-                                {item.count !== undefined && item.count > 0 && (
-                                  <span className="agv-preset-item-count has-data">
-                                    {item.count.toLocaleString('vi-VN')}
-                                  </span>
-                                )}
-                                {isSelected && (
-                                  <Check className="h-3 w-3 flex-shrink-0 text-[var(--agv-accent-text)]" />
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                <div className="agv-preset-group-title">Mốc theo tuần</div>
+                <div className="agv-preset-week-grid">
+                  {(weeksExpanded
+                    ? weekItems
+                    : weekItems.slice(0, DEFAULT_VISIBLE_WEEKS)
+                  ).map((wItem) => {
+                    const isSelected = selectedIds.has(wItem.id);
+                    return (
+                      <button
+                        key={wItem.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (e.ctrlKey || e.metaKey) {
+                            handleToggleChipMultiSelect(wItem.id);
+                            return;
+                          }
+                          setInternalValue(wItem.id);
+                          onSelect?.(wItem.id, false);
+                          setIsOpen(false);
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleChipMultiSelect(wItem.id);
+                        }}
+                        className={`agv-preset-chip is-week-chip ${
+                          isSelected ? 'is-active' : ''
+                        }`}
+                      >
+                        <span className="agv-chip-label">{wItem.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+                {weekItems.length > DEFAULT_VISIBLE_WEEKS && (
+                  <div className="agv-preset-week-expand-wrap">
+                    <button
+                      type="button"
+                      aria-label={weeksExpanded ? 'Thu gọn tuần' : 'Mở rộng thêm tuần'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setWeeksExpanded((prev) => !prev);
+                      }}
+                      className="agv-preset-week-expand-btn"
+                    >
+                      <MorphChevronIcon
+                        expanded={weeksExpanded}
+                        type="down-up"
+                        size={12}
+                        spring="snappy"
+                      />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
             {yearsData.length > 0 && (
               <div className="agv-preset-group">
-                <div className="agv-preset-group-title">Mốc theo năm</div>
                 {yearsData.map((yItem) => {
                   const y = yItem.year;
                   const isExpanded = Boolean(expandedYears[y]);
@@ -618,30 +589,26 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
                   return (
                     <div key={y} className="agv-preset-year-group">
                       <div
-                        onClick={() => {
-                          setInternalValue(yItem.id);
-                          onSelect?.(yItem.id, false);
-                          setIsOpen(false);
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => toggleExpandYear(y, e)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleExpandYear(y, e);
+                          }
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           toggleExpandYear(y, e);
                         }}
-                        className={`agv-preset-item agv-preset-year-row ${
-                          isYearSelected ? 'is-active' : ''
-                        }`}
+                        className="agv-preset-item agv-preset-year-row"
                       >
                         <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={(e) => toggleExpandYear(y, e)}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleExpandYear(y, e);
-                            }}
+                          <span
                             className="agv-preset-expand-btn"
+                            aria-hidden="true"
                           >
                             <ChevronRight
                               className={`h-3.5 w-3.5 text-[var(--agv-text-subtle)] transition-transform duration-150 ${
@@ -650,28 +617,51 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
                                   : ''
                               }`}
                             />
-                          </button>
-                          <span className="agv-preset-item-text truncate font-semibold">
+                          </span>
+                          <span className="agv-preset-item-text truncate font-medium">
                             {yItem.label}
                           </span>
                         </div>
 
-                        <div className="flex flex-shrink-0 items-center gap-1.5">
-                          {yItem.count !== undefined && yItem.count > 0 && (
-                            <span
-                              className="agv-preset-item-count has-data"
-                            >
+                        {yItem.count !== undefined && yItem.count > 0 && (
+                          <div className="flex flex-shrink-0 items-center gap-1.5">
+                            <span className="agv-preset-item-count has-data">
                               {yItem.count.toLocaleString('vi-VN')}
                             </span>
-                          )}
-                          {isYearSelected && (
-                            <Check className="h-3.5 w-3.5 flex-shrink-0 text-[var(--agv-accent-text)]" />
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
 
-                      {isExpanded && (hasQuarters || hasMonths) && (
+                      {isExpanded && (
                         <div className="agv-preset-subgrid">
+                          <div className="agv-preset-chips-section">
+                            <span className="agv-preset-chips-label">Năm:</span>
+                            <div className="agv-preset-chips-list">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (e.ctrlKey || e.metaKey) {
+                                    handleToggleChipMultiSelect(yItem.id);
+                                    return;
+                                  }
+                                  setInternalValue(yItem.id);
+                                  onSelect?.(yItem.id, false);
+                                  setIsOpen(false);
+                                }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleToggleChipMultiSelect(yItem.id);
+                                }}
+                                className={`agv-preset-chip ${
+                                  isYearSelected ? 'is-active' : ''
+                                }`}
+                              >
+                                <span className="agv-chip-label">Cả năm</span>
+                              </button>
+                            </div>
+                          </div>
                           {hasQuarters && (
                             <div className="agv-preset-chips-section">
                               <span className="agv-preset-chips-label">Quý:</span>
@@ -777,9 +767,10 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
                 })}
               </div>
             )}
+            </AdvOverlayScroll>
 
             {selectedIds.size > 0 && (
-              <div className="sticky bottom-0 mt-2 flex items-center justify-between border-t border-[var(--agv-border)] bg-[var(--agv-bg-popup)] px-2.5 py-1.5 text-[11px]">
+              <div className="flex shrink-0 items-center justify-between border-t border-[var(--agv-border)] bg-[var(--agv-bg-popup)] px-2.5 py-1.5 text-xs">
                 <span className="truncate font-medium text-[var(--agv-text-muted)]">
                   Đã chọn:{' '}
                   <strong className="text-[var(--agv-accent)]">
@@ -787,33 +778,34 @@ export const AdvDatePresetSelect = memo(function AdvDatePresetSelect({
                   </strong>
                 </span>
                 <div className="ml-2 flex shrink-0 items-center gap-1.5">
-                  <button
-                    type="button"
+                  <AdvButton
+                    variant="destructive"
+                    size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       setInternalValue('');
                       onSelect?.('', true);
                     }}
-                    className="rounded px-2 py-0.5 text-[10.5px] text-[var(--agv-text-subtle)] hover:bg-[var(--agv-bg-item-hover)] hover:text-[var(--agv-text-main)]"
+                    className="px-2"
                   >
                     Bỏ chọn
-                  </button>
-                  <button
-                    type="button"
+                  </AdvButton>
+                  <AdvButton
+                    variant="default"
+                    size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsOpen(false);
                     }}
-                    className="rounded bg-[var(--agv-accent)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[var(--agv-accent-text,#fff)] hover:opacity-90"
+                    className="px-3"
                   >
                     Áp dụng
-                  </button>
+                  </AdvButton>
                 </div>
               </div>
             )}
-          </div>,
-          triggerRef.current?.ownerDocument?.body || document.body
-        )}
+        </div>
+      </AdvAnchoredPopover>
     </div>
   );
 });

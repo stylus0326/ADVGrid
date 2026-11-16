@@ -4,7 +4,9 @@ node_modules/
 
 # Production build outputs
 dist/
+dist-lib/
 dist-ssr/
+*.tgz
 
 # Logs
 logs/

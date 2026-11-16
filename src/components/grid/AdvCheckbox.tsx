@@ -1,5 +1,5 @@
 import React from 'react';
-import { MorphCheckbox } from '../ui/MorphIcons';
+import { MorphCheckbox } from '../ui/MorphCheckbox';
 
 /* ==============================================================================
    HỆ THỐNG CHECKBOX CHUẨN DÙNG CHUNG (AdvCheckbox)

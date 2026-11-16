@@ -1,0 +1,295 @@
+/* Bộ token màu & chuyển động đồng bộ từ D:\Dự án\b2b-pnt. */
+/* Teal = CTA/focus. Gold = vị trí hiện tại (tab active, row selected/focused). Semantic = trạng thái. */
+
+:root {
+  --font-app-sans: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-sans);
+  --font-geist-mono: var(--font-app-sans);
+
+  --radius: 0.625rem;
+  --control-radius: calc(var(--radius) - 2px);
+  --popup-radius: calc(var(--radius) - 2px);
+  --control-height: 2.25rem;
+  --touch-target: 2.75rem;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --font-size-caption: 0.75rem;
+  --font-size-label: 0.8125rem;
+  --font-size-body: 0.875rem;
+  --font-size-section-title: 1rem;
+  --font-size-page-title: 1.25rem;
+
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 240ms;
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --z-shell: 20;
+  --z-action-bar: 40;
+  --z-sidebar: 100;
+  --z-overlay: 101;
+  --z-popover: 102;
+  --z-tooltip: 103;
+  --z-toast: 110;
+  --z-capture: 120;
+
+  --background: #f4f7f8;
+  --foreground: #102a33;
+  --card: #ffffff;
+  --card-foreground: #102a33;
+  --popover: #ffffff;
+  --popover-foreground: #102a33;
+  --primary: #1c6987;
+  --primary-foreground: #ffffff;
+  --secondary: #e7f1f4;
+  --secondary-foreground: #144c5e;
+  --muted: #edf2f3;
+  --muted-foreground: #5a717a;
+  --accent: #f0f6f8;
+  --accent-foreground: #144c5e;
+  --destructive: #b91c1c;
+  --border: #d5e1e4;
+  --input: #7e959d;
+  --control-border: #7e959d;
+  --ring: #1c6987;
+
+  --brand-teal: #1c6987;
+  --brand-shell: #0f5266;
+  --brand-deep: #00425c;
+  --brand-teal-100: #d7eaf0;
+  --brand-teal-50: #f0f6f8;
+  --brand-gold: #d49f4f;
+  --brand-gold-on-light: #8f6227;
+  --brand-gold-on-dark: #fccc6c;
+  --brand: var(--brand-teal);
+  --brand-foreground: #ffffff;
+  --brand-soft: var(--brand-teal-100);
+
+  --surface-ground: #f4f7f8;
+  --surface-hover: #f8fbfc;
+  --surface-selected: #e5eff3;
+  --table-header: #f0f6f8;
+  --surface-subtle: #edf2f3;
+  --surface-raised: #ffffff;
+
+  --status-success: #ecfdf5;
+  --status-success-foreground: #065f46;
+  --status-success-border: #a7f3d0;
+  --status-warning: #fffbeb;
+  --status-warning-foreground: #92400e;
+  --status-warning-border: #fde68a;
+  --status-danger: #fef2f2;
+  --status-danger-foreground: #991b1b;
+  --status-danger-border: #fecaca;
+  --status-info: #eff6ff;
+  --status-info-foreground: #1e40af;
+  --status-info-border: #bfdbfe;
+  --status-brand: #d7eaf0;
+  --status-brand-foreground: #1c6987;
+  --status-brand-border: #8ebaca;
+
+  --chart-1: #1c6987;
+  --chart-2: #9b6b2b;
+  --chart-3: #00425c;
+  --chart-4: #5a9eb2;
+  --chart-5: #d49f4f;
+  --chart-axis: #5a717a;
+  --chart-grid: #d5e1e4;
+  --chart-cursor: #7e959d;
+  --chart-comparison: #9b6b2b;
+
+  --sidebar: #0f5266;
+  --sidebar-foreground: #f4fbfd;
+  --sidebar-primary: #fccc6c;
+  --sidebar-primary-foreground: #102a33;
+  --sidebar-accent: rgb(255 255 255 / 12%);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2a6778;
+  --sidebar-ring: #fccc6c;
+  --sidebar-marker: #fccc6c;
+
+  --scrollbar-size: 0.5rem;
+  --scrollbar-thumb: color-mix(in srgb, var(--muted-foreground) 38%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--brand-teal) 62%, transparent);
+  --scrollbar-track: transparent;
+
+  --control-background: var(--card);
+  --control-border-hover: #000000;
+  --popup-background: var(--popover);
+  --popup-border: var(--border);
+  --popup-shadow: 0 10px 25px -5px rgb(16 42 51 / 0.16), 0 4px 10px -4px rgb(16 42 51 / 0.1);
+  --popup-item-hover-bg: var(--surface-hover);
+  --popup-item-selected-bg: var(--primary);
+  --popup-item-selected-fg: #ffffff;
+
+  /* Alias tương thích cho các thành phần DataGrid/UI dùng biến --agv-* */
+  --agv-bg-root: var(--background);
+  --agv-bg-surface: var(--card);
+  --agv-bg-card: var(--card);
+  --agv-bg-panel: var(--card);
+  --agv-bg-header: var(--table-header);
+  --agv-bg-row: var(--card);
+  --agv-bg-row-alt: var(--card);
+  --agv-bg-row-hover: var(--surface-hover);
+  --agv-bg-hover: var(--surface-hover);
+  --agv-bg-selected: var(--surface-selected);
+  --agv-bg-selected-hover: var(--surface-selected);
+  --agv-bg-focused: var(--surface-selected);
+  --agv-bg-focused-hover: var(--surface-selected);
+  --agv-bg-checked-focused: var(--surface-selected);
+  --agv-bg-checked-focused-hover: var(--surface-selected);
+  --agv-bg-popup: var(--popup-background);
+  --agv-bg-subtle: var(--muted);
+  --agv-bg-control: var(--form-field-label-background, var(--control-background));
+  --agv-bg-control-hover: var(--surface-hover);
+  --agv-bg-item-hover: var(--accent);
+  --agv-bg-item-active: var(--surface-selected);
+  --agv-btn-default-bg: var(--form-field-label-background, var(--control-background));
+  --agv-btn-default-border: var(--control-border);
+  --agv-btn-default-text: var(--foreground);
+  --agv-btn-default-hover: var(--surface-hover);
+  --agv-btn-default-active: var(--secondary);
+  --agv-card-bg: var(--card);
+  --agv-card-border: var(--border);
+  --agv-group-row-bg: var(--table-header);
+  --agv-row-data-bg: var(--card);
+  --agv-row-sticky-bg: var(--card);
+  --agv-border: var(--border);
+  --agv-border-subtle: var(--border);
+  --agv-border-strong: var(--control-border);
+  --agv-border-popup: var(--popup-border);
+  --agv-accent: var(--primary);
+  --agv-accent-hover: color-mix(in srgb, var(--primary) 90%, #000000);
+  --agv-accent-hover-border: #000000;
+  --agv-accent-active: var(--brand-shell);
+  --agv-accent-soft: var(--brand-teal-100);
+  --agv-accent-text: var(--primary-foreground);
+  --agv-text-main: var(--foreground);
+  --agv-text-header: var(--foreground);
+  --agv-text-muted: var(--muted-foreground);
+  --agv-text-subtle: var(--muted-foreground);
+  --agv-text-active: var(--brand-teal);
+  --agv-stt-cell-text: var(--muted-foreground);
+  --agv-danger: var(--status-danger-foreground);
+  --agv-danger-bg: var(--status-danger);
+  --agv-danger-hover: var(--destructive);
+  --agv-warning: var(--status-warning-foreground);
+  --agv-warning-bg: var(--status-warning);
+  --agv-success: var(--status-success-foreground);
+  --agv-success-bg: var(--status-success);
+  --agv-info: var(--status-info-foreground);
+  --agv-trend-up: var(--status-success-foreground);
+  --agv-trend-down: var(--status-danger-foreground);
+  --agv-weekend: var(--brand-gold-on-light);
+  --agv-focus-ring: var(--ring);
+  --agv-focus-halo: color-mix(in srgb, var(--ring) 25%, transparent);
+  --agv-backdrop-bg: rgb(16 42 51 / 0.4);
+  --agv-pinned-shadow: 4px 0 12px -4px rgb(16 42 51 / 0.08);
+  --agv-shadow-pinned: 4px 0 12px -4px rgb(16 42 51 / 0.08);
+}
+
+.dark,
+[data-theme="dark"],
+.agv-dark {
+  --background: #071c24;
+  --foreground: #f1f7f8;
+  --card: #0d2731;
+  --card-foreground: #f1f7f8;
+  --popover: #0d2731;
+  --popover-foreground: #f1f7f8;
+  --primary: #70bdd2;
+  --primary-foreground: #062a36;
+  --secondary: #173843;
+  --secondary-foreground: #d8e8ec;
+  --muted: #142f38;
+  --muted-foreground: #aec0c6;
+  --accent: #153640;
+  --accent-foreground: #d8e8ec;
+  --destructive: #b91c1c;
+  --border: #29454e;
+  --input: #5f7f89;
+  --control-border: #5f7f89;
+  --ring: #70bdd2;
+
+  --brand-teal: #70bdd2;
+  --brand-shell: #0f5266;
+  --brand-deep: #00425c;
+  --brand-teal-100: #163a44;
+  --brand-teal-50: #12313b;
+  --brand-gold: #d49f4f;
+  --brand-gold-on-light: #d6a55d;
+  --brand-gold-on-dark: #fccc6c;
+  --brand: var(--brand-teal);
+  --brand-foreground: #062a36;
+  --brand-soft: var(--brand-teal-100);
+
+  --surface-ground: #071c24;
+  --surface-hover: #153640;
+  --surface-selected: #173d49;
+  --table-header: #12313b;
+  --surface-subtle: #142f38;
+  --surface-raised: #0d2731;
+
+  --status-success: #052e2b;
+  --status-success-foreground: #6ee7b7;
+  --status-success-border: #047857;
+  --status-warning: #451a03;
+  --status-warning-foreground: #fcd34d;
+  --status-warning-border: #b45309;
+  --status-danger: #450a0a;
+  --status-danger-foreground: #fca5a5;
+  --status-danger-border: #b91c1c;
+  --status-info: #172554;
+  --status-info-foreground: #93c5fd;
+  --status-info-border: #1d4ed8;
+  --status-brand: #163a44;
+  --status-brand-foreground: #9ad8e4;
+  --status-brand-border: #2c829d;
+
+  --chart-1: #70bdd2;
+  --chart-2: #fccc6c;
+  --chart-3: #9ad8e4;
+  --chart-4: #5a9eb2;
+  --chart-5: #d6a55d;
+  --chart-axis: #aec0c6;
+  --chart-grid: #29454e;
+  --chart-cursor: #5f7f89;
+  --chart-comparison: #fccc6c;
+
+  --sidebar: #0f5266;
+  --sidebar-foreground: #f4fbfd;
+  --sidebar-primary: #fccc6c;
+  --sidebar-primary-foreground: #062a36;
+  --sidebar-accent: rgb(255 255 255 / 12%);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2a6778;
+  --sidebar-ring: #fccc6c;
+  --sidebar-marker: #fccc6c;
+
+  --scrollbar-thumb: color-mix(in srgb, var(--muted-foreground) 42%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--brand-teal) 70%, transparent);
+
+  --control-border-hover: #ffffff;
+  --popup-shadow: 0 14px 30px -6px rgb(0 0 0 / 0.55), 0 6px 14px -4px rgb(0 0 0 / 0.38);
+  --popup-item-hover-bg: var(--surface-hover);
+  --popup-item-selected-bg: #1c6987;
+  --popup-item-selected-fg: #ffffff;
+
+  --agv-accent-hover: color-mix(in srgb, var(--primary) 90%, #ffffff);
+  --agv-accent-hover-border: #ffffff;
+  --agv-accent-active: #5aa9c0;
+  --agv-backdrop-bg: rgb(2 10 14 / 0.68);
+  --agv-pinned-shadow: 4px 0 14px -4px rgb(0 0 0 / 0.45);
+  --agv-shadow-pinned: 4px 0 14px -4px rgb(0 0 0 / 0.45);
+}
+
+[data-sidebar="sidebar"] {
+  --scrollbar-thumb: rgb(255 255 255 / 0.22);
+  --scrollbar-thumb-hover: rgb(252 204 108 / 0.55);
+  --scrollbar-track: transparent;
+}

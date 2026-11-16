@@ -1,6 +1,23 @@
 import React from 'react';
 import { Filter } from 'lucide-react';
-import { MorphIcon, ChevronLeft, ChevronRight, MorphSortIcon } from '../ui/MorphIcons';
+
+import { preloadColumnResizeEngine } from './hooks/useColumnResize';
+import { preloadSortFlipEngine } from './hooks/useGridSortFlipAnimation';
+
+const preloadGridMorphIcons = () => {
+  void import('./GridMorphPrimitives');
+  preloadSortFlipEngine();
+};
+const preloadChecklistPopup = () => {
+  void import('./AdvChecklistFilterPopup');
+};
+
+const LazyHeaderSortMorphIcon = React.lazy(() =>
+  import('./GridMorphPrimitives').then((m) => ({ default: m.HeaderSortMorphIcon }))
+);
+const LazyHeaderBandToggleMorphIcon = React.lazy(() =>
+  import('./GridMorphPrimitives').then((m) => ({ default: m.HeaderBandToggleMorphIcon }))
+);
 import {
   ColumnDef,
   BaseGroupDef,
@@ -20,7 +37,7 @@ import {
   getRightPinnedDividerClass,
   getThemeClasses,
 } from './constants';
-import { isSelectionColumn } from './gridUtils';
+import { isSelectionColumn } from './gridFormatUtils';
 
 export interface GridHeaderProps<T = any> {
   totalGridWidth: number;
@@ -40,18 +57,23 @@ export interface GridHeaderProps<T = any> {
   lastEffectiveLeftColKey: string | null;
   firstEffectiveRightColKey: string | null;
   sortConfig?: SortConfig | null;
+  sortRules?: SortConfig[];
   surfaceTheme: SurfaceTheme;
   columnFilters?: Record<string, ColumnFilterValue>;
+  activeChecklistColKey?: string | null;
   emptyColKeys?: Set<string>;
   onOpenChecklistFilter?: (colKey: string, e: React.MouseEvent) => void;
-  onToggleSort: (colKey: string) => void;
-  onColumnContextMenu: (colKey: string, e: React.MouseEvent) => void;
+  onToggleSort: (colKey: string, e?: React.MouseEvent) => void;
+  onColumnContextMenu?: (colKey: string, e: React.MouseEvent) => void;
   onBandContextMenu?: (groupId: string, childCols: ColumnDef<T>[], e: React.MouseEvent) => void;
-  onMouseDownResize: (colKey: string, e: React.MouseEvent) => void;
+  onMouseDownResize?: (colKey: string, e: React.MouseEvent) => void;
   onToggleGroup?: (groupId: string) => void;
   onReorderColumns?: (sourceKey: string, targetKey: string) => void;
   headerHeight?: number;
   hasFilterRow?: boolean;
+  enableSorting?: boolean;
+  enableColumnResize?: boolean;
+  enableContextMenu?: boolean;
 }
 
 export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
@@ -69,8 +91,10 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
   lastEffectiveLeftColKey,
   firstEffectiveRightColKey,
   sortConfig,
+  sortRules,
   surfaceTheme,
   columnFilters = {},
+  activeChecklistColKey = null,
   emptyColKeys,
   onOpenChecklistFilter,
   onToggleSort,
@@ -81,6 +105,9 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
   onReorderColumns,
   headerHeight,
   hasFilterRow = true,
+  enableSorting = true,
+  enableColumnResize = true,
+  enableContextMenu = true,
 }) => {
   const theme = getThemeClasses(surfaceTheme);
   const bottomBorderClass = hasFilterRow ? theme.headerBorderBottom : theme.systemBorderBottom;
@@ -177,7 +204,17 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
    * dùng chung cho cả 4 vùng: Pinned Left, Middle Standalone, Middle Band Child, Pinned Right
    */
   const renderHeaderCellContent = (col: ColumnDef<any>, isTier2 = false) => {
-    const isSorted = sortConfig?.key === col.key;
+    const activeRules = enableSorting
+      ? sortRules && sortRules.length > 0
+        ? sortRules
+        : sortConfig?.key
+        ? [sortConfig]
+        : []
+      : [];
+    const ruleIdx = activeRules.findIndex((r) => r.key === col.key);
+    const activeRule = ruleIdx >= 0 ? activeRules[ruleIdx] : null;
+    const isSorted = Boolean(activeRule);
+    const showRuleOrder = activeRules.length >= 2;
     const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
     const curFilter = columnFilters[col.key];
     const isChecklistActive = Boolean(
@@ -186,24 +223,42 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
           (Array.isArray(curFilter.selectedValues) && curFilter.selectedValues.length > 0) ||
           curFilter.includeBlanks)
     );
+    const isChecklistOpen = activeChecklistColKey === col.key;
 
     return (
       <>
         <div className="inline-flex items-center justify-center gap-1 max-w-full px-0.5 min-w-0">
-          <span
-            className={`text-[10px] font-bold uppercase tracking-wider truncate text-center ${
-              isSorted ? 'text-[var(--agv-accent)]' : ''
-            }`}
-          >
-            {isSystemCol && !col.title ? '' : col.title}
-          </span>
-          {isSorted && (
+          {col.renderHeader ? (
+            <div
+              className={`inline-flex items-center justify-center max-w-full min-w-0 text-xs font-bold uppercase tracking-wider truncate text-center ${
+                isSorted ? 'text-[var(--agv-accent)]' : ''
+              }`}
+              onClick={isSelectionColumn(col) ? (e) => e.stopPropagation() : undefined}
+            >
+              {col.renderHeader()}
+            </div>
+          ) : (
+            <span
+              className={`text-xs font-bold uppercase tracking-wider truncate text-center ${
+                isSorted ? 'text-[var(--agv-accent)]' : ''
+              }`}
+            >
+              {isSystemCol && !col.title ? '' : col.title}
+            </span>
+          )}
+          {activeRule && (
             <span className="shrink-0 inline-flex items-center text-[var(--agv-accent)]">
-              <MorphSortIcon
-                direction={sortConfig?.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC}
-                size={isTier2 ? 10 : 11}
-                spring="snappy"
-              />
+              <React.Suspense fallback={null}>
+                <LazyHeaderSortMorphIcon
+                  direction={activeRule.direction === SORT_DIRECTIONS.ASC ? SORT_DIRECTIONS.ASC : SORT_DIRECTIONS.DESC}
+                  size={isTier2 ? 10 : 11}
+                />
+              </React.Suspense>
+              {showRuleOrder && (
+                <span className="text-xs font-extrabold leading-none tabular-nums ml-0.5">
+                  {ruleIdx + 1}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -218,16 +273,20 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             <button
               type="button"
               data-checklist-trigger={col.key}
+              data-agv-popover-trigger="true"
+              onMouseEnter={preloadChecklistPopup}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenChecklistFilter(col.key, e);
               }}
-              className={`agv-header-filter-btn flex items-center justify-center rounded transition-colors cursor-pointer border-none bg-transparent ${
+              className={`agv-header-filter-btn flex items-center justify-center rounded transition-colors cursor-pointer border-none ${
                 isTier2 ? 'w-3.5 h-3.5' : 'w-4 h-4'
               } ${
-                isChecklistActive
-                  ? 'text-[var(--agv-accent)] opacity-100'
-                  : 'text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 hover:text-[var(--agv-accent)]'
+                isChecklistOpen
+                  ? 'bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)] opacity-100 ring-1 ring-[var(--agv-accent)]/40'
+                  : isChecklistActive
+                  ? 'bg-transparent text-[var(--agv-accent)] opacity-100'
+                  : 'bg-transparent text-[var(--agv-text-muted)] opacity-0 group-hover/th:opacity-100 focus:opacity-100 focus-visible:opacity-100 hover:text-[var(--agv-accent)]'
               }`}
             >
               <Filter size={isTier2 ? 10 : 11} strokeWidth={2.5} />
@@ -236,10 +295,11 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         )}
 
         {/* Thanh kéo độ rộng cột (col resize handle) - vùng bắt chuột 9px cân tâm viền phải */}
-        {col.resizable !== false && !isSystemCol && (
+        {enableColumnResize && onMouseDownResize && col.resizable !== false && !isSystemCol && (
           <div
             data-col-resize-handle={col.key}
             draggable={false}
+            onMouseEnter={preloadColumnResizeEngine}
             onDragStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -279,7 +339,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         const width = colWidths[col.key] || col.defaultWidth;
         const isLeftDivider = col.key === lastEffectiveLeftColKey;
         const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
-        const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
+        const canSort = enableSorting && col.sortable !== false;
+        const canContextMenu = enableContextMenu && Boolean(onColumnContextMenu) && !isSystemCol && !col.disableHeaderContextMenu;
         const isDragOver = dragOverColKey === col.key;
 
         const headerBottomBorder = `${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg}`;
@@ -292,12 +353,16 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             key={`left_${col.key}`}
             data-col-key={col.key}
             {...createDragProps(col.key, isSystemCol)}
-            onClick={() => col.sortable !== false && onToggleSort(col.key)}
+            onMouseEnter={canSort ? preloadGridMorphIcons : undefined}
+            onClick={(e) => canSort && onToggleSort(col.key, e)}
             onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
               if (canContextMenu) {
-                onColumnContextMenu(col.key, e);
+                e.preventDefault();
+                e.stopPropagation();
+                onColumnContextMenu?.(col.key, e);
+              } else if (enableContextMenu) {
+                e.preventDefault();
+                e.stopPropagation();
               }
             }}
             style={{
@@ -312,7 +377,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             }}
             className={`group/th flex flex-col justify-center items-center text-center ${
               isSystemCol ? 'px-0.5' : 'px-1.5'
-            } ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
+            } ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${canSort ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
               isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
             }`}
           >
@@ -357,7 +422,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             ? getRightPinnedDividerClass(surfaceTheme)
             : '';
 
-          const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
+          const canSort = enableSorting && col.sortable !== false;
+          const canContextMenu = enableContextMenu && Boolean(onColumnContextMenu) && !isSystemCol && !col.disableHeaderContextMenu;
           const isDragOver = dragOverColKey === col.key;
 
           return (
@@ -365,18 +431,22 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               key={`mid_standalone_${col.key}`}
               data-col-key={col.key}
               {...createDragProps(col.key, isSystemCol)}
-              onClick={() => col.sortable !== false && onToggleSort(col.key)}
+              onMouseEnter={canSort ? preloadGridMorphIcons : undefined}
+              onClick={(e) => canSort && onToggleSort(col.key, e)}
               onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
                 if (canContextMenu) {
-                  onColumnContextMenu(col.key, e);
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onColumnContextMenu?.(col.key, e);
+                } else if (enableContextMenu) {
+                  e.preventDefault();
+                  e.stopPropagation();
                 }
               }}
               style={stickyHeaderStyle}
               className={`group/th flex flex-col justify-center items-center text-center px-1.5 ${headerBottomBorder} ${headerRightBorder} ${headerLeftBorder} ${
                 isDockedLeft || isDockedRight ? 'sticky z-40' : 'relative z-10'
-              } shrink-0 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
+              } shrink-0 select-none box-border ${canSort ? 'cursor-pointer' : 'cursor-default'} transition-colors relative ${
                 isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
               }`}
             >
@@ -413,10 +483,16 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                   color: 'var(--agv-text-header, var(--agv-text-main))',
                 }}
                 onContextMenu={(e) => {
-                  e.preventDefault();
-                  onBandContextMenu?.(group.id, childCols, e);
+                  if (enableContextMenu && onBandContextMenu) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onBandContextMenu(group.id, childCols, e);
+                  } else if (enableContextMenu) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
                 }}
-                className={`relative flex items-center justify-center text-center px-8 text-[10px] font-bold uppercase tracking-wider border-r border-b ${theme.tier1Border} ${theme.tier1Bg} shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] cursor-pointer ${
+                className={`relative flex items-center justify-center text-center px-8 text-xs font-bold uppercase tracking-wider border-r border-b ${theme.tier1Border} ${theme.tier1Bg} shrink-0 box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] cursor-pointer ${
                   isBandDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
                 }`}
               >
@@ -435,12 +511,11 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                       color: 'var(--agv-text-main)',
                     }}
                   >
-                    <MorphIcon
-                      icon={group.isCollapsed ? ChevronRight : ChevronLeft}
-                      size={14}
-                      strokeWidth={2.5}
-                      spring="bouncy"
-                    />
+                    <React.Suspense fallback={null}>
+                      <LazyHeaderBandToggleMorphIcon
+                        direction={group.isCollapsed ? 'right' : 'left'}
+                      />
+                    </React.Suspense>
                   </button>
                 )}
 
@@ -461,12 +536,9 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                       color: 'var(--agv-text-main)',
                     }}
                   >
-                    <MorphIcon
-                      icon={ChevronLeft}
-                      size={14}
-                      strokeWidth={2.5}
-                      spring="bouncy"
-                    />
+                    <React.Suspense fallback={null}>
+                      <LazyHeaderBandToggleMorphIcon direction="left" />
+                    </React.Suspense>
                   </button>
                 )}
               </div>
@@ -479,7 +551,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                 {childCols.map((col) => {
                   const width = colWidths[col.key] || col.defaultWidth;
                   const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
-                  const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
+                  const canSort = enableSorting && col.sortable !== false;
+                  const canContextMenu = enableContextMenu && Boolean(onColumnContextMenu) && !isSystemCol && !col.disableHeaderContextMenu;
                   const isChildDragOver = dragOverColKey === col.key;
 
                   return (
@@ -488,12 +561,16 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                       data-col-key={col.key}
                       data-tier2-col-key={col.key}
                       {...createDragProps(col.key, isSystemCol, new Set([group.id]))}
-                      onClick={() => col.sortable !== false && onToggleSort(col.key)}
+                      onMouseEnter={canSort ? preloadGridMorphIcons : undefined}
+                      onClick={(e) => canSort && onToggleSort(col.key, e)}
                       onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
                         if (canContextMenu) {
-                          onColumnContextMenu(col.key, e);
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onColumnContextMenu?.(col.key, e);
+                        } else if (enableContextMenu) {
+                          e.preventDefault();
+                          e.stopPropagation();
                         }
                       }}
                       style={{
@@ -504,7 +581,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
                         backgroundColor: 'var(--agv-bg-header)',
                         color: 'var(--agv-text-header, var(--agv-text-main))',
                       }}
-                      className={`group/th flex items-center justify-center text-center px-1 text-[10px] font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
+                      className={`group/th flex items-center justify-center text-center px-1 text-xs font-bold uppercase tracking-wider ${theme.headerBorderRight} ${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg} shrink-0 relative box-border h-[32px] min-h-[32px] max-h-[32px] leading-[32px] ${canSort ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
                         isChildDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''
                       }`}
                     >
@@ -523,7 +600,8 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
         const width = colWidths[col.key] || col.defaultWidth;
         const isRightDivider = col.key === firstEffectiveRightColKey;
         const isSystemCol = col.dataType === DATA_TYPES.SYSTEM || Boolean(col.isRowNumber) || isSelectionColumn(col);
-        const canContextMenu = !isSystemCol && col.pinnable !== false && !col.disableHeaderContextMenu;
+        const canSort = enableSorting && col.sortable !== false;
+        const canContextMenu = enableContextMenu && Boolean(onColumnContextMenu) && !isSystemCol && !col.disableHeaderContextMenu;
 
         const headerBottomBorder = `${bottomBorderClass} ${theme.sharedHeaderCellBg} ${theme.headerHoverBg}`;
         const headerRightBorder = theme.headerBorderRight;
@@ -534,12 +612,16 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
             key={`right_${col.key}`}
             data-col-key={col.key}
             {...createDragProps(col.key, isSystemCol)}
-            onClick={() => col.sortable !== false && onToggleSort(col.key)}
+            onMouseEnter={canSort ? preloadGridMorphIcons : undefined}
+            onClick={(e) => canSort && onToggleSort(col.key, e)}
             onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
               if (canContextMenu) {
-                onColumnContextMenu(col.key, e);
+                e.preventDefault();
+                e.stopPropagation();
+                onColumnContextMenu?.(col.key, e);
+              } else if (enableContextMenu) {
+                e.preventDefault();
+                e.stopPropagation();
               }
             }}
             style={{
@@ -552,7 +634,7 @@ export const GridHeader: React.FC<GridHeaderProps> = React.memo(({
               backgroundColor: 'var(--agv-bg-header)',
               color: 'var(--agv-text-header, var(--agv-text-main))',
             }}
-            className={`group/th flex flex-col justify-center items-center text-center px-1.5 ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${col.sortable !== false ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
+            className={`group/th flex flex-col justify-center items-center text-center px-1.5 ${headerBottomBorder} ${headerRightBorder} shrink-0 sticky z-40 select-none box-border ${canSort ? 'cursor-pointer' : 'cursor-default'} transition-colors ${
               isRightDivider ? getRightPinnedDividerClass(surfaceTheme) : ''
             } relative ${isDragOver ? 'ring-2 ring-inset ring-[var(--agv-accent)]' : ''}`}
           >

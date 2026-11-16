@@ -1,0 +1,524 @@
+@import '../styles/design-tokens.css';
+
+@tailwind components;
+@tailwind utilities;
+
+/* Cô lập Preflight cơ bản bên trong vùng Grid / Popup / Control để không ảnh hưởng Host Application */
+.agv-grid-root,
+.agv-grid-root *,
+.agv-grid-root *::before,
+.agv-grid-root *::after,
+[data-agv-popup="true"],
+[data-agv-popup="true"] *,
+[data-agv-popup="true"] *::before,
+[data-agv-popup="true"] *::after,
+.agv-control,
+.agv-btn {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--agv-border, var(--border));
+}
+
+/* Hợp đồng nguồn đơn (Single-Source Contract) cho 100% Controls & Popups */
+@layer components {
+  .agv-control {
+    background-color: var(--form-field-label-background, var(--control-background));
+    border: 1px solid var(--control-border);
+    border-radius: var(--control-radius);
+    color: var(--foreground);
+    font-family: var(--font-app-sans);
+    box-sizing: border-box;
+    transition:
+      border-color var(--motion-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-fast) var(--motion-ease-standard),
+      background-color var(--motion-fast) var(--motion-ease-standard),
+      color var(--motion-fast) var(--motion-ease-standard);
+  }
+
+  .agv-control::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  /* Hợp đồng nguồn đơn 4 phân loại Nút bấm (default, outline, ghost, destructive) */
+  .agv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--control-radius);
+    font-family: var(--font-app-sans);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition:
+      background-color var(--motion-fast) var(--motion-ease-standard),
+      border-color var(--motion-fast) var(--motion-ease-standard),
+      color var(--motion-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-fast) var(--motion-ease-standard);
+  }
+
+  .agv-btn-default {
+    background-color: var(--primary);
+    border: 1px solid transparent;
+    color: var(--primary-foreground);
+  }
+
+  .agv-btn-ghost {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: var(--agv-text-main, var(--foreground));
+  }
+
+  .agv-btn-destructive {
+    background-color: var(--agv-danger-bg, var(--status-danger));
+    border: 1px solid var(--status-danger-border);
+    color: var(--agv-danger, var(--status-danger-foreground));
+  }
+
+  /* Tuyệt đối không gắn nền lên [data-agv-popup="true"] chung vì các modal backdrop full-screen dùng thuộc tính này */
+  .agv-popup-panel,
+  .agv-portal-dropdown,
+  .agv-comboboxedit-dropdown,
+  .agv-searchlookupedit-dropdown,
+  .agv-lookup-op-menu,
+  .agv-filter-dropdown-menu,
+  .agv-context-menu,
+  .agv-column-chooser,
+  .agv-query-builder-modal,
+  .agv-query-dropdown,
+  .agv-multi-sort-popup,
+  .agv-multi-filter-popup,
+  .agv-multi-filter-op-menu,
+  .agv-criteria-summary-popup,
+  .agv-checklist-filter-popup,
+  .agv-calendar-popover,
+  .agv-preset-dropdown-menu,
+  .agv-custom-select-dropdown {
+    background-color: var(--popup-background);
+    color: var(--popover-foreground);
+    border: 1px solid var(--popup-border);
+    border-radius: var(--popup-radius);
+    box-shadow: var(--popup-shadow);
+    font-family: var(--font-app-sans);
+  }
+
+  .agv-popup-menu {
+    padding: 4px;
+  }
+
+  .agv-popup-item {
+    display: flex;
+    width: 100%;
+    min-height: 28px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: var(--font-app-sans);
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--popover-foreground);
+    background-color: transparent;
+    cursor: pointer;
+    user-select: none;
+    text-align: left;
+    border: none;
+    box-sizing: border-box;
+  }
+
+  .agv-popup-item:hover:not(:disabled):not([aria-disabled="true"]):not(.is-selected):not([data-selected="true"]) {
+    background-color: var(--popup-item-hover-bg, var(--surface-hover));
+    color: var(--popover-foreground);
+  }
+
+  .agv-popup-item.is-highlighted:not(.is-selected):not([data-selected="true"]) {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .agv-popup-item.is-selected,
+  .agv-popup-item[data-selected="true"] {
+    background-color: var(--popup-item-selected-bg);
+    color: var(--popup-item-selected-fg);
+    font-weight: 500;
+  }
+
+  .agv-popup-item.is-selected svg,
+  .agv-popup-item[data-selected="true"] svg {
+    color: var(--popup-item-selected-fg);
+  }
+
+  .agv-popup-item:disabled,
+  .agv-popup-item[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Thanh cuộn nổi (Overlay Scrollbar kiểu select-v2): ẩn thanh cuộn gốc, chỉ hiện thumb khi hover/cuộn */
+  .agv-overlay-scroll-viewport {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overscroll-behavior: contain;
+  }
+
+  .agv-overlay-scroll-viewport::-webkit-scrollbar,
+  [data-agv-popup="true"] .agv-overlay-scroll-viewport::-webkit-scrollbar,
+  .agv-grid-root .agv-overlay-scroll-viewport::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  .agv-overlay-scroll-bar {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--motion-normal, 180ms) ease;
+    user-select: none;
+  }
+
+  .agv-overlay-scroll-bar.is-vertical {
+    top: 2px;
+    bottom: 2px;
+    right: 2px;
+    width: 6px;
+  }
+
+  .agv-overlay-scroll-bar.is-horizontal {
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    height: 6px;
+  }
+
+  [data-overlay-scroll-active="true"] > .agv-overlay-scroll-bar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .agv-overlay-scroll-thumb {
+    border-radius: 9999px;
+    background-color: var(--scrollbar-thumb, color-mix(in srgb, var(--muted-foreground) 40%, transparent));
+    transition: background-color var(--motion-fast, 120ms) ease;
+    cursor: pointer;
+    will-change: transform;
+  }
+
+  .agv-overlay-scroll-thumb.is-vertical {
+    width: 100%;
+  }
+
+  .agv-overlay-scroll-thumb.is-horizontal {
+    height: 100%;
+  }
+
+  .agv-overlay-scroll-thumb:hover,
+  .agv-overlay-scroll-thumb.is-dragging {
+    background-color: var(--scrollbar-thumb-hover, color-mix(in srgb, var(--brand) 65%, transparent));
+  }
+
+  /* ============================================================================
+     CHECKBOX DRAW CHECK (ĐỒNG BỘ TOÀN HỆ THỐNG THEO THEME)
+     ============================================================================ */
+  .agv-cb-morph-box {
+    border: 2px solid var(--agv-border-strong, var(--control-border, var(--agv-border)));
+    background-color: transparent;
+    color: var(--agv-accent-text, #ffffff);
+    transition:
+      background-color 180ms ease 110ms,
+      border-color 180ms ease 110ms,
+      box-shadow 180ms ease;
+  }
+
+  .agv-cb-morph-box[data-state="checked"],
+  .agv-cb-morph-box[data-state="indeterminate"] {
+    background-color: var(--agv-accent);
+    border-color: var(--agv-accent);
+    color: var(--agv-accent-text, #ffffff);
+    transition:
+      background-color 180ms ease 0ms,
+      border-color 180ms ease 0ms,
+      box-shadow 180ms ease;
+  }
+
+  .agv-morph-checkbox:hover:not([aria-disabled="true"]) .agv-cb-morph-box[data-state="unchecked"] {
+    border-color: var(--agv-accent);
+  }
+
+  .agv-morph-checkbox:focus-visible .agv-cb-morph-box {
+    border-color: var(--agv-accent);
+    box-shadow: 0 0 0 2px var(--agv-focus-halo, color-mix(in srgb, var(--ring) 25%, transparent));
+  }
+
+  .agv-cb-check-path,
+  .agv-cb-indeterminate-path {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    opacity: 0;
+    transition:
+      stroke-dashoffset 200ms ease-in,
+      opacity 60ms ease 140ms;
+  }
+
+  .agv-cb-morph-box[data-state="checked"] .agv-cb-check-path {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition:
+      stroke-dashoffset 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 60ms ease;
+  }
+
+  .agv-cb-morph-box[data-state="indeterminate"] .agv-cb-indeterminate-path {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition:
+      stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 60ms ease;
+  }
+}
+
+@keyframes agv-spring-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.agv-spring-down {
+  animation: agv-spring-down 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-up {
+  animation: agv-spring-up 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+
+@layer utilities {
+  .font-sans {
+    font-family: var(--font-app-sans);
+  }
+
+  .font-mono {
+    font-family: var(--font-app-sans);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .bg-background {
+    background-color: var(--background);
+  }
+
+  .bg-card {
+    background-color: var(--card);
+  }
+
+  .bg-popover {
+    background-color: var(--popover);
+  }
+
+  .bg-table-header {
+    background-color: var(--table-header);
+  }
+
+  .bg-surface-hover {
+    background-color: var(--surface-hover);
+  }
+
+  .bg-surface-selected {
+    background-color: var(--surface-selected);
+  }
+
+  .bg-surface-subtle {
+    background-color: var(--surface-subtle);
+  }
+
+  .bg-surface-raised {
+    background-color: var(--surface-raised);
+  }
+
+  .bg-control-surface {
+    background-color: var(--form-field-label-background, var(--control-background));
+  }
+
+  .border-border {
+    border-color: var(--border);
+  }
+
+  .border-t-border {
+    border-top-color: var(--border);
+  }
+
+  .border-r-border {
+    border-right-color: var(--border);
+  }
+
+  .border-b-border {
+    border-bottom-color: var(--border);
+  }
+
+  .border-l-border {
+    border-left-color: var(--border);
+  }
+
+  .divide-border > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border);
+  }
+
+  .border-control {
+    border-color: var(--control-border);
+  }
+}
+
+/* ==============================================================================
+   TRẠNG THÁI TƯƠNG TÁC NGUỒN ĐƠN (.agv-control / .agv-focus-ring)
+   Đặt sau @tailwind utilities để tuyệt đối không bị class Tailwind ring/hover ghi đè
+   ============================================================================== */
+.agv-control:not(button):hover:not(:disabled):not([aria-disabled="true"]):not(:focus):not(:focus-within):not([data-state="open"]):not([aria-expanded="true"]):not(.is-open):not(.is-focused):not([aria-invalid="true"]),
+button.agv-control[data-agv-trigger="true"]:hover:not(:disabled):not([aria-disabled="true"]):not(:focus):not(:focus-visible):not([data-state="open"]):not([aria-expanded="true"]):not(.is-open):not(.is-focused):not([aria-invalid="true"]),
+button.agv-control:not([data-agv-trigger="true"]):hover:not(:disabled):not([aria-disabled="true"]):not(:focus-visible):not([aria-invalid="true"]):not([data-active="true"]) {
+  border-color: var(--control-border-hover);
+}
+
+.agv-btn:disabled,
+.agv-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.agv-btn-default:hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--agv-accent-hover, color-mix(in srgb, var(--primary) 90%, #000000));
+}
+
+.agv-btn-outline:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: var(--surface-hover);
+}
+
+.agv-btn-ghost:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: var(--agv-bg-item-hover, var(--surface-hover));
+  color: var(--agv-text-main, var(--foreground));
+}
+
+.agv-btn-destructive:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: color-mix(in srgb, var(--agv-danger) 14%, var(--agv-danger-bg));
+  border-color: var(--agv-danger);
+  color: var(--agv-danger);
+}
+
+.agv-btn[data-active="true"] {
+  background-color: var(--agv-accent);
+  border-color: var(--agv-accent);
+  color: var(--popup-item-selected-fg, #ffffff);
+}
+
+.agv-btn-destructive.agv-focus-ring:focus-visible,
+.agv-btn-destructive:focus-visible {
+  outline: none;
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--destructive);
+}
+
+.agv-inline-clear-ghost,
+.agv-inline-clear-destructive {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--agv-text-muted);
+  transition: color var(--motion-fast) var(--motion-ease-standard);
+}
+
+.agv-inline-clear-ghost:hover:not(:disabled) {
+  color: var(--agv-text-main);
+}
+
+.agv-inline-clear-destructive:hover:not(:disabled) {
+  color: var(--agv-danger);
+}
+
+input.agv-control:focus,
+input.agv-control:focus-visible,
+textarea.agv-control:focus,
+textarea.agv-control:focus-visible,
+select.agv-control:focus,
+select.agv-control:focus-visible,
+.agv-control-box:focus-within,
+.agv-control[data-agv-trigger="true"]:focus,
+.agv-control[data-agv-trigger="true"]:focus-visible,
+.agv-control[data-agv-trigger="true"]:focus-within,
+.agv-control[data-state="open"],
+.agv-control[aria-expanded="true"],
+.agv-control.is-open,
+.agv-control.is-focused {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.agv-focus-ring:focus-visible,
+button.agv-control:not([data-agv-trigger="true"]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--ring);
+}
+
+button.agv-control:not([data-agv-trigger="true"]):focus-visible {
+  border-color: var(--brand);
+}
+
+.agv-control[aria-invalid="true"],
+.agv-control[aria-invalid="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--destructive);
+}
+
+.agv-control[aria-invalid="true"]:focus,
+.agv-control[aria-invalid="true"]:focus-visible,
+.agv-control[aria-invalid="true"]:focus-within,
+.agv-control[aria-invalid="true"][data-state="open"],
+.agv-control[aria-invalid="true"][aria-expanded="true"],
+.agv-control[aria-invalid="true"].is-open,
+.agv-control[aria-invalid="true"].is-focused {
+  outline: none;
+  border-color: var(--destructive);
+  box-shadow: inset 0 0 0 1px var(--destructive);
+}
+
+.agv-control.agv-incell-control {
+  height: 100%;
+  min-height: 28px;
+  max-height: 30px;
+}
+
+/* Bảo vệ tối thiểu mọi icon SVG trong button/control không bao giờ bị ép nhỏ hơn 8x8 */
+button svg,
+[role="button"] svg,
+.agv-control svg {
+  min-width: 8px;
+  min-height: 8px;
+  flex-shrink: 0;
+}

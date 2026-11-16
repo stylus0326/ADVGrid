@@ -1,46 +1,146 @@
 /** @type {import('tailwindcss').Config} */
+const withCssExpr = (expr) => ({ opacityValue }) => {
+  if (
+    opacityValue === undefined ||
+    opacityValue === '1' ||
+    Number(opacityValue) === 1 ||
+    String(opacityValue).includes('--tw-')
+  ) {
+    return expr;
+  }
+  const pct = Math.round(Number(opacityValue) * 1000) / 10;
+  return Number.isFinite(pct)
+    ? `color-mix(in srgb, ${expr} ${pct}%, transparent)`
+    : expr;
+};
+
+const withVar = (cssVar) => withCssExpr(`var(${cssVar})`);
+
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['var(--font-app-sans)', 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['var(--font-app-sans)', 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
+      },
+      fontSize: {
+        caption: 'var(--font-size-caption)',
+        label: 'var(--font-size-label)',
+        body: 'var(--font-size-body)',
+        'section-title': 'var(--font-size-section-title)',
+        'page-title': 'var(--font-size-page-title)',
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+        xl: 'calc(var(--radius) + 4px)',
+      },
+      spacing: {
+        control: 'var(--control-height)',
+        touch: 'var(--touch-target)',
+      },
+      zIndex: {
+        shell: 'var(--z-shell)',
+        'action-bar': 'var(--z-action-bar)',
+        sidebar: 'var(--z-sidebar)',
+        overlay: 'var(--z-overlay)',
+        popover: 'var(--z-popover)',
+        tooltip: 'var(--z-tooltip)',
+        toast: 'var(--z-toast)',
+        capture: 'var(--z-capture)',
       },
       colors: {
-        border: 'hsl(var(--border, 240 34.8% 91%))',
-        input: 'hsl(var(--input, 240 34.8% 91%))',
-        ring: 'hsl(var(--ring, 251.9 55.8% 57.5%))',
-        background: 'hsl(var(--background, 240 100% 98%))',
-        foreground: 'hsl(var(--foreground, 240 27.6% 22.7%))',
+        border: withVar('--border'),
+        input: withVar('--input'),
+        control: withVar('--control-border'),
+        'control-surface': withCssExpr('var(--form-field-label-background, var(--control-background))'),
+        'control-hover': withCssExpr('var(--control-hover-background, var(--accent))'),
+        ring: withVar('--ring'),
+        background: withVar('--background'),
+        foreground: withVar('--foreground'),
         primary: {
-          DEFAULT: 'hsl(var(--primary, 251.9 55.8% 57.5%))',
-          foreground: 'hsl(var(--primary-foreground, 0 0% 100%))',
+          DEFAULT: withVar('--primary'),
+          foreground: withVar('--primary-foreground'),
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary, 249.4 100% 93.7%))',
-          foreground: 'hsl(var(--secondary-foreground, 249.4 33.3% 37.6%))',
+          DEFAULT: withVar('--secondary'),
+          foreground: withVar('--secondary-foreground'),
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive, 350.2 100% 66.5%))',
-          foreground: 'hsl(var(--destructive-foreground, 0 0% 100%))',
+          DEFAULT: withVar('--destructive'),
+          foreground: '#ffffff',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted, 240 50% 96.1%))',
-          foreground: 'hsl(var(--muted-foreground, 240 12.2% 48.2%))',
+          DEFAULT: withVar('--muted'),
+          foreground: withVar('--muted-foreground'),
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent, 218.5 100% 92.4%))',
-          foreground: 'hsl(var(--accent-foreground, 240 27.6% 22.7%))',
+          DEFAULT: withVar('--accent'),
+          foreground: withVar('--accent-foreground'),
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover, 0 0% 100%))',
-          foreground: 'hsl(var(--popover-foreground, 240 27.6% 22.7%))',
+          DEFAULT: withVar('--popover'),
+          foreground: withVar('--popover-foreground'),
         },
         card: {
-          DEFAULT: 'hsl(var(--card, 0 0% 100%))',
-          foreground: 'hsl(var(--card-foreground, 240 27.6% 22.7%))',
+          DEFAULT: withVar('--card'),
+          foreground: withVar('--card-foreground'),
         },
-        'slate-850': '#151f32',
+        brand: {
+          DEFAULT: withVar('--brand'),
+          foreground: withVar('--brand-foreground'),
+          soft: withVar('--brand-soft'),
+          teal: withVar('--brand-teal'),
+          shell: withVar('--brand-shell'),
+          deep: withVar('--brand-deep'),
+          'teal-50': withVar('--brand-teal-50'),
+          'teal-100': withVar('--brand-teal-100'),
+          gold: withVar('--brand-gold'),
+          'gold-on-light': withVar('--brand-gold-on-light'),
+          'gold-on-dark': withVar('--brand-gold-on-dark'),
+        },
+        surface: {
+          ground: withVar('--surface-ground'),
+          hover: withVar('--surface-hover'),
+          selected: withVar('--surface-selected'),
+          subtle: withVar('--surface-subtle'),
+          raised: withVar('--surface-raised'),
+        },
+        'table-header': withVar('--table-header'),
+        status: {
+          success: withVar('--status-success'),
+          'success-foreground': withVar('--status-success-foreground'),
+          'success-border': withVar('--status-success-border'),
+          warning: withVar('--status-warning'),
+          'warning-foreground': withVar('--status-warning-foreground'),
+          'warning-border': withVar('--status-warning-border'),
+          danger: withVar('--status-danger'),
+          'danger-foreground': withVar('--status-danger-foreground'),
+          'danger-border': withVar('--status-danger-border'),
+          info: withVar('--status-info'),
+          'info-foreground': withVar('--status-info-foreground'),
+          'info-border': withVar('--status-info-border'),
+          brand: withVar('--status-brand'),
+          'brand-foreground': withVar('--status-brand-foreground'),
+          'brand-border': withVar('--status-brand-border'),
+        },
+        sidebar: {
+          DEFAULT: withVar('--sidebar'),
+          foreground: withVar('--sidebar-foreground'),
+          primary: withVar('--sidebar-primary'),
+          'primary-foreground': withVar('--sidebar-primary-foreground'),
+          accent: withVar('--sidebar-accent'),
+          'accent-foreground': withVar('--sidebar-accent-foreground'),
+          border: withVar('--sidebar-border'),
+          ring: withVar('--sidebar-ring'),
+          marker: withVar('--sidebar-marker'),
+        },
         agv: {
           accent: 'var(--agv-accent)',
           'accent-text': 'var(--agv-accent-text, #ffffff)',
@@ -65,11 +165,11 @@ export default {
           'text-muted': 'var(--agv-text-muted)',
           'text-subtle': 'var(--agv-text-subtle)',
           'text-active': 'var(--agv-text-active, var(--agv-accent))',
-          danger: 'var(--agv-danger, #ef4444)',
+          danger: 'var(--agv-danger, #b91c1c)',
           'danger-bg': 'var(--agv-danger-bg)',
-          warning: 'var(--agv-warning, #f59e0b)',
+          warning: 'var(--agv-warning, #92400e)',
           'warning-bg': 'var(--agv-warning-bg)',
-          success: 'var(--agv-success, #10b981)',
+          success: 'var(--agv-success, #065f46)',
           'success-bg': 'var(--agv-success-bg)',
           'trend-up': 'var(--agv-trend-up)',
           'trend-down': 'var(--agv-trend-down)',

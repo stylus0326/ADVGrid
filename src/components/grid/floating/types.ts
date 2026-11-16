@@ -1,5 +1,5 @@
 import React from 'react';
-import { ColumnDef, BaseGroupDef, PinPosition, SurfaceTheme, FilterOperation } from '../types';
+import { ColumnDef, BaseGroupDef, PinPosition, SurfaceTheme, FilterOperation, SortConfig } from '../types';
 
 export interface QueryRule {
   id?: string;
@@ -42,37 +42,28 @@ export interface QueryPreset {
 export const TOOLBAR_POPUPS = {
   SEARCH: 'search',
   QUERY_BUILDER: 'queryBuilder',
+  MULTI_SORT: 'multiSort',
   COLUMN_CHOOSER: 'columnChooser',
-  SETTINGS: 'settings',
 } as const;
 export type FloatingPopupType = (typeof TOOLBAR_POPUPS)[keyof typeof TOOLBAR_POPUPS] | null;
-
-/**
- * Danh mục chế độ mật độ dòng hiển thị
- */
-export const DENSITY_MODES = {
-  COMPACT: 'compact',
-  STANDARD: 'standard',
-} as const;
-export type DensityMode = (typeof DENSITY_MODES)[keyof typeof DENSITY_MODES];
-
-export interface GridSettingsState {
-  quickSearchEnabled: boolean;
-  pinnedShadowEnabled: boolean;
-  showVerticalGridlines: boolean;
-  showRowNumber: boolean;
-  showSelectionCol: boolean;
-  densityMode: DensityMode;
-  showSummaryRow: boolean;
-  showPagerBar: boolean;
-  rowSnapMode: boolean;
-}
 
 export interface GridFloatingToolbarProps<T = any> {
   // Container & Placement
   gridContainerRef: React.RefObject<HTMLDivElement | null>;
+  gridId?: string;
+  persistState?: boolean;
   surfaceTheme?: SurfaceTheme;
   headerHeight?: number;
+
+  // Feature Flags
+  enableQuickSearch?: boolean;
+  enableQueryBuilder?: boolean;
+  enableMultiSort?: boolean;
+  enableColumnChooser?: boolean;
+  enableFullscreen?: boolean;
+  enableColumnPinning?: boolean;
+  enableColumnReorder?: boolean;
+  enableColumnHide?: boolean;
 
   // 1. Quick Filter
   quickFilterText: string;
@@ -90,27 +81,26 @@ export interface GridFloatingToolbarProps<T = any> {
   hasColumnEmptyCells?: (colKey: string) => boolean;
   getColumnDateBounds?: (colKey: string) => { min: string; max: string };
 
+  // Multi-Sort (Sắp xếp phân cấp)
+  sortRules?: SortConfig[];
+  onApplySortRules?: (rules: SortConfig[]) => void;
+
   // 3. Column Chooser
   columns: ColumnDef<any>[];
   columnGroups?: BaseGroupDef[];
   visibleColKeys: string[];
   onVisibleColKeysChange: (keys: string[]) => void;
   columnPins: Record<string, PinPosition>;
-  onColumnPinChange: (colKey: string, pin: PinPosition) => void;
+  onColumnPinChange?: (colKey: string, pin: PinPosition) => void;
   onResetColumns: () => void;
   onAutoFitColumn?: (colKey: string) => void;
   onAutoFitAllColumns?: () => void;
   onReorderColumns?: (sourceKey: string, targetKey: string) => void;
 
-  // 4. Grid Settings
-  settings: GridSettingsState;
-  onUpdateSettings: (updater: (prev: GridSettingsState) => GridSettingsState) => void;
-
-  // 5. Excel Export
-  onExportExcel?: () => void;
-  isExporting?: boolean;
-
-  // 6. Fullscreen
+  // Fullscreen
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+
+  // Popup state sync for Grid interaction & scroll lock
+  onActivePopupChange?: (hasOpenPopup: boolean) => void;
 }

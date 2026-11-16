@@ -5,16 +5,20 @@ import { MorphChevronIcon } from '../ui/MorphIcons';
 import { ColumnDef, FilterOperation, ColumnFilterValue, FILTER_OPS, DATA_TYPES, FILTER_MODES, EDITOR_TYPES, SURFACE_THEMES } from './types';
 import { getAllowedFilterOpsForColumn, getDefaultFilterOpForColumn, FilterOpIcon, FILTER_OP_META, RangeArrowSeparator } from './FilterIcons';
 import { getThemeClass } from '../../themes';
+import { AdvOverlayScroll } from '../ui/AdvOverlayScroll';
+import { AdvAnchoredPopover, DEFAULT_POPOVER_IGNORE_SELECTORS } from '../ui/AdvPopover';
+import { AdvButton } from '../ui/AdvButton';
 import { AdvDatePicker, AdvDateRangePicker, formatDisplayDate } from '../ui/AdvDatePicker';
 import { parseDateToNum, parseTimeToMinutes } from './floating/queryUtils';
 import { formatSmartInputText, handleNumericKeyDown, expandAllShortcuts } from './smartNumberUtils';
-import { isBetweenFilterOp, isNegativeFilterOp } from './gridUtils';
+import { isBetweenFilterOp, isNegativeFilterOp } from './gridFormatUtils';
 import { NO_AUTOFILL_PROPS } from './constants';
 
 export interface AdvMultiFilterPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  anchorRect: { top: number; left: number; bottom: number; right: number; width?: number; height?: number } | null;
+  anchorEl?: HTMLElement | null;
+  anchorRect?: { top: number; left: number; bottom: number; right: number; width?: number; height?: number } | null;
   column: ColumnDef<any>;
   currentFilter?: ColumnFilterValue;
   onApply: (colKey: string, filter: ColumnFilterValue) => void;
@@ -27,6 +31,7 @@ export interface AdvMultiFilterPopupProps {
 export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
   isOpen,
   onClose,
+  anchorEl,
   anchorRect,
   column,
   currentFilter,
@@ -55,41 +60,11 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
 
   const [isOpMenuOpen, setIsOpMenuOpen] = useState(false);
   const opBtnRef = useRef<HTMLButtonElement>(null);
-  const [opMenuPos, setOpMenuPos] = useState<{
-    top: number;
-    left: number;
-    bottom?: number;
-    isFlipUp?: boolean;
-  } | null>(null);
 
   const isNegativeOp = isNegativeFilterOp(selectedOp);
 
   const handleToggleOpMenu = () => {
-    if (!isOpMenuOpen && opBtnRef.current) {
-      const rect = opBtnRef.current.getBoundingClientRect();
-      const menuWidth = 192;
-      let left = rect.right - menuWidth;
-      if (left < 8) left = 8;
-      if (left + menuWidth > window.innerWidth - 8) {
-        left = window.innerWidth - menuWidth - 8;
-      }
-      const menuMaxHeight = 224;
-      const spaceBelow = window.innerHeight - rect.bottom - 8;
-      const spaceAbove = rect.top - 8;
-      const flipUp = spaceBelow < menuMaxHeight && spaceAbove > spaceBelow;
-      let top: number;
-      let bottom: number | undefined;
-      if (flipUp) {
-        bottom = window.innerHeight - rect.top + 4;
-        top = Math.max(8, rect.top - menuMaxHeight - 4);
-      } else {
-        top = rect.bottom + 4;
-      }
-      setOpMenuPos({ top, left, bottom, isFlipUp: flipUp });
-      setIsOpMenuOpen(true);
-    } else {
-      setIsOpMenuOpen(false);
-    }
+    setIsOpMenuOpen((prev) => !prev);
   };
 
   // Textarea raw value
@@ -171,9 +146,9 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Click outside listener
+  // Click outside listener (fallback khi gọi không qua anchorEl / AdvAnchoredPopover)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || anchorEl) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
@@ -195,25 +170,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('touchstart', handleClickOutside, true);
     };
-  }, [isOpen, onClose]);
-
-  // Click outside listener riêng cho menu toán tử con
-  useEffect(() => {
-    if (!isOpMenuOpen) return;
-    const handleOpMenuClickOutside = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (opBtnRef.current && opBtnRef.current.contains(target)) return;
-      if (target.closest?.('.agv-multi-filter-op-menu')) return;
-      setIsOpMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handleOpMenuClickOutside, true);
-    document.addEventListener('touchstart', handleOpMenuClickOutside, true);
-    return () => {
-      document.removeEventListener('mousedown', handleOpMenuClickOutside, true);
-      document.removeEventListener('touchstart', handleOpMenuClickOutside, true);
-    };
-  }, [isOpMenuOpen]);
+  }, [isOpen, anchorEl, onClose]);
 
   // Parse text into tokens
   const recognizedTokens = useMemo(() => {
@@ -352,110 +309,44 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
     setDiscreteDates((prev) => prev.filter((item) => item !== d));
   };
 
-  if (!isOpen || !anchorRect) return null;
-
-  // Geometry computation
-  const popupWidth = 390;
-  const padding = 8;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
-  // 1. Tính toán vị trí ngang (left)
-  let left: number;
-  if (anchorRect.width && anchorRect.width <= 120) {
-    // Với trigger nhỏ (như nút SVG hoặc chip tóm tắt trên Query Builder), căn mép phải của popup theo mép phải trigger
-    left = anchorRect.right - popupWidth;
-  } else {
-    // Với trigger lớn (như ô filter trên GridFilterRow), căn theo mép trái của ô
-    left = anchorRect.left;
-  }
-
-  // Kẹp biên ngang viewport
-  if (left + popupWidth > viewportWidth - padding) {
-    left = viewportWidth - popupWidth - padding;
-  }
-  if (left < padding) {
-    left = padding;
-  }
-
-  // 2. Tính toán vị trí dọc (top / bottom)
-  const spaceBelow = viewportHeight - anchorRect.bottom - padding;
-  const spaceAbove = anchorRect.top - padding;
-  // Lật lên trên nếu khoảng trống bên dưới quá hẹp (< 260px) và phía trên rộng hơn
-  const isFlipUp = spaceBelow < 260 && spaceAbove > spaceBelow;
-  const maxHeight = isFlipUp
-    ? Math.max(160, Math.min(520, spaceAbove - 8))
-    : Math.max(160, Math.min(520, spaceBelow - 8));
-
-  const popupStyle: React.CSSProperties = {
-    position: 'fixed',
-    left: `${left}px`,
-    width: `${popupWidth}px`,
-    maxWidth: 'calc(100vw - 16px)',
-    maxHeight: `${maxHeight}px`,
-    zIndex: 99999999,
-    backgroundColor: 'var(--agv-bg-popup)',
-    borderColor: 'var(--agv-border-popup, var(--agv-border))',
-    boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-    color: 'var(--agv-text-main)',
-  };
-
-  if (isFlipUp) {
-    // Khi lật lên trên: đáy của popup neo dính sát đỉnh của nút bấm (cách 4px), không bao giờ bị bay lơ lửng
-    popupStyle.bottom = `${viewportHeight - anchorRect.top + 4}px`;
-    popupStyle.top = 'auto';
-  } else {
-    // Khi mở xuống dưới: đỉnh của popup dính sát đáy của nút bấm (cách 4px)
-    popupStyle.top = `${anchorRect.bottom + 4}px`;
-    popupStyle.bottom = 'auto';
-  }
+  if (!isOpen || (!anchorEl && !anchorRect)) return null;
 
   const dateBounds = getColumnDateBounds?.(column.key) || { min: '01/09/2026', max: '30/09/2026' };
 
-  return (
+  const innerSections = (
     <>
-      {createPortal(
-        <div
-          ref={popupRef}
-          style={popupStyle}
-          className={`agv-multi-filter-popup flex flex-col rounded-md border text-xs overflow-hidden select-none ${
-            isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-          } ${getThemeClass(
-            surfaceTheme as any
-          )}`}
-          data-theme={surfaceTheme}
-          data-agv-popup="true"
-          onClick={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-        >
           {/* 1. Header: Tiêu đề cột & Nút đóng */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--agv-border)] bg-[var(--agv-bg-header)] shrink-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-semibold text-xs text-[var(--agv-text-main)] truncate">
                 {isNegativeOp ? 'Lọc loại trừ (AND)' : 'Lọc nhiều điều kiện (OR)'}
               </span>
-              <span className="text-[11px] text-[var(--agv-text-muted)] truncate">
+              <span className="text-xs text-[var(--agv-text-muted)] truncate">
                 : {column.title || column.key}
               </span>
             </div>
-            <button
-              type="button"
+            <AdvButton
+              variant="ghost"
+              size="icon-sm"
               onClick={onClose}
-              className="w-5 h-5 flex items-center justify-center rounded text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer"
+              className="text-[var(--agv-text-muted)]"
             >
               <X size={14} strokeWidth={2.2} />
-            </button>
+            </AdvButton>
           </div>
 
           {/* 2. Dòng chọn toán tử so sánh (Toán tử chuẩn của cột) */}
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--agv-border)] bg-[var(--agv-bg-root)] shrink-0">
-            <span className="text-[11px] text-[var(--agv-text-muted)] font-medium">Toán tử so khớp:</span>
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--agv-border)] bg-[var(--agv-bg-header)] shrink-0">
+            <span className="text-xs text-[var(--agv-text-muted)] font-medium">Toán tử so khớp:</span>
             <div className="relative">
               <button
                 ref={opBtnRef}
                 type="button"
+                data-agv-trigger="true"
+                data-agv-popover-trigger="true"
+                aria-expanded={isOpMenuOpen}
                 onClick={handleToggleOpMenu}
-                className="flex items-center gap-1.5 px-2 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] bg-[var(--agv-bg-popup)] hover:border-agv-accent text-xs text-[var(--agv-text-main)] transition cursor-pointer"
+                className="agv-control flex items-center gap-1.5 rounded-md px-2 h-[28px] min-h-[28px] text-xs text-[var(--agv-text-main)] cursor-pointer outline-none"
               >
                 <FilterOpIcon op={selectedOp} size={13} />
                 <span className="font-medium">{FILTER_OP_META[selectedOp]?.label || selectedOp}</span>
@@ -470,22 +361,27 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
           </div>
 
       {/* 3. Phân nhánh controls theo dataType */}
-      <div className="p-3 flex flex-col gap-2.5 overflow-y-auto max-h-[calc(100vh-140px)]">
+      <AdvOverlayScroll
+        className="flex-initial min-h-0"
+        viewportClassName="p-3 flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-140px)] overscroll-contain"
+        contentSignature={`${dataType}-${ranges.length}-${discreteDates.length}`}
+      >
         {/* === 3.1 DỮ LIỆU CHUỖI (TEXT) === */}
         {dataType === DATA_TYPES.TEXT && (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] text-[var(--agv-text-muted)]">
+              <span className="text-xs text-[var(--agv-text-muted)]">
                 Dán hoặc nhập danh sách từ khóa (mỗi dòng 1 từ):
               </span>
               {rawText && (
-                <button
-                  type="button"
+                <AdvButton
+                  variant="destructive"
+                  size="sm"
                   onClick={() => setRawText('')}
-                  className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
+                  className="px-2"
                 >
                   Xóa trắng
-                </button>
+                </AdvButton>
               )}
             </div>
             <textarea
@@ -494,7 +390,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
               placeholder="VD:&#10;VN123&#10;VJ456&#10;QH789&#10;(hỗ trợ phân tách bằng xuống dòng, dấu phẩy, tab)"
               {...NO_AUTOFILL_PROPS}
               rows={6}
-              className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent focus:ring-1 focus:ring-agv-accent resize-y min-h-[120px] max-h-[220px]"
+              className="agv-control w-full p-2 text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] resize-y min-h-[120px] max-h-[220px]"
             />
           </div>
         )}
@@ -504,10 +400,16 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
           <div className="flex flex-col gap-2">
             {isBetweenFilterOp(selectedOp) ? (
               <div className="flex flex-col gap-2">
-                <div className={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${ranges.length > 3 ? 'max-h-[140px] overflow-y-auto' : 'overflow-hidden'}`}>
+                <AdvOverlayScroll
+                  className="flex-initial min-h-0"
+                  viewportClassName={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${
+                    ranges.length > 3 ? 'max-h-[140px] overflow-y-auto overscroll-contain' : 'overflow-hidden'
+                  }`}
+                  contentSignature={ranges.length}
+                >
                   {ranges.map((rng, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 w-full min-w-0 h-[28px] min-h-[28px]">
-                      <span className="text-[11px] text-[var(--agv-text-muted)] w-4 shrink-0 text-center select-none font-mono">#{idx + 1}</span>
+                      <span className="text-xs text-[var(--agv-text-muted)] min-w-[20px] shrink-0 text-center select-none font-mono tabular-nums">#{idx + 1}</span>
                       <input
                         type="text"
                         value={rng.from}
@@ -522,7 +424,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         onKeyDown={handleNumericKeyDown}
                         placeholder="Từ..."
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent tabular-nums"
+                        className="agv-control flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 text-xs tabular-nums"
                       />
                       <RangeArrowSeparator className="mx-0.5" />
                       <input
@@ -539,45 +441,47 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         onKeyDown={handleNumericKeyDown}
                         placeholder="Đến..."
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent tabular-nums"
+                        className="agv-control flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 text-xs tabular-nums"
                       />
-                      <button
-                        type="button"
+                      <AdvButton
+                        variant="destructive"
+                        size="icon-sm"
                         onClick={() => {
                           setRanges((prev) => {
                             if (prev.length <= 1) return [{ from: '', to: '' }];
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        <X size={12} strokeWidth={2.2} />
-                      </button>
+                        <X size={12} strokeWidth={2.2} className="shrink-0" />
+                      </AdvButton>
                     </div>
                   ))}
-                </div>
-                <button
-                  type="button"
+                </AdvOverlayScroll>
+                <AdvButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full text-agv-accent"
                 >
                   + Thêm khoảng số
-                </button>
+                </AdvButton>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-[var(--agv-text-muted)]">
+                  <span className="text-xs text-[var(--agv-text-muted)]">
                     Dán hoặc nhập danh sách số (mỗi dòng 1 số):
                   </span>
                   {rawText && (
-                    <button
-                      type="button"
+                    <AdvButton
+                      variant="destructive"
+                      size="sm"
                       onClick={() => setRawText('')}
-                      className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
+                      className="px-2"
                     >
                       Xóa trắng
-                    </button>
+                    </AdvButton>
                   )}
                 </div>
                 <textarea
@@ -586,7 +490,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   placeholder="Nhập hoặc dán các số (VD: 10, 25, 50, 100)..."
                   {...NO_AUTOFILL_PROPS}
                   rows={5}
-                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
+                  className="agv-control w-full p-2 text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] resize-y min-h-[100px] max-h-[200px]"
                 />
               </div>
             )}
@@ -599,10 +503,16 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
             {isBetweenFilterOp(selectedOp) ? (
               /* Trường hợp 1: Toán tử "Trong khoảng" (between) -> Dùng AdvDateRangePicker cho từng khoảng */
               <div className="flex flex-col gap-2">
-                <div className={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${ranges.length > 3 ? 'max-h-[140px] overflow-y-auto' : 'overflow-hidden'}`}>
+                <AdvOverlayScroll
+                  className="flex-initial min-h-0"
+                  viewportClassName={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${
+                    ranges.length > 3 ? 'max-h-[140px] overflow-y-auto overscroll-contain' : 'overflow-hidden'
+                  }`}
+                  contentSignature={ranges.length}
+                >
                   {ranges.map((rng, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 w-full min-w-0 h-[28px] min-h-[28px]">
-                      <span className="text-[11px] text-[var(--agv-text-muted)] w-4 shrink-0 text-center select-none font-mono">#{idx + 1}</span>
+                      <span className="text-xs text-[var(--agv-text-muted)] min-w-[20px] shrink-0 text-center select-none font-mono tabular-nums">#{idx + 1}</span>
                       <div className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border">
                         <AdvDateRangePicker
                           from={rng.from}
@@ -625,28 +535,29 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                           showTime={Boolean(column.showTime)}
                         />
                       </div>
-                      <button
-                        type="button"
+                      <AdvButton
+                        variant="destructive"
+                        size="icon-sm"
                         onClick={() => {
                           setRanges((prev) => {
                             if (prev.length <= 1) return [{ from: '', to: '' }];
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        <X size={12} strokeWidth={2.2} />
-                      </button>
+                        <X size={12} strokeWidth={2.2} className="shrink-0" />
+                      </AdvButton>
                     </div>
                   ))}
-                </div>
-                <button
-                  type="button"
+                </AdvOverlayScroll>
+                <AdvButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full text-agv-accent"
                 >
                   + Thêm khoảng ngày
-                </button>
+                </AdvButton>
               </div>
             ) : (
               /* Trường hợp 2: Toán tử Bằng, Khác, Lớn hơn, Nhỏ hơn... -> Chọn ngày tích lũy chip qua AdvDatePicker */
@@ -674,39 +585,44 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                 </div>
 
                 {/* Danh sách thẻ chip ngày đã chọn */}
-                <div className="flex flex-wrap gap-1 max-h-[140px] overflow-y-auto p-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] min-h-[60px]">
+                <AdvOverlayScroll
+                  className="rounded border border-[var(--agv-border)] bg-[var(--agv-bg-control)]"
+                  viewportClassName="flex flex-wrap gap-1 max-h-[140px] overflow-y-auto overflow-x-hidden p-1.5 min-h-[60px] overscroll-contain"
+                  contentSignature={discreteDates.length}
+                >
                   {discreteDates.length === 0 ? (
-                    <span className="text-[11px] text-[var(--agv-text-muted)] italic self-center">
+                    <span className="text-xs text-[var(--agv-text-muted)] italic self-center">
                       Chưa chọn ngày nào. Click lịch ở trên để chọn.
                     </span>
                   ) : (
                     discreteDates.map((d) => (
                       <span
                         key={d}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[var(--agv-bg-card)] border border-[var(--agv-border)] text-[var(--agv-text-main)]"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[var(--agv-bg-card)] border border-[var(--agv-border)] text-[var(--agv-text-main)]"
                       >
                         {d}
                         <button
                           type="button"
                           onClick={() => handleRemoveDiscreteDate(d)}
-                          className="hover:text-[var(--agv-danger)] text-[var(--agv-text-muted)] cursor-pointer flex items-center"
+                          className="agv-inline-clear-destructive p-0.5"
                         >
                           <X size={11} strokeWidth={2.2} />
                         </button>
                       </span>
                     ))
                   )}
-                </div>
+                </AdvOverlayScroll>
                 {discreteDates.length > 0 && (
-                  <div className="flex justify-between items-center text-[11px] text-[var(--agv-text-muted)]">
+                  <div className="flex justify-between items-center text-xs text-[var(--agv-text-muted)]">
                     <span>Đã chọn: <strong className="text-agv-accent">{discreteDates.length}</strong> ngày</span>
-                    <button
-                      type="button"
+                    <AdvButton
+                      variant="destructive"
+                      size="sm"
                       onClick={() => setDiscreteDates([])}
-                      className="text-[var(--agv-danger)] hover:underline cursor-pointer"
+                      className="px-2"
                     >
                       Xóa tất cả
-                    </button>
+                    </AdvButton>
                   </div>
                 )}
               </div>
@@ -719,10 +635,16 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
           <div className="flex flex-col gap-2">
             {isBetweenFilterOp(selectedOp) ? (
               <div className="flex flex-col gap-2">
-                <div className={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${ranges.length > 3 ? 'max-h-[140px] overflow-y-auto' : 'overflow-hidden'}`}>
+                <AdvOverlayScroll
+                  className="flex-initial min-h-0"
+                  viewportClassName={`flex flex-col gap-1.5 py-0.5 pr-0.5 overflow-x-hidden ${
+                    ranges.length > 3 ? 'max-h-[140px] overflow-y-auto overscroll-contain' : 'overflow-hidden'
+                  }`}
+                  contentSignature={ranges.length}
+                >
                   {ranges.map((rng, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 w-full min-w-0 h-[28px] min-h-[28px]">
-                      <span className="text-[11px] text-[var(--agv-text-muted)] w-4 shrink-0 text-center select-none font-mono">#{idx + 1}</span>
+                      <span className="text-xs text-[var(--agv-text-muted)] min-w-[20px] shrink-0 text-center select-none font-mono tabular-nums">#{idx + 1}</span>
                       <input
                         type="text"
                         value={rng.from}
@@ -736,7 +658,7 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         }}
                         placeholder="HH:mm"
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                        className="agv-control flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 text-xs tabular-nums"
                       />
                       <RangeArrowSeparator className="mx-0.5" />
                       <input
@@ -752,45 +674,47 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                         }}
                         placeholder="HH:mm"
                         {...NO_AUTOFILL_PROPS}
-                        className="flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] outline-none focus:border-agv-accent"
+                        className="agv-control flex-1 min-w-0 h-[28px] min-h-[28px] box-border px-1.5 text-xs tabular-nums"
                       />
-                      <button
-                        type="button"
+                      <AdvButton
+                        variant="destructive"
+                        size="icon-sm"
                         onClick={() => {
                           setRanges((prev) => {
                             if (prev.length <= 1) return [{ from: '', to: '' }];
                             return prev.filter((_, i) => i !== idx);
                           });
                         }}
-                        className="w-6 h-[28px] min-h-[28px] shrink-0 flex items-center justify-center rounded border border-[var(--agv-border)] text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] hover:border-[var(--agv-danger)] transition cursor-pointer text-xs"
                       >
-                        <X size={12} strokeWidth={2.2} />
-                      </button>
+                        <X size={12} strokeWidth={2.2} className="shrink-0" />
+                      </AdvButton>
                     </div>
                   ))}
-                </div>
-                <button
-                  type="button"
+                </AdvOverlayScroll>
+                <AdvButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setRanges((prev) => [...prev, { from: '', to: '' }])}
-                  className="w-full h-[28px] min-h-[28px] rounded border border-dashed border-[var(--agv-border)] hover:border-agv-accent text-[11px] font-medium text-agv-accent hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full text-agv-accent"
                 >
                   + Thêm khoảng giờ
-                </button>
+                </AdvButton>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-[var(--agv-text-muted)]">
+                  <span className="text-xs text-[var(--agv-text-muted)]">
                     Dán hoặc nhập danh sách giờ (mỗi dòng 1 mốc giờ HH:mm):
                   </span>
                   {rawText && (
-                    <button
-                      type="button"
+                    <AdvButton
+                      variant="destructive"
+                      size="sm"
                       onClick={() => setRawText('')}
-                      className="text-[11px] text-[var(--agv-danger)] hover:underline cursor-pointer"
+                      className="px-2"
                     >
                       Xóa trắng
-                    </button>
+                    </AdvButton>
                   )}
                 </div>
                 <textarea
@@ -799,17 +723,17 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
                   placeholder="VD:&#10;08:30&#10;12:00&#10;17:45"
                   {...NO_AUTOFILL_PROPS}
                   rows={5}
-                  className="w-full p-2 rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 outline-none focus:border-agv-accent resize-y min-h-[100px] max-h-[200px]"
+                  className="agv-control w-full p-2 text-xs text-[var(--agv-text-main)] placeholder:text-[var(--agv-text-muted)] resize-y min-h-[100px] max-h-[200px]"
                 />
               </div>
             )}
           </div>
         )}
-      </div>
+      </AdvOverlayScroll>
 
       {/* 4. Footer: Đếm số điều kiện & 2 nút Xóa / Áp dụng */}
       <div className="flex items-center justify-between px-3 py-2 border-t border-[var(--agv-border)] bg-[var(--agv-bg-header)] shrink-0">
-        <div className="text-[11px] text-[var(--agv-text-muted)]">
+        <div className="text-xs text-[var(--agv-text-muted)]">
           {totalConditionsCount > 0 ? (
             <span>
               Tổng cộng: <strong className="text-agv-accent">{totalConditionsCount}</strong> điều kiện ({isNegativeOp ? 'AND' : 'OR'})
@@ -819,82 +743,170 @@ export const AdvMultiFilterPopup: React.FC<AdvMultiFilterPopupProps> = ({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <AdvButton
+            variant="destructive"
+            size="sm"
             onClick={() => {
               onClear(column.key);
               onClose();
             }}
-            className="px-2.5 h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] hover:bg-[var(--agv-bg-item-hover)] text-xs text-[var(--agv-text-muted)] hover:text-[var(--agv-danger)] transition cursor-pointer"
+            className="px-2.5"
           >
             Xóa
-          </button>
-          <button
-            type="button"
+          </AdvButton>
+          <AdvButton
+            variant="default"
+            size="sm"
             onClick={handleApply}
-            className="px-3 h-[28px] min-h-[28px] rounded font-medium text-xs bg-agv-accent hover:opacity-90 text-agv-accent-text transition cursor-pointer flex items-center gap-1"
           >
             Áp dụng
-          </button>
+          </AdvButton>
         </div>
       </div>
-    </div>,
-    document.body
-  )}
+    </>
+  );
 
-  {/* Dropdown danh sách toán tử đưa ra ngoài vùng (Portal body) để tránh bị tràn/cắt mất dòng */}
-  {isOpMenuOpen && opMenuPos && createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        left: `${opMenuPos.left}px`,
-        ...(opMenuPos.isFlipUp
-          ? { bottom: `${opMenuPos.bottom}px`, top: 'auto' }
-          : { top: `${opMenuPos.top}px`, bottom: 'auto' }),
-        zIndex: 999999999,
-        backgroundColor: 'var(--agv-bg-popup)',
-        borderColor: 'var(--agv-border)',
-        boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-        color: 'var(--agv-text-main)',
-      }}
-      className={`agv-multi-filter-op-menu w-48 max-h-56 overflow-y-auto rounded-md border py-1 flex flex-col select-none ${
-        opMenuPos.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-      } ${getThemeClass(
-        surfaceTheme as any
-      )}`}
-      data-theme={surfaceTheme}
-      data-agv-popup="true"
-      onClick={(e) => e.stopPropagation()}
-      onWheel={(e) => e.stopPropagation()}
-    >
-      {allowedOps
-        .filter((op) => !FILTER_OP_META[op]?.noInput)
-        .map((op) => {
-          const isSel = op === selectedOp;
-          return (
-            <div
-              key={op}
-              onClick={() => {
-                setSelectedOp(op);
-                setIsOpMenuOpen(false);
-              }}
-              className={`flex items-center justify-between px-2.5 h-[28px] min-h-[28px] cursor-pointer text-xs transition ${
-                isSel
-                  ? 'bg-agv-accent text-agv-accent-text font-semibold'
-                  : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FilterOpIcon op={op} size={13} />
-                <span>{FILTER_OP_META[op]?.label}</span>
-              </div>
-              {isSel && <Check size={13} strokeWidth={2.5} className="shrink-0" />}
-            </div>
-          );
-        })}
-    </div>,
-    document.body
-  )}
+  const renderFallbackPortal = () => {
+    if (!anchorRect) return null;
+    const popupWidth = 390;
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left =
+      anchorRect.width && anchorRect.width <= 120
+        ? anchorRect.right - popupWidth
+        : anchorRect.left;
+
+    if (left + popupWidth > viewportWidth - padding) {
+      left = viewportWidth - popupWidth - padding;
+    }
+    if (left < padding) {
+      left = padding;
+    }
+
+    const spaceBelow = viewportHeight - anchorRect.bottom - padding;
+    const spaceAbove = anchorRect.top - padding;
+    const isFlipUp = spaceBelow < 260 && spaceAbove > spaceBelow;
+    const maxHeight = isFlipUp
+      ? Math.max(160, Math.min(520, spaceAbove - 8))
+      : Math.max(160, Math.min(520, spaceBelow - 8));
+
+    const popupStyle: React.CSSProperties = {
+      position: 'fixed',
+      left: `${left}px`,
+      width: `${popupWidth}px`,
+      maxWidth: 'calc(100vw - 16px)',
+      maxHeight: `${maxHeight}px`,
+      zIndex: 99999999,
+      backgroundColor: 'var(--popup-background)',
+      borderColor: 'var(--popup-border)',
+      boxShadow: 'var(--popup-shadow)',
+      color: 'var(--agv-text-main)',
+      ...(isFlipUp
+        ? { bottom: `${viewportHeight - anchorRect.top + 4}px`, top: 'auto' }
+        : { top: `${anchorRect.bottom + 4}px`, bottom: 'auto' }),
+    };
+
+    return createPortal(
+      <div
+        ref={popupRef}
+        style={popupStyle}
+        className={`agv-multi-filter-popup agv-popup-panel flex flex-col rounded-md border text-xs overflow-hidden select-none ${
+          isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
+        } ${getThemeClass(surfaceTheme as any)}`}
+        data-theme={surfaceTheme}
+        data-agv-popup="true"
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        {innerSections}
+      </div>,
+      document.body
+    );
+  };
+
+  const anchorWidth = anchorEl ? anchorEl.getBoundingClientRect().width : 0;
+
+  return (
+    <>
+      {anchorEl ? (
+        <AdvAnchoredPopover
+          isOpen={isOpen}
+          anchorEl={anchorEl}
+          onClose={onClose}
+          placement={anchorWidth > 0 && anchorWidth <= 120 ? 'bottom-end' : 'bottom-start'}
+          showArrow={true}
+          offset={10}
+          width={390}
+          minWidth={320}
+          maxWidth="calc(100vw - 16px)"
+          paddingClassName="p-0"
+          contentClassName="text-xs agv-multi-filter-popup"
+          zIndex={99999999}
+          theme={surfaceTheme}
+          ignoreClickOutsideSelectors={`${DEFAULT_POPOVER_IGNORE_SELECTORS}, .agv-custom-select-dropdown, .agv-datepicker-popup, .agv-modal-portal, [data-agv-popover-trigger="true"]`}
+        >
+          <div
+            data-theme={surfaceTheme}
+            className="flex flex-col max-h-[min(520px,calc(100vh-80px))] rounded-md overflow-hidden text-xs text-[var(--agv-text-main)] select-none"
+          >
+            {innerSections}
+          </div>
+        </AdvAnchoredPopover>
+      ) : (
+        renderFallbackPortal()
+      )}
+
+      {/* Dropdown danh sách toán tử qua AdvAnchoredPopover */}
+      <AdvAnchoredPopover
+        isOpen={isOpMenuOpen}
+        anchorEl={opBtnRef.current}
+        onClose={() => setIsOpMenuOpen(false)}
+        placement="bottom-end"
+        showArrow={true}
+        offset={10}
+        width={192}
+        minWidth={192}
+        paddingClassName="p-0"
+        contentClassName="text-xs agv-multi-filter-op-menu"
+        zIndex={100000000}
+        theme={surfaceTheme}
+        ignoreClickOutsideSelectors=""
+      >
+        <div
+          data-theme={surfaceTheme}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="w-full rounded-md overflow-hidden flex flex-col select-none"
+        >
+          <AdvOverlayScroll
+            className="flex-initial min-h-0"
+            viewportClassName="p-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 overscroll-contain"
+            viewportStyle={{ maxHeight: '222px' }}
+            contentSignature={allowedOps.length}
+          >
+            {allowedOps
+              .filter((op) => !FILTER_OP_META[op]?.noInput)
+              .map((op) => {
+                const isSel = op === selectedOp;
+                return (
+                  <div
+                    key={op}
+                    onClick={() => {
+                      setSelectedOp(op);
+                      setIsOpMenuOpen(false);
+                    }}
+                    className={`agv-popup-item ${isSel ? 'is-selected' : ''}`}
+                  >
+                    <FilterOpIcon op={op} size={14} className="shrink-0" />
+                    <span className="flex-1 truncate">{FILTER_OP_META[op]?.label}</span>
+                    {isSel && <Check size={13} strokeWidth={2.5} className="shrink-0" />}
+                  </div>
+                );
+              })}
+          </AdvOverlayScroll>
+        </div>
+      </AdvAnchoredPopover>
     </>
   );
 };

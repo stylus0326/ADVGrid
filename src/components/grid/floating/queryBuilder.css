@@ -1,0 +1,7 @@
+.agv-query-builder-modal {
+  background-color: var(--popup-background, var(--agv-bg-popup)) !important;
+  border-color: var(--popup-border, var(--agv-border-popup)) !important;
+  border-radius: var(--popup-radius);
+  box-shadow: var(--popup-shadow);
+  color: var(--agv-text-main) !important;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import {
@@ -6,8 +6,23 @@ import {
   getThemeClass,
   SURFACE_THEMES,
   computeEditorCoords,
+  areEditorCoordsEqual,
+  computeDropdownPageStep,
+  computeNextHighlightedIndex,
+  scrollDropdownItemIntoView,
   useClickOutside,
 } from './enterpriseEditorUtils';
+import { getGridControlRadiusClass } from '../grid/constants';
+import {
+  CONTROL_SURFACE_CLASS,
+  POPUP_PANEL_CLASS,
+  getControlSizeClass,
+} from './controlFocus';
+import { AdvOverlayScroll } from './AdvOverlayScroll';
+import { useVirtualList } from './useVirtualList';
+
+const SELECT_ROW_STRIDE = 30;
+const SELECT_MAX_HEIGHT = 240;
 
 export interface AdvSelectOption {
   value: string;
@@ -38,7 +53,7 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   disabled = false,
   className = '',
   style = {},
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = SURFACE_THEMES.LIGHT,
   size = 'sm',
   width = '100%',
 }) => {
@@ -48,9 +63,19 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
 
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isKeyboardNav, setIsKeyboardNav] = useState(false);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const navSourceRef = useRef<'pointer' | 'keyboard' | 'init'>('init');
+  const isKeyboardNavRef = useRef(false);
+
+  const setKeyboardNavActive = useCallback((active: boolean) => {
+    if (isKeyboardNavRef.current === active) return;
+    isKeyboardNavRef.current = active;
+    setIsKeyboardNav(active);
+  }, []);
 
   const [coords, setCoords] = useState<{
     top: number;
@@ -68,35 +93,74 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
     });
   }, [options]);
 
-  const selectedOption = useMemo(() => {
-    return normalizedOptions.find((o) => o.value === curVal);
-  }, [normalizedOptions, curVal]);
+  const optionIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < normalizedOptions.length; i++) {
+      const val = normalizedOptions[i].value;
+      if (!map.has(val)) map.set(val, i);
+    }
+    return map;
+  }, [normalizedOptions]);
+
+  const selectedIndex = optionIndexMap.get(curVal) ?? -1;
+  const selectedOption = selectedIndex >= 0 ? normalizedOptions[selectedIndex] : undefined;
 
   const updateCoords = useCallback(() => {
     if (!triggerRef.current) return;
     const c = computeEditorCoords(triggerRef.current, 240, 140);
-    setCoords(c);
+    setCoords((prev) => (areEditorCoordsEqual(prev, c) ? prev : c));
   }, []);
 
-  const openDropdown = useCallback(() => {
+  const openDropdown = useCallback((fromKeyboard = false) => {
     if (disabled) return;
     updateCoords();
+    navSourceRef.current = fromKeyboard ? 'keyboard' : 'init';
+    setKeyboardNavActive(fromKeyboard);
     setIsOpen(true);
-    const idx = normalizedOptions.findIndex((o) => o.value === curVal);
+    const idx = optionIndexMap.get(curVal) ?? -1;
     setHighlightedIndex(idx >= 0 ? idx : 0);
-  }, [disabled, updateCoords, normalizedOptions, curVal]);
+  }, [disabled, updateCoords, optionIndexMap, curVal, setKeyboardNavActive]);
 
   const closeDropdown = useCallback(() => {
     setIsOpen(false);
+    setKeyboardNavActive(false);
     setHighlightedIndex(-1);
-  }, []);
+  }, [setKeyboardNavActive]);
 
   const toggleDropdown = useCallback(() => {
     if (isOpen) closeDropdown();
-    else openDropdown();
+    else openDropdown(false);
   }, [isOpen, closeDropdown, openDropdown]);
 
+  const maxPopupViewportHeight = coords
+    ? Math.min(SELECT_MAX_HEIGHT - 2, Math.max(118, coords.maxHeight - 2))
+    : SELECT_MAX_HEIGHT - 2;
+
+  const virtual = useVirtualList({
+    itemCount: normalizedOptions.length,
+    itemHeight: SELECT_ROW_STRIDE,
+    viewportRef: scrollViewportRef,
+    overscan: 6,
+    threshold: 40,
+    enabled: isOpen,
+    defaultViewportHeight: maxPopupViewportHeight,
+  });
+
   useClickOutside(isOpen, closeDropdown, updateCoords, triggerRef, popupRef);
+
+  useLayoutEffect(() => {
+    if (!isOpen || navSourceRef.current === 'pointer') return;
+    if (virtual.isVirtualized) {
+      virtual.scrollToIndex(highlightedIndex, 4, 4);
+      return;
+    }
+    const container = scrollViewportRef.current;
+    if (!container) return;
+    const itemEl = container.querySelector<HTMLElement>(`[data-select-idx="${highlightedIndex}"]`);
+    if (itemEl) {
+      scrollDropdownItemIntoView(container, itemEl, 4, 4);
+    }
+  }, [isOpen, highlightedIndex, normalizedOptions.length, virtual.isVirtualized, virtual.scrollToIndex]);
 
   const handleSelect = useCallback(
     (optVal: string) => {
@@ -112,24 +176,38 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
-    if (e.key === 'ArrowDown') {
+    if (
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'PageDown' ||
+      e.key === 'PageUp' ||
+      e.key === 'Home' ||
+      e.key === 'End'
+    ) {
       e.preventDefault();
       if (!isOpen) {
-        openDropdown();
-      } else {
-        setHighlightedIndex((prev) => (prev < normalizedOptions.length - 1 ? prev + 1 : 0));
-      }
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (!isOpen) {
-        openDropdown();
-      } else {
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : normalizedOptions.length - 1));
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          openDropdown(true);
+        }
+      } else if (normalizedOptions.length > 0) {
+        const container = scrollViewportRef.current;
+        const firstItem = container?.querySelector<HTMLElement>('[data-select-idx]');
+        const pageStep = computeDropdownPageStep(
+          container?.clientHeight || 232,
+          virtual.isVirtualized ? SELECT_ROW_STRIDE : firstItem?.offsetHeight || 28,
+          6
+        );
+        navSourceRef.current = 'keyboard';
+        setKeyboardNavActive(true);
+        setHighlightedIndex((prev) => {
+          const next = computeNextHighlightedIndex(e.key, prev, normalizedOptions.length, pageStep);
+          return next !== null ? next : prev;
+        });
       }
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (!isOpen) {
-        openDropdown();
+        openDropdown(true);
       } else if (highlightedIndex >= 0 && normalizedOptions[highlightedIndex]) {
         const item = normalizedOptions[highlightedIndex];
         if (!item.disabled) handleSelect(item.value);
@@ -140,31 +218,60 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
     }
   };
 
+  const renderOptionRow = (opt: AdvSelectOption, idx: number, isVirtualRow: boolean) => {
+    const isSelected = opt.value === curVal;
+    const isHighlighted = isKeyboardNav && idx === highlightedIndex;
+
+    return (
+      <button
+        key={opt.value}
+        type="button"
+        data-select-idx={idx}
+        disabled={opt.disabled}
+        onClick={() => !opt.disabled && handleSelect(opt.value)}
+        className={`agv-popup-item justify-between ${
+          isVirtualRow ? 'h-[28px] min-h-[28px] mb-[2px]' : ''
+        } ${
+          isSelected ? 'is-selected' : isHighlighted ? 'is-highlighted' : ''
+        }`.trim()}
+      >
+        <span className="truncate">{opt.label}</span>
+        {isSelected && (
+          <Check
+            size={13}
+            strokeWidth={2.5}
+            className="shrink-0 ml-1.5"
+          />
+        )}
+      </button>
+    );
+  };
+
   const themeVars = getPortalThemeVars(theme);
   const themeClass = getThemeClass(theme);
 
   return (
     <div
-      className={`relative inline-block select-none ${className}`}
+      data-theme={theme || undefined}
+      className={`relative inline-block select-none ${themeClass} ${className}`.trim()}
       style={{ width, ...style }}
     >
       <button
         ref={triggerRef}
         type="button"
         disabled={disabled}
+        data-agv-trigger="true"
+        data-state={isOpen ? 'open' : 'closed'}
+        aria-expanded={isOpen}
         onClick={toggleDropdown}
         onKeyDown={handleKeyDown}
-        className={`w-full flex items-center justify-between gap-2 px-2.5 rounded-md text-xs font-normal border transition-colors outline-none cursor-pointer min-h-[28px] box-border ${
-          size === 'md' ? 'h-[32px] text-sm' : 'h-[28px]'
+        className={`w-full flex items-center justify-between gap-2 px-2.5 font-normal cursor-pointer outline-none ${CONTROL_SURFACE_CLASS} ${getGridControlRadiusClass()} ${getControlSizeClass(
+          size
+        )} ${
+          selectedOption ? 'text-foreground' : 'text-muted-foreground'
         } ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--agv-border-strong)]'
-        } ${
-          isOpen ? 'border-[var(--agv-accent)] ring-1 ring-[var(--agv-accent)]' : 'border-[var(--agv-border)]'
-        }`}
-        style={{
-          backgroundColor: 'var(--agv-bg-control, transparent)',
-          color: selectedOption ? 'var(--agv-text-main)' : 'var(--agv-text-muted)',
-        }}
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`.trim()}
       >
         <span className="truncate text-left flex-1">
           {selectedOption ? selectedOption.label : placeholder}
@@ -173,7 +280,7 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
           size={14}
           strokeWidth={2}
           className={`shrink-0 transition-transform duration-150 ${
-            isOpen ? 'rotate-180 text-[var(--agv-accent)]' : 'text-[var(--agv-text-muted)]'
+            isOpen ? 'rotate-180 text-brand' : 'text-muted-foreground'
           }`}
         />
       </button>
@@ -187,8 +294,15 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
             <div
               ref={popupRef}
               data-agv-popup="true"
+              onMouseMove={() => {
+                if (isKeyboardNavRef.current) {
+                  navSourceRef.current = 'pointer';
+                  setKeyboardNavActive(false);
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className={`pointer-events-auto absolute p-1 rounded-md border select-none overflow-y-auto max-h-[240px] shadow-xl ${
+              className={`agv-select-portal agv-portal-dropdown pointer-events-auto absolute ${POPUP_PANEL_CLASS} overflow-hidden select-none ${
                 coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
               }`}
               style={{
@@ -196,66 +310,33 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
                 bottom: coords.isFlipUp ? `${coords.bottom}px` : undefined,
                 left: `${coords.left}px`,
                 width: `${coords.width}px`,
-                backgroundColor: 'var(--agv-bg-popup)',
-                borderColor: 'var(--agv-border)',
-                color: 'var(--agv-text-main)',
-                boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 4px 10px -2px rgba(0, 0, 0, 0.1)',
               }}
             >
-              {normalizedOptions.length === 0 ? (
-                <div className="px-2.5 py-1.5 text-xs text-[var(--agv-text-muted)] text-center">
-                  Không có tùy chọn
-                </div>
-              ) : (
-                <div className="space-y-0.5">
-                  {normalizedOptions.map((opt, idx) => {
-                    const isSelected = opt.value === curVal;
-                    const isHighlighted = idx === highlightedIndex;
-
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        disabled={opt.disabled}
-                        onClick={() => !opt.disabled && handleSelect(opt.value)}
-                        onMouseEnter={() => !opt.disabled && setHighlightedIndex(idx)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs text-left transition cursor-pointer min-h-[28px] ${
-                          opt.disabled ? 'opacity-40 cursor-not-allowed' : ''
-                        }`}
-                        style={
-                          isHighlighted
-                            ? {
-                                backgroundColor: 'var(--agv-accent)',
-                                color: 'var(--agv-accent-text, #ffffff)',
-                              }
-                            : isSelected
-                            ? {
-                                backgroundColor: 'var(--agv-bg-item-active, rgba(0,0,0,0.06))',
-                                color: 'var(--agv-text-main)',
-                              }
-                            : {
-                                color: 'var(--agv-text-main)',
-                              }
-                        }
-                      >
-                        <span className={`truncate ${isSelected ? 'font-semibold' : ''}`}>
-                          {opt.label}
-                        </span>
-                        {isSelected && (
-                          <Check
-                            size={13}
-                            strokeWidth={2.5}
-                            className="shrink-0 ml-1.5"
-                            style={{
-                              color: isHighlighted ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-accent)',
-                            }}
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <AdvOverlayScroll
+                viewportRef={scrollViewportRef}
+                onScroll={virtual.handleScroll}
+                viewportClassName="overflow-y-auto overflow-x-hidden p-1"
+                viewportStyle={{ maxHeight: `${maxPopupViewportHeight}px` }}
+                contentSignature={`${normalizedOptions.length}:${virtual.startIndex}:${virtual.endIndex}`}
+              >
+                {normalizedOptions.length === 0 ? (
+                  <div className="px-2.5 py-1.5 text-xs text-muted-foreground text-center">
+                    Không có tùy chọn
+                  </div>
+                ) : virtual.isVirtualized ? (
+                  <div style={{ height: `${virtual.totalHeight}px`, position: 'relative' }}>
+                    <div style={{ transform: `translate3d(0, ${virtual.offsetY}px, 0)` }}>
+                      {normalizedOptions
+                        .slice(virtual.startIndex, virtual.endIndex)
+                        .map((opt, offset) => renderOptionRow(opt, virtual.startIndex + offset, true))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {normalizedOptions.map((opt, idx) => renderOptionRow(opt, idx, false))}
+                  </div>
+                )}
+              </AdvOverlayScroll>
             </div>
           </div>,
           document.body

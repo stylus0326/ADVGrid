@@ -1,4 +1,6 @@
 import React, {
+  lazy,
+  Suspense,
   useState,
   useEffect,
   useLayoutEffect,
@@ -11,73 +13,88 @@ import React, {
 import {
   VirtualizedGridProps,
   VirtualizedGridRef,
+  GridToolbarPopupType,
   ColumnDef,
-  BaseGroupDef,
   PinPosition,
   PIN_POSITIONS,
   DATA_TYPES,
-  SORT_DIRECTIONS,
   FILTER_MODES,
-  CenterDockStatus,
-  CENTER_DOCK_STATUSES,
-  GridScrollMetrics,
+  CONTEXT_MENU_TYPES,
+  ContextMenuData,
   GRID_EDIT_MODES,
   SURFACE_THEMES,
   GRID_LAYOUT_MODES,
-  GridLayoutMode,
+  resolveGridFeatures,
 } from './types';
 import {
   DEFAULT_CHUNK_SIZE,
   DEFAULT_ROW_HEIGHT,
-  POPUP_SELECTORS,
   getThemeClasses,
 } from './constants';
 import { getThemeClass } from '../../themes';
+import { AdvButton } from '../ui/AdvButton';
 import { GridHeader } from './GridHeader';
-import { GridFilterRow } from './GridFilterRow';
-import { GridChunkBlock } from './GridChunkBlock';
+import { GridVirtualRowSlot } from './GridVirtualRowSlot';
 import { GridRow } from './GridRow';
-import { ColumnContextMenu, ContextMenuData, CONTEXT_MENU_TYPES } from './ColumnContextMenu';
+import { buildGridLayoutSnapshot } from './colRenderMeta';
+import type { AdvChecklistFilterPopupRef } from './AdvChecklistFilterPopup';
+import { normalizeSortRules, toggleColumnSortRules } from './multiSortUtils';
 import {
-  calcColAutoFitWidth,
-  getSttColWidth,
-  matchFilterValue as defaultMatchFilterValue,
-  getColumnDateBoundsFromGetter,
-  getGridCellValue,
-  createColumnFilter,
   createEqualsFilter,
+  getDefaultFilterOpForColumn,
+  getGridCellValue,
   isNoInputFilterOp,
   isSelectionColumn,
-} from './gridUtils';
+} from './gridFormatUtils';
+import { matchSimpleFilterSync } from './gridSimpleFilter';
+import { QueryGroup } from './floating/types';
+import { countActiveQueryRules, hasActiveQueryRules } from './floating/queryRuleCheck';
+import { useGridLayoutMode } from './responsive/useGridLayoutMode';
 import {
-  AdvChecklistFilterPopup,
-  AdvChecklistFilterPopupRef,
-} from './AdvChecklistFilterPopup';
-import { getDefaultFilterOpForColumn } from './FilterIcons';
-import { GridFloatingToolbar } from './GridFloatingToolbar';
-import { GridSettingsState, QueryGroup, DENSITY_MODES } from './floating/types';
-import { useGridLayoutMode, GridTabletHeader, ResponsiveSortFilterModal } from './responsive';
+  compilePhoneCard,
+  compileTabletGroups,
+  computeTabletTrackMinWidth,
+} from './responsive/responsiveColumnUtils';
+
+const LazyGridFilterRow = lazy(() =>
+  import('./GridFilterRow').then((m) => ({ default: m.GridFilterRow }))
+);
+const LazyColumnContextMenu = lazy(() =>
+  import('./ColumnContextMenu').then((m) => ({ default: m.ColumnContextMenu }))
+);
+const LazyAdvChecklistFilterPopup = lazy(() =>
+  import('./AdvChecklistFilterPopup').then((m) => ({ default: m.AdvChecklistFilterPopup }))
+);
+const LazyGridExternalPopupHost = lazy(() =>
+  import('./GridExternalPopupHost').then((m) => ({ default: m.GridExternalPopupHost }))
+);
+const LazyGridResponsiveHeader = lazy(() =>
+  import('./responsive/GridResponsiveHeader').then((m) => ({
+    default: m.GridResponsiveHeader,
+  }))
+);
+const LazyResponsiveSortFilterModal = lazy(() =>
+  import('./responsive/ResponsiveSortFilterModal').then((m) => ({
+    default: m.ResponsiveSortFilterModal,
+  }))
+);
+import './grid.css';
 import {
   useColumnResize,
   useColumnAutoFit,
   useInCellEditor,
   useGridKeyboardNav,
   useGridSortFlipAnimation,
+  useGridPopupLock,
+  useGridColumnLayout,
+  useDynamicRowHeights,
+  useGridOverlayScrollbar,
+  useGridCrossHover,
+  isAnyPopupActive,
 } from './hooks';
+import { computeSpanWindowPlan, type SpanWindowPlan } from './gridCellSpanEngine';
 
-let cachedPopupActive = false;
-let lastPopupCheckTime = 0;
-
-function isAnyPopupActive(force: boolean = false): boolean {
-  if (typeof document === 'undefined') return false;
-  const now = performance.now();
-  if (!force && now - lastPopupCheckTime < 64) {
-    return cachedPopupActive;
-  }
-  lastPopupCheckTime = now;
-  cachedPopupActive = Boolean(document.querySelector(POPUP_SELECTORS));
-  return cachedPopupActive;
-}
+const EMPTY_NUMBERS: number[] = [];
 
 const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridProps>(
   <T extends any>(
@@ -88,6 +105,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       getRowId,
       columns,
       columnGroups,
+      tabletGroups,
+      phoneCard,
       columnPins: controlledPins,
       defaultColumnPins,
       onColumnPinsChange,
@@ -96,24 +115,26 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onColWidthsChange,
       sortConfig,
       onSortChange,
+      sortRules,
+      onSortRulesChange,
       selectedRowIndex,
       selectedRowKey,
       onSelectRow,
+      onRowDetail,
       checkedRowIndices,
       onToggleCheck,
       onClearCheckedRows,
       renderCell,
       chunkSize = DEFAULT_CHUNK_SIZE,
       rowHeight = DEFAULT_ROW_HEIGHT,
-      overscanChunks = 3,
+      overscanChunks: _overscanChunks = 3,
+      overscanRows = 5,
+      scrollbarAlwaysOn = false,
+      dynamicRowHeight = false,
+      estimatedRowHeight,
+      getRowHeight: getRowHeightProp,
       antiGhostMode = true,
       surfaceTheme = SURFACE_THEMES.LIGHT,
-      rowSnapMode: controlledRowSnapMode,
-      onRowSnapModeChange,
-      rowsPerWheelStep = 3,
-      autoScrolling = false,
-      autoScrollSpeed = 32,
-      onScrollMetrics,
       onToggleGroup,
       onQuickFilter,
       formulaMode,
@@ -124,7 +145,28 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onStartEditCell,
       onEndEditCell,
       onCellChange,
-      showFilterRow = true,
+      variant,
+      autoHeight,
+      maxHeight,
+      persistState,
+      enableFiltering,
+      showFilterRow: rawShowFilterRow,
+      enableHeaderFilter,
+      enableQuickSearch,
+      enableQueryBuilder,
+      enableSorting,
+      enableMultiSort,
+      enableColumnResize,
+      enableColumnReorder,
+      enableColumnPinning,
+      enableColumnHide,
+      enableRowNumber,
+      enableSelection,
+      enableGrouping,
+      enableRowPinning,
+      enableSummary,
+      enableStatusBar,
+      enableContextMenu,
       columnFilters = {},
       onColumnFilterChange,
       onClearAllColumnFilters,
@@ -136,13 +178,14 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       getDistinctValues,
       className = '',
       style,
-      enableFloatingToolbar = true,
+      enableFloatingToolbar: rawEnableFloatingToolbar,
+      enableColumnChooser,
+      enableFullscreen,
       quickFilterText: controlledQuickFilterText,
       onQuickFilterTextChange: controlledOnQuickFilterTextChange,
       appliedQueryTree: controlledAppliedQueryTree,
       onApplyQueryTree: controlledOnApplyQueryTree,
-      onExportExcel: controlledOnExportExcel,
-      isExporting: controlledIsExporting = false,
+      onToolbarStateChange,
       hiddenColKeys: controlledHiddenColKeys,
       defaultHiddenColKeys,
       onHiddenColKeysChange,
@@ -157,15 +200,129 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onExpandAllGroups,
       onUngroup,
       onCopyGroupTable,
-      onExportGroupExcel,
       groupSortConfig,
       onToggleGroupSort,
       matchFilterValue,
       dataVersion = 0,
       layoutMode = GRID_LAYOUT_MODES.AUTO,
+      gridId,
+      loading = false,
+      refreshing = false,
+      error = null,
+      onRetry,
+      emptyText,
+      statusBar,
+      showSummaryRow: controlledShowSummaryRow,
+      showStatusBar: controlledShowStatusBar,
+      modules,
+      pinnedTopRowData,
+      enableCenterDock,
+      enableCellEditing,
+      enableResponsiveLayout,
+      enableCrossHover,
+      crossHoverHighlightHeader,
+      enableCellSpan,
+      enableTreeData,
+      enableRowDetail,
+      spanMethod,
+      maxRowSpanLookback,
+      treeColumnKey,
+      treeIndentSize,
+      onToggleTreeExpand,
+      detailExpandColKey,
+      isRowDetailExpanded,
+      canExpandRowDetail,
+      onToggleRowDetail,
+      renderDetailRow,
+      hasDynamicDetailRows,
+      treeDetailActions,
+      _resolvedFeatures,
     }: VirtualizedGridProps<T>,
     ref: React.Ref<VirtualizedGridRef>
   ) => {
+    const features = useMemo(
+      () =>
+        _resolvedFeatures ??
+        resolveGridFeatures({
+          modules,
+          variant,
+          autoHeight,
+          maxHeight,
+          persistState,
+          enableFiltering,
+          showFilterRow: rawShowFilterRow,
+          enableHeaderFilter,
+          enableQuickSearch,
+          enableQueryBuilder,
+          enableSorting,
+          enableMultiSort,
+          enableColumnResize,
+          enableColumnReorder,
+          enableColumnPinning,
+          enableCenterDock,
+          enableColumnHide,
+          enableRowNumber,
+          enableSelection,
+          enableGrouping,
+          enableRowPinning,
+          enableCellEditing,
+          enableResponsiveLayout,
+          enableCrossHover,
+          crossHoverHighlightHeader,
+          enableCellSpan: enableCellSpan ?? (spanMethod !== undefined ? true : undefined),
+          enableTreeData,
+          enableRowDetail,
+          enableSummary,
+          showSummaryRow: controlledShowSummaryRow,
+          enableStatusBar,
+          showStatusBar: controlledShowStatusBar,
+          enableContextMenu,
+          enableFloatingToolbar: rawEnableFloatingToolbar,
+          enableColumnChooser,
+          enableFullscreen,
+        }),
+      [
+        _resolvedFeatures,
+        modules,
+        variant,
+        autoHeight,
+        maxHeight,
+        persistState,
+        enableFiltering,
+        rawShowFilterRow,
+        enableHeaderFilter,
+        enableQuickSearch,
+        enableQueryBuilder,
+        enableSorting,
+        enableMultiSort,
+        enableColumnResize,
+        enableColumnReorder,
+        enableColumnPinning,
+        enableCenterDock,
+        enableColumnHide,
+        enableRowNumber,
+        enableSelection,
+        enableGrouping,
+        enableRowPinning,
+        enableCellEditing,
+        enableResponsiveLayout,
+        enableCrossHover,
+        crossHoverHighlightHeader,
+        enableCellSpan,
+        spanMethod,
+        enableTreeData,
+        enableRowDetail,
+        enableSummary,
+        controlledShowSummaryRow,
+        enableStatusBar,
+        controlledShowStatusBar,
+        enableContextMenu,
+        rawEnableFloatingToolbar,
+        enableColumnChooser,
+        enableFullscreen,
+      ]
+    );
+    const effectiveEditMode = features.enableCellEditing ? editMode : GRID_EDIT_MODES.VIEW;
     // Active column filter count (hỗ trợ cả Row Filter và Checklist độc lập)
     const activeColumnFilterCount = useMemo(() => {
       return Object.values(columnFilters).filter((f) => {
@@ -208,8 +365,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       [getCellValue, getRowItem]
     );
 
-    // Bộ lọc dữ liệu mặc định O(1) nếu không truyền từ bên ngoài
-    const effectiveMatchFilterValue = matchFilterValue || defaultMatchFilterValue;
+    // Bộ lọc dữ liệu mặc định nhẹ nếu không truyền từ bên ngoài
+    const effectiveMatchFilterValue = matchFilterValue || matchSimpleFilterSync;
 
     // Tự động phát hiện cột có ô trống nếu không truyền hàm riêng
     const defaultHasColumnEmptyCells = useCallback(
@@ -217,17 +374,31 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         const sample = Math.min(totalRows, 300);
         for (let i = 0; i < sample; i++) {
           const val = effectiveGetCellValue(i, colKey);
-          if (val === null || val === undefined || String(val).trim() === '') return true;
+          if (val !== null && val !== undefined && String(val).trim() === '') return true;
         }
         return false;
       },
       [totalRows, effectiveGetCellValue]
     );
 
-    // Tự động tìm giới hạn ngày nếu không truyền hàm riêng
+    const filterEngineRef = useRef<typeof import('./gridFilterEngine') | null>(null);
+    const [, setFilterEngineVersion] = useState(0);
+
+    // Tự động tìm giới hạn ngày (lazy-load gridFilterEngine khi dùng độc lập không qua DataGrid)
     const defaultGetColumnDateBounds = useCallback(
       (colKey: string) => {
-        return getColumnDateBoundsFromGetter(effectiveGetCellValue, totalRows, colKey);
+        if (filterEngineRef.current) {
+          return filterEngineRef.current.getColumnDateBoundsFromGetter(
+            effectiveGetCellValue,
+            totalRows,
+            colKey
+          );
+        }
+        void import('./gridFilterEngine').then((m) => {
+          filterEngineRef.current = m;
+          setFilterEngineVersion((v) => v + 1);
+        });
+        return { min: '', max: '' };
       },
       [effectiveGetCellValue, totalRows]
     );
@@ -235,18 +406,13 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
     const effectiveHasColumnEmptyCells = hasColumnEmptyCells || defaultHasColumnEmptyCells;
     const effectiveGetColumnDateBounds = getColumnDateBounds || defaultGetColumnDateBounds;
 
-    // Column widths state (controlled or uncontrolled)
-    const [internalWidths, setInternalWidths] = useState<Record<string, number>>(() => {
-      const initial: Record<string, number> = {};
-      columns.forEach((c) => {
-        initial[c.key] = defaultColWidths?.[c.key] ?? c.defaultWidth;
-      });
-      return initial;
-    });
-
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const lastScrollTopRef = useRef<number>(0);
+    const virtualScrollTopRef = useRef<number>(0);
+    const lastScrollLeftRef = useRef<number>(0);
 
-    // In-Cell Editing Hook (quản lý trạng thái sửa ô, In-Cell scroll lock & global event lock)
+    // In-Cell Editing Hook (quản lý trạng thái sửa ô & scroll restore)
     const {
       activeEditingCell,
       handleStartEditCell,
@@ -258,98 +424,67 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       onEndEditCell,
       scrollContainerRef,
     });
+    const effectiveEditingCell = features.enableCellEditing ? activeEditingCell : null;
+    const effectiveStartEditCell = features.enableCellEditing ? handleStartEditCell : undefined;
 
-    const rawColWidths = controlledWidths ?? internalWidths;
+    // Bố cục cột, độ rộng, ghim trái/phải/giữa, ẩn cột & CSS variables
+    const {
+      colMap,
+      colWidths,
+      setColWidth,
+      setMultipleColWidths,
+      columnPins,
+      setColumnPin,
+      hiddenColKeys,
+      setHiddenColKeys,
+      effectiveColumns,
+      columnDataTypes,
+      effectiveColumnGroups,
+      visibleColKeys,
+      handleVisibleColKeysChange,
+      handleResetColumns,
+      leftColumns,
+      rightColumns,
+      flatColumns,
+      leftOffsets,
+      rightOffsets,
+      centerPinnedColKeys,
+      centerDockStatus,
+      computeCenterDock,
+      centerLeftOffsets,
+      centerRightOffsets,
+      lastEffectiveLeftColKey,
+      firstEffectiveRightColKey,
+      totalGridWidth,
+      middleElements,
+      gridColVars,
+    } = useGridColumnLayout({
+      columns,
+      columnGroups,
+      totalRows,
+      features,
+      controlledWidths,
+      defaultColWidths,
+      onColWidthsChange,
+      controlledPins,
+      defaultColumnPins,
+      onColumnPinsChange,
+      controlledHiddenColKeys,
+      defaultHiddenColKeys,
+      onHiddenColKeysChange,
+      controlledOnResetColumns,
+      scrollContainerRef,
+    });
 
-    const autoSttWidth = useMemo(
-      () => getSttColWidth(totalRows),
-      [totalRows]
-    );
-
-    // Column Map
-    const colMap = useMemo(() => {
-      const map: Record<string, ColumnDef<T>> = {};
-      columns.forEach((col) => {
-        map[col.key] = col;
-      });
-      return map;
-    }, [columns]);
-
-    const colWidths = useMemo<Record<string, number>>(() => {
-      const res: Record<string, number> = { ...(rawColWidths || {}) };
-      for (const col of columns) {
-        if (col.dataType === DATA_TYPES.SYSTEM || col.isRowNumber || isSelectionColumn(col)) {
-          if (col.isRowNumber || col.title) {
-            res[col.key] = res[col.key] || autoSttWidth || col.defaultWidth || 46;
-          } else {
-            res[col.key] = res[col.key] || col.defaultWidth || 32;
-          }
-        }
-      }
-      return res;
-    }, [rawColWidths, autoSttWidth, columns]);
-
-    const colWidthsRef = useRef(colWidths);
-    colWidthsRef.current = colWidths;
-
-    const setColWidth = useCallback(
-      (key: string, width: number) => {
-        const targetCol = colMap[key];
-        if (!targetCol || targetCol.resizable === false || targetCol.dataType === DATA_TYPES.SYSTEM || targetCol.isRowNumber || isSelectionColumn(targetCol)) return;
-        if (onColWidthsChange) {
-          onColWidthsChange({ ...colWidthsRef.current, [key]: width });
-        } else {
-          setInternalWidths((prev) => ({ ...prev, [key]: width }));
-        }
-      },
-      [onColWidthsChange, colMap]
-    );
-
-    const setMultipleColWidths = useCallback(
-      (updates: Record<string, number>) => {
-        if (!updates || Object.keys(updates).length === 0) return;
-        const filteredUpdates: Record<string, number> = {};
-        for (const [k, v] of Object.entries(updates)) {
-          const targetCol = colMap[k];
-          if (targetCol && targetCol.resizable !== false && targetCol.dataType !== DATA_TYPES.SYSTEM && !targetCol.isRowNumber && !isSelectionColumn(targetCol)) {
-            filteredUpdates[k] = v;
-          }
-        }
-        if (Object.keys(filteredUpdates).length === 0) return;
-        if (onColWidthsChange) {
-          onColWidthsChange({ ...colWidthsRef.current, ...filteredUpdates });
-        } else {
-          setInternalWidths((prev) => ({ ...prev, ...filteredUpdates }));
-        }
-      },
-      [onColWidthsChange, colMap]
-    );
-
-    // Column pins state (controlled or uncontrolled)
-    const [internalPins, setInternalPins] = useState<Record<string, PinPosition>>(
-      () => defaultColumnPins ?? {}
-    );
-
-    const columnPins = controlledPins ?? internalPins;
-
-    const setColumnPin = useCallback(
-      (colKey: string, pin: PinPosition) => {
-        const currentPin = columnPins[colKey] || PIN_POSITIONS.NONE;
-        const nextPin = currentPin === pin ? PIN_POSITIONS.NONE : pin;
-        const next = { ...columnPins, [colKey]: nextPin };
-        if (onColumnPinsChange) onColumnPinsChange(next);
-        else setInternalPins(next);
-      },
-      [columnPins, onColumnPinsChange]
-    );
-
-    const containerRef = useRef<HTMLDivElement | null>(null);
-
-    // Floating Toolbar internal states
+    // External Popover states
     const [internalQuickFilterText, setInternalQuickFilterText] = useState('');
     const [isQuickFilterSmart, setIsQuickFilterSmart] = useState(true);
     const [internalQueryTree, setInternalQueryTree] = useState<QueryGroup | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [externalPopup, setExternalPopup] = useState<{
+      type: GridToolbarPopupType;
+      anchorEl: HTMLElement | null;
+    } | null>(null);
 
     const currentQuickFilterText =
       controlledQuickFilterText !== undefined
@@ -396,7 +531,10 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     // Shortcut Alt + Shift + F: Kích hoạt mở rộng / thu nhỏ toàn màn hình (Fullscreen toggle)
     useEffect(() => {
-      if (enableFloatingToolbar) return; // Khi enableFloatingToolbar = true, toolbar đã xử lý
+      if (!features.enableFullscreen) {
+        if (isFullscreen) setIsFullscreen(false);
+        return;
+      }
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.altKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
           e.preventDefault();
@@ -408,79 +546,49 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [enableFloatingToolbar, toggleFullscreen, isFullscreen]);
-
-    const [gridSettings, setGridSettings] = useState<GridSettingsState>(() => ({
-      quickSearchEnabled: true,
-      pinnedShadowEnabled: true,
-      showVerticalGridlines: true,
-      showRowNumber: true,
-      showSelectionCol: true,
-      densityMode: DENSITY_MODES.STANDARD,
-      showSummaryRow: true,
-      showPagerBar: true,
-      rowSnapMode: controlledRowSnapMode ?? true,
-    }));
-
-    useEffect(() => {
-      if (controlledRowSnapMode === undefined) return;
-      setGridSettings((prev) =>
-        prev.rowSnapMode === controlledRowSnapMode
-          ? prev
-          : { ...prev, rowSnapMode: controlledRowSnapMode }
-      );
-    }, [controlledRowSnapMode]);
-
-    const handleUpdateGridSettings = useCallback(
-      (updater: (prev: GridSettingsState) => GridSettingsState) => {
-        setGridSettings((prev) => {
-          const next = updater(prev);
-          if (next.rowSnapMode !== prev.rowSnapMode && onRowSnapModeChange) {
-            onRowSnapModeChange(next.rowSnapMode);
-          }
-          return next;
-        });
-      },
-      [onRowSnapModeChange]
-    );
+    }, [features.enableFullscreen, toggleFullscreen, isFullscreen]);
 
     const { activeMode } = useGridLayoutMode({
       layoutMode,
       containerRef,
+      enabled: features.enableResponsiveLayout,
     });
     const isTabletMode = activeMode === 'tablet';
     const isPhoneMode = activeMode === 'phone';
     const isResponsiveMode = isTabletMode || isPhoneMode;
 
-    const rowSnapMode = gridSettings.rowSnapMode;
+    const showSummaryRow = features.enableSummary ? (controlledShowSummaryRow ?? true) : false;
+    const showStatusBar = features.enableStatusBar ? (controlledShowStatusBar ?? true) : false;
 
-    const actualRowHeight = isTabletMode
-      ? 68
-      : isPhoneMode
-      ? 104
-      : gridSettings.densityMode === DENSITY_MODES.COMPACT
-      ? 28
-      : rowHeight;
-
-    // Chiều cao nở thêm chuẩn từng pixel khi mở rộng thẻ Phone Card (biểu đồ 12T + thông tin chi tiết: 150px)
-    const EXPANDED_CARD_EXTRA_HEIGHT = 150;
-
-    // Quản lý danh sách thẻ Phone Card đang mở rộng (Map: rowKey -> rowIndex để tính toán topOffset và chunkHeight O(1))
-    const [phoneExpandedRows, setPhoneExpandedRows] = useState<Map<string | number, number>>(() => new Map());
+    const actualRowHeight = isTabletMode ? 76 : isPhoneMode ? 108 : rowHeight;
+    const compiledTabletGroups = useMemo(
+      () =>
+        isTabletMode
+          ? compileTabletGroups(flatColumns, tabletGroups, effectiveColumnGroups, hiddenColKeys)
+          : undefined,
+      [isTabletMode, flatColumns, tabletGroups, effectiveColumnGroups, hiddenColKeys]
+    );
+    const compiledPhoneCard = useMemo(
+      () =>
+        isPhoneMode
+          ? compilePhoneCard(flatColumns, phoneCard, hiddenColKeys)
+          : undefined,
+      [isPhoneMode, flatColumns, phoneCard, hiddenColKeys]
+    );
+    const EXPANDED_CARD_EXTRA_HEIGHT = compiledPhoneCard?.extraHeight ?? 140;
+    const [phoneExpandedRows, setPhoneExpandedRows] = useState<Map<string | number, number>>(
+      () => new Map()
+    );
 
     const handleToggleExpandPhoneCard = useCallback((rowKey: string | number, rowIndex: number) => {
       setPhoneExpandedRows((prev) => {
         const next = new Map(prev);
-        if (next.has(rowKey)) {
-          next.delete(rowKey);
-        } else {
-          next.set(rowKey, rowIndex);
-        }
+        if (next.has(rowKey)) next.delete(rowKey);
+        else next.set(rowKey, rowIndex);
         return next;
       });
     }, []);
 
-    // Tự động giải phóng khi chuyển khỏi bố cục Phone hoặc khi tập dữ liệu bị lọc/sắp xếp
     useEffect(() => {
       if (activeMode !== 'phone' && phoneExpandedRows.size > 0) {
         setPhoneExpandedRows(new Map());
@@ -493,406 +601,105 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       }
     }, [dataVersion, totalRows]);
 
-    // Hidden columns state (controlled or uncontrolled)
-    const [internalHiddenColKeys, setInternalHiddenColKeys] = useState<Set<string>>(
-      () => defaultHiddenColKeys ?? new Set()
-    );
-    const hiddenColKeys = controlledHiddenColKeys ?? internalHiddenColKeys;
-    const setHiddenColKeys = useCallback(
-      (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-        const resolved = typeof next === 'function' ? next(hiddenColKeys) : next;
-        if (onHiddenColKeysChange) onHiddenColKeysChange(resolved);
-        else setInternalHiddenColKeys(resolved);
-      },
-      [hiddenColKeys, onHiddenColKeysChange]
-    );
+    // Context Menu State & Responsive Sort/Filter Modal
+    const [activeContextMenu, setActiveContextMenu] = useState<ContextMenuData | null>(null);
+    const [isSortFilterModalOpen, setIsSortFilterModalOpen] = useState(false);
 
-    const effectiveColumns = useMemo(
-      () => columns.filter((c) => !hiddenColKeys.has(c.key)),
-      [columns, hiddenColKeys]
-    );
-
-    // Column Data Types Map
-    const columnDataTypes = useMemo(() => {
-      const map: Record<string, string> = {};
-      columns.forEach((col) => {
-        map[col.key] = col.dataType || DATA_TYPES.TEXT;
-      });
-      return map;
-    }, [columns]);
-
-    // Đồng bộ thứ tự columnGroups và các cột con bên trong group theo đúng thứ tự mảng columns hiện tại
-    const effectiveColumnGroups = useMemo(() => {
-      if (!columnGroups || columnGroups.length === 0) return columnGroups;
-      const orderMap = new Map<string, number>();
-      columns.forEach((c, idx) => orderMap.set(c.key, idx));
-
-      const withSortedKeys = columnGroups.map((grp) => {
-        if (!grp.keys || grp.keys.length <= 1) return grp;
-        const sortedKeys = [...grp.keys].sort(
-          (a, b) => (orderMap.get(a) ?? 999999) - (orderMap.get(b) ?? 999999)
-        );
-        return { ...grp, keys: sortedKeys };
-      });
-
-      return [...withSortedKeys].sort((a, b) => {
-        const minA = Math.min(...a.keys.map((k) => orderMap.get(k) ?? 999999));
-        const minB = Math.min(...b.keys.map((k) => orderMap.get(k) ?? 999999));
-        return minA - minB;
-      });
-    }, [columnGroups, columns]);
-
-    // Active column keys in order (reflecting hidden columns & settings for STT / Checkbox)
-    const activeColKeys = useMemo(() => {
-      const isAllowed = (k: string) => {
-        const col = colMap[k];
-        if (!gridSettings.showRowNumber && (col?.isRowNumber || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)))) return false;
-        if (!gridSettings.showSelectionCol && isSelectionColumn(col)) return false;
-        return true;
-      };
-
-      if (effectiveColumnGroups && effectiveColumnGroups.length > 0) {
-        const keys: string[] = [];
-        effectiveColumnGroups.forEach((grp) => {
-          grp.keys.forEach((k) => {
-            if (colMap[k] && !hiddenColKeys.has(k) && isAllowed(k)) keys.push(k);
-          });
-        });
-        return keys;
-      }
-      return effectiveColumns.filter((c) => isAllowed(c.key)).map((c) => c.key);
-    }, [effectiveColumnGroups, colMap, effectiveColumns, hiddenColKeys, gridSettings.showRowNumber, gridSettings.showSelectionCol]);
-
-    const visibleColKeys = useMemo(
-      () => columns.filter((c) => !hiddenColKeys.has(c.key)).map((c) => c.key),
-      [columns, hiddenColKeys]
-    );
-
-    const handleVisibleColKeysChange = useCallback(
-      (keys: string[]) => {
-        const nextHidden = new Set<string>();
-        columns.forEach((c) => {
-          if (!keys.includes(c.key)) nextHidden.add(c.key);
-        });
-        setHiddenColKeys(nextHidden);
-      },
-      [columns]
-    );
-
-    const handleResetColumns = useCallback(() => {
-      if (controlledOnResetColumns) {
-        controlledOnResetColumns();
-        return;
-      }
-      setHiddenColKeys(new Set());
-      if (defaultColumnPins) {
-        if (onColumnPinsChange) onColumnPinsChange(defaultColumnPins);
-        else setInternalPins(defaultColumnPins);
-      }
-    }, [controlledOnResetColumns, defaultColumnPins, onColumnPinsChange]);
-
-    const handleExportExcel = useCallback(() => {
-      if (controlledOnExportExcel) {
-        controlledOnExportExcel();
-        return;
-      }
-      try {
-        const exportCols = columns.filter((c) => !hiddenColKeys.has(c.key));
-        const headers = exportCols.map((c) => `"${(c.title || c.key).replace(/"/g, '""')}"`).join(',');
-        const rows: string[] = [];
-        const maxExport = Math.min(totalRows, 300000);
-        for (let i = 0; i < maxExport; i++) {
-          const rowVals = exportCols.map((col) => {
-            let val = '';
-            if (getCellValue) {
-              val = String(getCellValue(i, col.key) ?? '');
-            } else {
-              const item: any = getRowItem(i);
-              val = String(item?.cells?.get ? item.cells.get(col.key)?.value ?? '' : item?.[col.key] ?? '');
-            }
-            return `"${val.replace(/"/g, '""')}"`;
-          });
-          rows.push(rowVals.join(','));
-        }
-        const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `Du_Lieu_Grid_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Failed to export:', err);
-      }
-    }, [controlledOnExportExcel, columns, hiddenColKeys, totalRows, getCellValue, getRowItem]);
-
-    // Column partitioning: Left - Middle - Right
-    const { leftColumns, middleColumns, rightColumns, flatColumns } = useMemo(() => {
-      const leftCols: ColumnDef<T>[] = [];
-      const rightCols: ColumnDef<T>[] = [];
-      const midCols: ColumnDef<T>[] = [];
-
-      activeColKeys.forEach((key) => {
-        const pin = columnPins[key] || PIN_POSITIONS.NONE;
-        const col = colMap[key];
-        if (!col) return;
-
-        if (pin === PIN_POSITIONS.LEFT) leftCols.push(col);
-        else if (pin === PIN_POSITIONS.RIGHT) rightCols.push(col);
-        else midCols.push(col);
-      });
-
-      return {
-        leftColumns: leftCols,
-        middleColumns: midCols,
-        rightColumns: rightCols,
-        flatColumns: [...leftCols, ...midCols, ...rightCols],
-      };
-    }, [activeColKeys, columnPins, colMap]);
-
-    // Sticky offsets for Left and Right
-    const { leftOffsets, rightOffsets, totalLeftWidth, totalRightWidth } = useMemo(() => {
-      const lOffsets: Record<string, number> = {};
-      let curLeft = 0;
-      leftColumns.forEach((col) => {
-        lOffsets[col.key] = curLeft;
-        curLeft += colWidths[col.key] || col.defaultWidth;
-      });
-
-      const rOffsets: Record<string, number> = {};
-      let curRight = 0;
-      for (let i = rightColumns.length - 1; i >= 0; i--) {
-        const col = rightColumns[i];
-        rOffsets[col.key] = curRight;
-        curRight += colWidths[col.key] || col.defaultWidth;
-      }
-
-      return {
-        leftOffsets: lOffsets,
-        rightOffsets: rOffsets,
-        totalLeftWidth: curLeft,
-        totalRightWidth: curRight,
-      };
-    }, [leftColumns, rightColumns, colWidths]);
-
-    // Natural X position of each column
-    const columnNaturalPositions = useMemo(() => {
-      const pos: Record<string, { left: number; width: number }> = {};
-      let currentX = 0;
-      flatColumns.forEach((c) => {
-        const w = colWidths[c.key] || c.defaultWidth;
-        pos[c.key] = { left: currentX, width: w };
-        currentX += w;
-      });
-      return pos;
-    }, [flatColumns, colWidths]);
-
-    const totalGridWidth = useMemo(() => {
-      return flatColumns.reduce((acc, col) => acc + (colWidths[col.key] || col.defaultWidth), 0);
-    }, [flatColumns, colWidths]);
-
-    // Center-pinned column keys
-    const centerPinnedColKeys = useMemo(() => {
-      return activeColKeys.filter((k) => columnPins[k] === PIN_POSITIONS.CENTER);
-    }, [activeColKeys, columnPins]);
-
-    // Docking status of center-pinned columns
-    const [centerDockStatus, setCenterDockStatus] = useState<Record<string, CenterDockStatus>>({});
-
-    // Compute center dock offsets & border dividers
+    // Khóa cuộn & chặn tương tác nền khi mở bất kỳ Popup/Modal nào
     const {
-      centerLeftOffsets,
-      centerRightOffsets,
-      lastEffectiveLeftColKey,
-      firstEffectiveRightColKey,
-    } = useMemo(() => {
-      const cLeftOffsets: Record<string, number> = {};
-      const cRightOffsets: Record<string, number> = {};
+      isToolbarPopupOpen,
+      setIsToolbarPopupOpen,
+      isPopupLockActive,
+      popupLockedScrollPosRef,
+      suppressNextGridClickRef,
+      handleContainerMouseDownCapture,
+      handleContainerSuppressClickCapture,
+      handleContainerContextMenuCapture,
+    } = useGridPopupLock({
+      containerRef,
+      scrollContainerRef,
+      lastScrollTopRef,
+      lastScrollLeftRef,
+      activeContextMenu,
+      isSortFilterModalOpen,
+      activeEditingCell,
+    });
 
-      let runningLeft = totalLeftWidth;
-      let lastDockedLeftKey: string | null = null;
-      centerPinnedColKeys.forEach((key) => {
-        cLeftOffsets[key] = runningLeft;
-        const w = colWidths[key] || 120;
-        if (centerDockStatus[key] === CENTER_DOCK_STATUSES.LEFT) {
-          runningLeft += w;
-          lastDockedLeftKey = key;
+    useEffect(() => {
+      setIsToolbarPopupOpen(externalPopup !== null);
+    }, [externalPopup, setIsToolbarPopupOpen]);
+
+    const isPopupTypeEnabled = useCallback(
+      (type: GridToolbarPopupType) => {
+        switch (type) {
+          case 'search':
+            return features.enableQuickSearch;
+          case 'queryBuilder':
+            return features.enableQueryBuilder;
+          case 'columnChooser':
+            return features.enableColumnChooser;
+          case 'multiSort':
+            return features.enableMultiSort;
+          default:
+            return false;
         }
-      });
+      },
+      [
+        features.enableQuickSearch,
+        features.enableQueryBuilder,
+        features.enableColumnChooser,
+        features.enableMultiSort,
+      ]
+    );
 
-      let runningRight = totalRightWidth;
-      let firstDockedRightKey: string | null = null;
-      for (let i = centerPinnedColKeys.length - 1; i >= 0; i--) {
-        const key = centerPinnedColKeys[i];
-        cRightOffsets[key] = runningRight;
-        const w = colWidths[key] || 120;
-        if (centerDockStatus[key] === CENTER_DOCK_STATUSES.RIGHT) {
-          runningRight += w;
-          firstDockedRightKey = key;
+    const openExternalPopup = useCallback(
+      (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => {
+        if (!isPopupTypeEnabled(type)) return;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('agv-close-all-popups', { detail: { except: 'external-popover' } })
+          );
         }
-      }
+        setExternalPopup({ type, anchorEl });
+      },
+      [isPopupTypeEnabled]
+    );
 
-      const effectiveLastLeft =
-        lastDockedLeftKey !== null
-          ? lastDockedLeftKey
-          : leftColumns.length > 0
-          ? leftColumns[leftColumns.length - 1].key
-          : null;
-
-      const effectiveFirstRight =
-        firstDockedRightKey !== null
-          ? firstDockedRightKey
-          : rightColumns.length > 0
-          ? rightColumns[0].key
-          : null;
-
-      return {
-        centerLeftOffsets: cLeftOffsets,
-        centerRightOffsets: cRightOffsets,
-        lastEffectiveLeftColKey: effectiveLastLeft,
-        firstEffectiveRightColKey: effectiveFirstRight,
-      };
-    }, [
-      centerPinnedColKeys,
-      totalLeftWidth,
-      totalRightWidth,
-      colWidths,
-      centerDockStatus,
-      leftColumns,
-      rightColumns,
-    ]);
-
-    // Middle elements structure (splits groups into segments when a center-pinned column docks)
-    const middleElements = useMemo(() => {
-      type MiddleElement =
-        | { type: 'standalone'; col: ColumnDef<T>; isCenterPinned?: boolean }
-        | { type: 'group'; def: BaseGroupDef; segmentKey: string; children: ColumnDef<T>[] };
-
-      const midElements: MiddleElement[] = [];
-
-      if (!effectiveColumnGroups || effectiveColumnGroups.length === 0) {
-        middleColumns.forEach((col) => {
-          midElements.push({
-            type: 'standalone',
-            col,
-            isCenterPinned: columnPins[col.key] === PIN_POSITIONS.CENTER,
-          });
+    const toggleExternalPopup = useCallback(
+      (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => {
+        if (!isPopupTypeEnabled(type)) return;
+        setExternalPopup((prev) => {
+          if (prev && prev.type === type && prev.anchorEl === anchorEl) {
+            return null;
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('agv-close-all-popups', { detail: { except: 'external-popover' } })
+            );
+          }
+          return { type, anchorEl };
         });
-        return midElements;
+      },
+      [isPopupTypeEnabled]
+    );
+
+    const closeExternalPopup = useCallback(() => {
+      setExternalPopup(null);
+    }, []);
+
+    useEffect(() => {
+      if (externalPopup && !isPopupTypeEnabled(externalPopup.type)) {
+        setExternalPopup(null);
       }
+    }, [externalPopup, isPopupTypeEnabled]);
 
-      effectiveColumnGroups.forEach((grp) => {
-        if (grp.isStandalone) {
-          const key = grp.keys[0];
-          const pin = columnPins[key] || PIN_POSITIONS.NONE;
-          if (activeColKeys.includes(key) && (pin === PIN_POSITIONS.NONE || pin === PIN_POSITIONS.CENTER)) {
-            const col = colMap[key];
-            if (col) {
-              midElements.push({ type: 'standalone', col, isCenterPinned: pin === PIN_POSITIONS.CENTER });
-            }
-          }
-        } else {
-          const middleGroupKeys = grp.keys.filter((k) => {
-            if (hiddenColKeys.has(k)) return false;
-            const pin = columnPins[k] || PIN_POSITIONS.NONE;
-            return pin === PIN_POSITIONS.NONE || pin === PIN_POSITIONS.CENTER;
-          });
-
-          let currentSegment: ColumnDef<T>[] = [];
-          let segIdx = 0;
-
-          middleGroupKeys.forEach((k) => {
-            const col = colMap[k];
-            if (!col) return;
-            const pin = columnPins[k] || PIN_POSITIONS.NONE;
-            const dock = pin === PIN_POSITIONS.CENTER ? centerDockStatus[k] || CENTER_DOCK_STATUSES.NORMAL : CENTER_DOCK_STATUSES.NORMAL;
-
-            if (pin === PIN_POSITIONS.CENTER && (dock === CENTER_DOCK_STATUSES.LEFT || dock === CENTER_DOCK_STATUSES.RIGHT)) {
-              if (currentSegment.length > 0) {
-                midElements.push({
-                  type: 'group',
-                  def: grp,
-                  segmentKey: `${grp.id}_seg_${segIdx++}`,
-                  children: currentSegment,
-                });
-                currentSegment = [];
-              }
-              midElements.push({ type: 'standalone', col, isCenterPinned: true });
-            } else {
-              currentSegment.push(col);
-            }
-          });
-
-          if (currentSegment.length > 0) {
-            midElements.push({
-              type: 'group',
-              def: grp,
-              segmentKey: `${grp.id}_seg_${segIdx++}`,
-              children: currentSegment,
-            });
-          }
-        }
-      });
-
-      return midElements;
-    }, [effectiveColumnGroups, middleColumns, columnPins, activeColKeys, colMap, centerDockStatus, hiddenColKeys]);
-
-    // CSS Variables for Live Column Widths & Offsets (Zero React re-render during drag resize)
-    const gridColVars = useMemo<React.CSSProperties>(() => {
-      const vars: Record<string, string> = {};
-      flatColumns.forEach((col) => {
-        const w = colWidths[col.key] || col.defaultWidth;
-        vars[`--agv-col-w-${col.key}`] = `${w}px`;
-      });
-      vars['--agv-total-grid-w'] = `${totalGridWidth}px`;
-      leftColumns.forEach((col) => {
-        vars[`--agv-left-offset-${col.key}`] = `${leftOffsets[col.key]}px`;
-      });
-      rightColumns.forEach((col) => {
-        vars[`--agv-right-offset-${col.key}`] = `${rightOffsets[col.key]}px`;
-      });
-      centerPinnedColKeys.forEach((key) => {
-        vars[`--agv-center-left-offset-${key}`] = `${centerLeftOffsets[key]}px`;
-        vars[`--agv-center-right-offset-${key}`] = `${centerRightOffsets[key]}px`;
-      });
-      return vars as unknown as React.CSSProperties;
-    }, [
-      flatColumns,
-      colWidths,
-      totalGridWidth,
-      leftColumns,
-      leftOffsets,
-      rightColumns,
-      rightOffsets,
-      centerPinnedColKeys,
-      centerLeftOffsets,
-      centerRightOffsets,
-    ]);
-
-    // Column Resizing Hook
-    const { handleMouseDownResize, resizingRef } = useColumnResize({
+    // Column Resizing & Auto-Fit Hooks
+    const { handleMouseDownResize } = useColumnResize({
       colMap,
       colWidths,
       setColWidth,
     });
 
-    // Sample rows for auto-fit calculation (first 100 rows)
-    const sampleRows = useMemo(() => {
-      const count = Math.min(100, totalRows);
-      const rows: T[] = [];
-      for (let i = 0; i < count; i++) {
-        rows.push(getRowItem(i));
-      }
-      return rows;
-    }, [totalRows, getRowItem, dataVersion]);
-
-    // Context Menu State (Header, Band, Row)
-    const [activeContextMenu, setActiveContextMenu] = useState<ContextMenuData | null>(null);
-
-    // Column Auto-Fit Hook (vừa độ rộng tối ưu dựa trên đo chữ canvas)
     const {
       handleAutoFitColumn,
       handleAutoFitAllColumns,
@@ -901,7 +708,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       colMap,
       effectiveColumns,
       columnGroups,
-      sampleRows,
+      getRowItem,
       columnSums,
       totalRows,
       setColWidth,
@@ -921,21 +728,20 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       (groupId: string, pin: PinPosition) => {
         const group = columnGroups?.find((g) => g.id === groupId);
         if (!group) return;
-        const targetKeys = group.keys;
-
-        targetKeys.forEach((key) => {
-          setColumnPin(key, pin);
-        });
+        group.keys.forEach((key) => setColumnPin(key, pin));
         setActiveContextMenu(null);
       },
       [columnGroups, setColumnPin]
     );
 
     // Hide / Show columns & bands handlers
-    const handleHideColumn = useCallback((colKey: string) => {
-      setHiddenColKeys((prev) => new Set(prev).add(colKey));
-      setActiveContextMenu(null);
-    }, []);
+    const handleHideColumn = useCallback(
+      (colKey: string) => {
+        setHiddenColKeys((prev) => new Set(prev).add(colKey));
+        setActiveContextMenu(null);
+      },
+      [setHiddenColKeys]
+    );
 
     const handleHideAllEmptyColumns = useCallback(() => {
       if (!emptyColKeys || emptyColKeys.size === 0) return;
@@ -945,27 +751,25 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         return next;
       });
       setActiveContextMenu(null);
-    }, [emptyColKeys]);
+    }, [emptyColKeys, setHiddenColKeys]);
 
     const handleShowAllHiddenColumns = useCallback(() => {
       setHiddenColKeys(new Set());
       setActiveContextMenu(null);
-    }, []);
+    }, [setHiddenColKeys]);
 
     const handleHideBand = useCallback(
       (groupId: string) => {
         const group = columnGroups?.find((g) => g.id === groupId);
         if (!group) return;
-        const targetKeys = group.keys;
-
         setHiddenColKeys((prev) => {
           const next = new Set(prev);
-          targetKeys.forEach((k) => next.add(k));
+          group.keys.forEach((k) => next.add(k));
           return next;
         });
         setActiveContextMenu(null);
       },
-      [columnGroups]
+      [columnGroups, setHiddenColKeys]
     );
 
     // Distinct values cache ref để mở lại Checklist popup 0ms
@@ -973,24 +777,42 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       Record<string, { values: string[]; hasBlanks: boolean }>
     >({});
 
-    // Xóa distinctValuesCacheRef khi tiêu chí lọc hoặc dữ liệu thay đổi để phễu cập nhật chuẩn xác
     useEffect(() => {
       distinctValuesCacheRef.current = {};
     }, [columnFilters, controlledQuickFilterText, controlledAppliedQueryTree, dataVersion]);
 
-    // Checklist Popup Ref
+    // Checklist Popup (mount lười khi người dùng bấm phễu lần đầu)
     const checklistPopupRef = useRef<AdvChecklistFilterPopupRef | null>(null);
+    const [isChecklistMounted, setIsChecklistMounted] = useState(false);
+    const [activeChecklistColKey, setActiveChecklistColKey] = useState<string | null>(null);
+    const pendingChecklistOpenRef = useRef<{ colKey: string; pos: any; curFilter: any } | null>(null);
 
-    // Responsive Sort & Filter Modal cho Tablet & Phone
-    const [isSortFilterModalOpen, setIsSortFilterModalOpen] = useState(false);
-    const hasActiveFilterOrSort = Boolean(
-      sortConfig ||
-      (currentQuickFilterText && currentQuickFilterText.trim().length > 0) ||
-      (columnFilters && Object.values(columnFilters).some((f) => f && f.val !== undefined && f.val !== ''))
+    const handleChecklistPopupRef = useCallback((node: AdvChecklistFilterPopupRef | null) => {
+      checklistPopupRef.current = node;
+      if (node && pendingChecklistOpenRef.current) {
+        const pending = pendingChecklistOpenRef.current;
+        pendingChecklistOpenRef.current = null;
+        node.open(pending.colKey, pending.pos, pending.curFilter);
+      }
+    }, []);
+
+    const effectiveSortRules = useMemo(
+      () => normalizeSortRules(sortRules, sortConfig),
+      [sortRules, sortConfig]
     );
 
-    // Mở popup lọc checklist cho cột (Zero re-render: chỉ popup mở độc lập)
-    // Lắng nghe đóng tất cả popups để đảm bảo chỉ có duy nhất 1 popup hiển thị trên Grid
+    const hasActiveFilterOrSort = Boolean(
+      (features.enableSorting && effectiveSortRules.length > 0) ||
+      (features.enableQuickSearch && currentQuickFilterText && currentQuickFilterText.trim().length > 0) ||
+      (features.enableFiltering && columnFilters && Object.values(columnFilters).some((f) => f && f.val !== undefined && f.val !== ''))
+    );
+
+    useEffect(() => {
+      if (!features.enableContextMenu && activeContextMenu) {
+        setActiveContextMenu(null);
+      }
+    }, [features.enableContextMenu, activeContextMenu]);
+
     useEffect(() => {
       const handleCloseAll = (e: Event) => {
         const ce = e as CustomEvent;
@@ -1009,7 +831,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
     const handleOpenChecklistFilter = useCallback(
       (colKey: string, e: React.MouseEvent) => {
-        if (emptyColKeys?.has(colKey)) return;
+        if (!features.enableHeaderFilter || emptyColKeys?.has(colKey)) return;
         if (checklistPopupRef.current?.isOpenFor(colKey)) {
           checklistPopupRef.current.close();
           return;
@@ -1022,7 +844,8 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         );
         setActiveContextMenu(null);
 
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const anchorEl = e.currentTarget as HTMLElement;
+        const rect = anchorEl.getBoundingClientRect();
         const vh = window.innerHeight;
         const spaceBelow = vh - rect.bottom - 8;
         const spaceAbove = rect.top - 8;
@@ -1033,19 +856,23 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           left = Math.max(10, window.innerWidth - 270 - 10);
         }
 
+        const pos = {
+          top: rect.bottom + 4,
+          bottom: isFlipUp ? vh - rect.top + 4 : undefined,
+          left,
+          isFlipUp,
+          anchorEl,
+        };
         const curFilter = columnFilters[colKey];
-        checklistPopupRef.current?.open(
-          colKey,
-          {
-            top: rect.bottom + 4,
-            bottom: isFlipUp ? vh - rect.top + 4 : undefined,
-            left,
-            isFlipUp,
-          },
-          curFilter
-        );
+
+        if (checklistPopupRef.current) {
+          checklistPopupRef.current.open(colKey, pos, curFilter);
+        } else {
+          pendingChecklistOpenRef.current = { colKey, pos, curFilter };
+          setIsChecklistMounted(true);
+        }
       },
-      [columnFilters, emptyColKeys]
+      [features.enableHeaderFilter, columnFilters, emptyColKeys]
     );
 
     // Áp dụng giá trị lọc checklist khi tick/untick (giữ nguyên độc lập Row Filter của cột)
@@ -1113,6 +940,19 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       Array<{ rowKey: string | number; rowIndex: number; row: T }>
     >([]);
 
+    const effectivePinnedRows = useMemo(() => {
+      if (!features.enableRowPinning) return [];
+      const staticPinned = (pinnedTopRowData ?? []).map((row, idx) => ({
+        rowKey: getRowKey(row, -(idx + 1)),
+        rowIndex: -(idx + 1),
+        row,
+      }));
+      if (staticPinned.length === 0) return pinnedRows;
+      if (pinnedRows.length === 0) return staticPinned;
+      const staticKeySet = new Set(staticPinned.map((p) => p.rowKey));
+      return [...staticPinned, ...pinnedRows.filter((p) => !staticKeySet.has(p.rowKey))];
+    }, [features.enableRowPinning, pinnedTopRowData, pinnedRows, getRowKey]);
+
     const pinnedRowKeysSet = useMemo(
       () => new Set(pinnedRows.map((p) => p.rowKey)),
       [pinnedRows]
@@ -1131,9 +971,21 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           typeof (row as any)?.rowIndex === 'number' && (row as any).rowIndex >= 0
             ? (row as any).rowIndex
             : rowIndex;
-        return [...prev, { rowKey: rKey, rowIndex: resolvedIdx, row }];
+        const snapshotRow =
+          (row as any)?._rowKey !== undefined && typeof (row as any)?.rowIndex === 'number'
+            ? row
+            : ({
+                ...(row as any),
+                _baseRecord: (row as any)?._baseRecord ?? row,
+                _rowKey: rKey,
+                rowIndex: resolvedIdx,
+                ...(renderCell || (row as any)?.col_stt !== undefined
+                  ? {}
+                  : { col_stt: resolvedIdx + 1 }),
+              } as T);
+        return [...prev, { rowKey: rKey, rowIndex: resolvedIdx, row: snapshotRow }];
       });
-    }, [activeContextMenu, getRowKey]);
+    }, [activeContextMenu, getRowKey, renderCell]);
 
     const handleUnpinRow = useCallback((rowKey: string | number) => {
       setPinnedRows((prev) => prev.filter((p) => p.rowKey !== rowKey));
@@ -1238,12 +1090,9 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           return;
         }
 
-        let cellValue: any = undefined;
-        if ((row as any)?.cells instanceof Map) {
-          cellValue = (row as any).cells.get(colKey)?.value;
-        } else if ((row as any)?.[colKey] !== undefined) {
-          cellValue = (row as any)[colKey];
-        }
+        const cellValue = col.valueGetter
+          ? col.valueGetter((row as any)?._baseRecord ?? row, rowIndex)
+          : getGridCellValue(row, colKey);
         setActiveContextMenu({
           type: CONTEXT_MENU_TYPES.ROW,
           x: e.clientX,
@@ -1291,207 +1140,242 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       []
     );
 
-    // Sorting toggle handler
+    // Sorting toggle handler (hỗ trợ Shift+Click ghép sắp xếp đa cấp khi bật enableMultiSort)
     const handleToggleSort = useCallback(
-      (colKey: string) => {
-        if (!onSortChange) return;
-        if (sortConfig?.key === colKey) {
-          if (sortConfig.direction === SORT_DIRECTIONS.ASC) {
-            onSortChange({ key: colKey, direction: SORT_DIRECTIONS.DESC });
-          } else {
-            onSortChange(null);
-          }
-        } else {
-          onSortChange({ key: colKey, direction: SORT_DIRECTIONS.ASC });
-        }
-      },
-      [sortConfig, onSortChange]
-    );
-
-    // Virtualization Geometry
-    const [viewportHeight, setViewportHeight] = useState<number>(600);
-    const [viewportWidth, setViewportWidth] = useState<number>(1200);
-
-    const totalChunks = Math.ceil(totalRows / chunkSize);
-    const chunkPixelHeight = chunkSize * actualRowHeight;
-    const totalPhoneExtraHeight = isPhoneMode ? phoneExpandedRows.size * EXPANDED_CARD_EXTRA_HEIGHT : 0;
-    const totalContentHeight = totalRows * actualRowHeight + totalPhoneExtraHeight;
-
-    // Helpers O(1) tính toán số thẻ mở rộng trước và trong từng Chunk để dịch chuyển tọa độ GPU translate3d
-    const getExpandedBeforeChunk = useCallback(
-      (chunkIdx: number): number => {
-        if (!isPhoneMode || phoneExpandedRows.size === 0) return 0;
-        const chunkStartRow = chunkIdx * chunkSize;
-        let count = 0;
-        for (const rIdx of phoneExpandedRows.values()) {
-          if (rIdx < chunkStartRow) count++;
-        }
-        return count;
-      },
-      [isPhoneMode, phoneExpandedRows, chunkSize]
-    );
-
-    const getExpandedInChunk = useCallback(
-      (chunkIdx: number): number => {
-        if (!isPhoneMode || phoneExpandedRows.size === 0) return 0;
-        const chunkStartRow = chunkIdx * chunkSize;
-        const chunkEndRow = chunkStartRow + chunkSize - 1;
-        let count = 0;
-        for (const rIdx of phoneExpandedRows.values()) {
-          if (rIdx >= chunkStartRow && rIdx <= chunkEndRow) count++;
-        }
-        return count;
-      },
-      [isPhoneMode, phoneExpandedRows, chunkSize]
-    );
-
-    const [chunkWindow, setChunkWindow] = useState<{ start: number; end: number }>(() => {
-      if (totalRows === 0) return { start: 0, end: -1 };
-      return { start: 0, end: Math.min(totalChunks - 1, 5) };
-    });
-    const activeChunkWindowRef = useRef<{ start: number; end: number }>(
-      totalRows === 0 ? { start: 0, end: -1 } : { start: 0, end: Math.min(totalChunks - 1, 5) }
-    );
-
-    // Center docking computation
-    const computeCenterDock = useCallback(
-      (scrollLeft: number, clientWidth: number) => {
-        if (centerPinnedColKeys.length === 0) {
-          setCenterDockStatus((prev) => (Object.keys(prev).length === 0 ? prev : {}));
-          return;
-        }
-
-        const nextStatus: Record<string, CenterDockStatus> = {};
-        let runningLeftEdge = scrollLeft + totalLeftWidth;
-        let runningRightEdge = scrollLeft + clientWidth - totalRightWidth;
-
-        // Check left docking
-        for (let i = 0; i < centerPinnedColKeys.length; i++) {
-          const key = centerPinnedColKeys[i];
-          const pos = columnNaturalPositions[key];
-          if (!pos) continue;
-          if (pos.left < runningLeftEdge) {
-            nextStatus[key] = CENTER_DOCK_STATUSES.LEFT;
-            runningLeftEdge += pos.width;
-          } else {
-            nextStatus[key] = CENTER_DOCK_STATUSES.NORMAL;
-          }
-        }
-
-        // Check right docking
-        for (let i = centerPinnedColKeys.length - 1; i >= 0; i--) {
-          const key = centerPinnedColKeys[i];
-          if (nextStatus[key] === CENTER_DOCK_STATUSES.LEFT) continue;
-          const pos = columnNaturalPositions[key];
-          if (!pos) continue;
-          if (pos.left + pos.width > runningRightEdge) {
-            nextStatus[key] = CENTER_DOCK_STATUSES.RIGHT;
-            runningRightEdge -= pos.width;
-          }
-        }
-
-        setCenterDockStatus((prev) => {
-          let hasChange = Object.keys(prev).length !== Object.keys(nextStatus).length;
-          if (!hasChange) {
-            for (const k of centerPinnedColKeys) {
-              if (prev[k] !== nextStatus[k]) {
-                hasChange = true;
-                break;
-              }
-            }
-          }
-          return hasChange ? nextStatus : prev;
+      (colKey: string, e?: React.MouseEvent) => {
+        if (!features.enableSorting || (!onSortChange && !onSortRulesChange)) return;
+        const isMulti = Boolean(e?.shiftKey) && features.enableMultiSort;
+        const nextRules = toggleColumnSortRules(effectiveSortRules, colKey, {
+          multi: isMulti,
+          enableMultiSort: features.enableMultiSort,
         });
+        if (onSortRulesChange) {
+          onSortRulesChange(nextRules);
+        } else {
+          onSortChange?.(nextRules[0] ?? null);
+        }
       },
-      [centerPinnedColKeys, totalLeftWidth, totalRightWidth, columnNaturalPositions]
+      [features.enableSorting, features.enableMultiSort, effectiveSortRules, onSortChange, onSortRulesChange]
     );
 
-    // Sync center dock on resize or viewport width change
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-      computeCenterDock(el.scrollLeft, el.clientWidth);
-    }, [computeCenterDock, viewportWidth]);
+    const handleApplyMultiSortRules = useCallback(
+      (nextRules: typeof effectiveSortRules) => {
+        if (!features.enableSorting) return;
+        const normalized = normalizeSortRules(nextRules);
+        if (onSortRulesChange) {
+          onSortRulesChange(normalized);
+        } else {
+          onSortChange?.(normalized[0] ?? null);
+        }
+      },
+      [features.enableSorting, onSortRulesChange, onSortChange]
+    );
 
-    // Viewport resize observer
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
+    const handleRemoveSortRule = useCallback(
+      (colKey: string) => {
+        const nextRules = effectiveSortRules.filter((r) => r.key !== colKey);
+        handleApplyMultiSortRules(nextRules);
+      },
+      [effectiveSortRules, handleApplyMultiSortRules]
+    );
 
-      const updateSize = () => {
-        setViewportHeight(el.clientHeight);
-        setViewportWidth(el.clientWidth);
-      };
-      updateSize();
+    // Virtualization Geometry & Window Scroll vs Container Scroll
+    const [viewportHeight, setViewportHeight] = useState<number>(600);
+    const isAutoSizedRoot = features.autoHeight && !isFullscreen;
+    const isWindowScroll =
+      isAutoSizedRoot &&
+      features.maxHeight === undefined &&
+      (style?.height === undefined || style?.height === 'auto') &&
+      style?.maxHeight === undefined;
 
-      const observer = new ResizeObserver(updateSize);
-      observer.observe(el);
-      return () => observer.disconnect();
-    }, []);
+    const getRowKeyForVirtual = useCallback(
+      (row: T, idx: number): string | number =>
+        getRowId
+          ? getRowId(row, idx)
+          : (row as any)?.originalIndex ?? (row as any)?.id ?? idx,
+      [getRowId]
+    );
 
-    // Update chunk window on viewport/chunk changes
-    useEffect(() => {
-      const currentTop = scrollContainerRef.current?.scrollTop || 0;
-      if (totalChunks === 0) {
-        activeChunkWindowRef.current = { start: 0, end: -1 };
-        setChunkWindow({ start: 0, end: -1 });
-        return;
-      }
-      const rawStart = Math.floor(currentTop / chunkPixelHeight);
-      const rawEnd = Math.floor((currentTop + viewportHeight) / chunkPixelHeight);
-      const start = Math.max(0, rawStart - overscanChunks);
-      const end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
+    const isDynamicPcEnabled = Boolean(dynamicRowHeight && !isResponsiveMode);
+    const dynamicLayoutResetKey = useMemo(() => {
+      if (!isDynamicPcEnabled) return '';
+      return `${activeMode}:${flatColumns
+        .filter((c) => c.wrapText)
+        .map((c) => `${c.key}=${colWidths[c.key] ?? c.defaultWidth}`)
+        .join('|')}`;
+    }, [isDynamicPcEnabled, activeMode, flatColumns, colWidths]);
 
-      activeChunkWindowRef.current = { start, end };
-      setChunkWindow({ start, end });
-    }, [viewportHeight, chunkPixelHeight, totalChunks, overscanChunks]);
+    const {
+      isDynamicActive: isDynamicRowHeightActive,
+      totalContentHeight,
+      measureVersion: dynamicHeightVersion,
+      getRowTop,
+      getRowHeight: getDynamicRowHeightAtIndex,
+      findRowIndexAtOffset,
+      getVisibleRowRange,
+      observeRowSlot,
+      unobserveRowSlot,
+    } = useDynamicRowHeights({
+      totalRows,
+      baseRowHeight: actualRowHeight,
+      dynamicRowHeight: isDynamicPcEnabled,
+      hasDynamicDetailRows: Boolean(hasDynamicDetailRows),
+      estimatedRowHeight,
+      getRowHeightProp,
+      getRowItem,
+      getRowKey: getRowKeyForVirtual,
+      overscanRows,
+      isPhoneMode,
+      phoneExpandedRows,
+      expandedCardExtraHeight: EXPANDED_CARD_EXTRA_HEIGHT,
+      dataVersion,
+      layoutResetKey: dynamicLayoutResetKey,
+      scrollContainerRef,
+      virtualScrollTopRef,
+      lastScrollTopRef,
+      isWindowScroll,
+    });
 
-    // Tính toán dòng tiêu đề nhóm dính trên đỉnh khi cuộn dọc (Sticky Group Header)
+    const initialRowWindow = useMemo(
+      () => getVisibleRowRange(0, 600),
+      // Chỉ tính dải dòng khởi tạo lần đầu khi mount
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      []
+    );
+    const [rowWindow, setRowWindow] = useState<{ start: number; end: number }>(
+      () => initialRowWindow
+    );
+    const activeRowWindowRef = useRef<{ start: number; end: number }>(initialRowWindow);
+
+    const updateRowWindow = useCallback(
+      (scrollTop: number, vHeight: number) => {
+        const nextRange = getVisibleRowRange(scrollTop, vHeight);
+        if (
+          nextRange.start !== activeRowWindowRef.current.start ||
+          nextRange.end !== activeRowWindowRef.current.end
+        ) {
+          activeRowWindowRef.current = nextRange;
+          setRowWindow(nextRange);
+        }
+      },
+      [getVisibleRowRange]
+    );
+
+    // Sticky Group Header (chỉ nạp gridGroupingEngine khi bật gom nhóm và có groupByColumnKey)
     const [stickyGroupRowIndex, setStickyGroupRowIndex] = useState<number | null>(null);
+    const groupingEngineRef = useRef<typeof import('./gridGroupingEngine') | null>(null);
+    const [isGroupingEngineReady, setIsGroupingEngineReady] = useState(false);
+
+    useEffect(() => {
+      if (!features.enableGrouping || !groupByColumnKey || groupingEngineRef.current) return;
+      let active = true;
+      void import('./gridGroupingEngine').then((m) => {
+        groupingEngineRef.current = m;
+        if (active) setIsGroupingEngineReady(true);
+      });
+      return () => {
+        active = false;
+      };
+    }, [features.enableGrouping, groupByColumnKey]);
 
     const computeStickyGroupIdx = useCallback(
       (currentTop: number): number | null => {
-        if (!groupByColumnKey || totalRows <= 0 || currentTop <= 0) return null;
-        const topRowIdx = Math.min(
-          totalRows - 1,
-          Math.max(0, Math.floor(currentTop / actualRowHeight))
-        );
-        const rowAtTop = getRowItem(topRowIdx) as any;
-        if (!rowAtTop) return null;
-        if (rowAtTop._isGroupRow) {
-          if (!rowAtTop.isCollapsed && rowAtTop.count > 0 && currentTop > topRowIdx * actualRowHeight) {
-            return topRowIdx;
-          }
+        if (!features.enableGrouping || !groupByColumnKey || !groupingEngineRef.current) {
           return null;
         }
-        if (typeof rowAtTop.localRowIndex === 'number') {
-          const gIdx = topRowIdx - rowAtTop.localRowIndex - 1;
-          if (gIdx >= 0 && gIdx < totalRows) {
-            const gRow = getRowItem(gIdx) as any;
-            if (gRow && gRow._isGroupRow && !gRow.isCollapsed) {
-              return gIdx;
-            }
-          }
-        }
-        for (let k = topRowIdx - 1; k >= 0; k--) {
-          const candidate = getRowItem(k) as any;
-          if (candidate && candidate._isGroupRow) {
-            return !candidate.isCollapsed ? k : null;
-          }
-        }
-        return null;
+        return groupingEngineRef.current.computeStickyGroupIndexAtTop({
+          currentTop,
+          totalRows,
+          actualRowHeight,
+          getRowItem,
+          getRowTop,
+          findRowIndexAtOffset,
+        });
       },
-      [groupByColumnKey, totalRows, actualRowHeight, getRowItem]
+      [
+        features.enableGrouping,
+        groupByColumnKey,
+        totalRows,
+        actualRowHeight,
+        getRowItem,
+        getRowTop,
+        findRowIndexAtOffset,
+        isGroupingEngineReady,
+      ]
     );
 
+    const computeStickyGroupIdxRef = useRef(computeStickyGroupIdx);
+    computeStickyGroupIdxRef.current = computeStickyGroupIdx;
+
+    const isLockedForScrollRef = useRef(false);
+    isLockedForScrollRef.current = Boolean(
+      activeContextMenu || activeEditingCell || isPopupLockActive
+    );
+
+    // Đo kích thước viewport + theo dõi cuộn Window / Container trong 1 pass trước paint
+    useLayoutEffect(() => {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+
+      if (isWindowScroll) {
+        const syncWindowScroll = () => {
+          if (isLockedForScrollRef.current || isAnyPopupActive()) return;
+          el.style.setProperty('--agv-viewport-w', `${el.clientWidth || 600}px`);
+          const rect = el.getBoundingClientRect();
+          const vTop = Math.max(0, -rect.top);
+          const vH = window.innerHeight || 600;
+          virtualScrollTopRef.current = vTop;
+          lastScrollTopRef.current = vTop;
+          setViewportHeight((prev) => (prev === vH ? prev : vH));
+          updateRowWindow(vTop, vH);
+          if (features.enableGrouping && groupByColumnKey) {
+            const nextSticky = computeStickyGroupIdxRef.current(vTop);
+            setStickyGroupRowIndex((prev) => (prev === nextSticky ? prev : nextSticky));
+          }
+        };
+
+        syncWindowScroll();
+        window.addEventListener('scroll', syncWindowScroll, { passive: true });
+        window.addEventListener('resize', syncWindowScroll, { passive: true });
+        return () => {
+          window.removeEventListener('scroll', syncWindowScroll);
+          window.removeEventListener('resize', syncWindowScroll);
+        };
+      }
+
+      const syncContainerSize = () => {
+        el.style.setProperty('--agv-viewport-w', `${el.clientWidth || 600}px`);
+        const nextH = el.clientHeight || 600;
+        virtualScrollTopRef.current = el.scrollTop || 0;
+        setViewportHeight((prev) => (prev === nextH ? prev : nextH));
+        updateRowWindow(virtualScrollTopRef.current, nextH);
+      };
+      syncContainerSize();
+
+      const observer = new ResizeObserver(syncContainerSize);
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, [isWindowScroll, updateRowWindow, features.enableGrouping, groupByColumnKey]);
+
     useEffect(() => {
-      const currentTop = scrollContainerRef.current?.scrollTop || 0;
+      updateRowWindow(virtualScrollTopRef.current, viewportHeight);
+    }, [updateRowWindow, viewportHeight]);
+
+    useEffect(() => {
+      if (!features.enableGrouping || !groupByColumnKey) {
+        setStickyGroupRowIndex((prev) => (prev === null ? prev : null));
+        return;
+      }
+      const currentTop = isWindowScroll
+        ? virtualScrollTopRef.current
+        : (scrollContainerRef.current?.scrollTop || 0);
       const nextIdx = computeStickyGroupIdx(currentTop);
       setStickyGroupRowIndex((prev) => (prev === nextIdx ? prev : nextIdx));
-    }, [computeStickyGroupIdx, dataVersion]);
+    }, [features.enableGrouping, groupByColumnKey, computeStickyGroupIdx, dataVersion, isWindowScroll]);
 
     const stickyGroupRow = useMemo(() => {
       if (
+        !features.enableGrouping ||
         !groupByColumnKey ||
         stickyGroupRowIndex === null ||
         stickyGroupRowIndex < 0 ||
@@ -1501,100 +1385,131 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       }
       const r = getRowItem(stickyGroupRowIndex);
       return (r as any)?._isGroupRow ? r : null;
-    }, [groupByColumnKey, stickyGroupRowIndex, totalRows, getRowItem, dataVersion]);
+    }, [features.enableGrouping, groupByColumnKey, stickyGroupRowIndex, totalRows, getRowItem, dataVersion]);
 
-    // Velocity & On-Demand FPS tracking (Chỉ chạy vòng lặp đo FPS khi thực sự cuộn, 0% CPU khi đứng yên)
-    const lastScrollTopRef = useRef<number>(0);
-    const lastScrollLeftRef = useRef<number>(0);
-    const lastScrollTimeRef = useRef<number>(performance.now());
-    const lastMetricsEmitTimeRef = useRef<number>(0);
-    const windowAccumDistanceRef = useRef<number>(0);
-    const windowStartTimeRef = useRef<number>(performance.now());
     const scrollStopTimeoutRef = useRef<number | null>(null);
     const isScrollingAttrSetRef = useRef<boolean>(false);
-    const currentVelocityRef = useRef<number>(0);
-    const currentFpsRef = useRef<number>(60);
-    const fpsRafRef = useRef<number | null>(null);
-    const fpsFrameCountRef = useRef<number>(0);
-    const fpsLastTimeRef = useRef<number>(0);
 
-    const startFpsMonitor = useCallback(() => {
-      if (fpsRafRef.current !== null) return;
-      fpsFrameCountRef.current = 0;
-      fpsLastTimeRef.current = performance.now();
+    const pinnedRowsContainerRef = useRef<HTMLDivElement | null>(null);
+    const [measuredPinnedHeight, setMeasuredPinnedHeight] = useState<number>(0);
 
-      const measureFps = (now: number) => {
-        fpsFrameCountRef.current++;
-        const elapsed = now - fpsLastTimeRef.current;
-        if (elapsed >= 350) {
-          const fps = Math.min(144, Math.round((fpsFrameCountRef.current * 1000) / elapsed));
-          currentFpsRef.current = fps;
-          fpsFrameCountRef.current = 0;
-          fpsLastTimeRef.current = now;
-        }
-        fpsRafRef.current = requestAnimationFrame(measureFps);
-      };
-
-      fpsRafRef.current = requestAnimationFrame(measureFps);
-    }, []);
-
-    const stopFpsMonitor = useCallback(() => {
-      if (fpsRafRef.current !== null) {
-        cancelAnimationFrame(fpsRafRef.current);
-        fpsRafRef.current = null;
+    useLayoutEffect(() => {
+      if (isResponsiveMode || effectivePinnedRows.length === 0) {
+        setMeasuredPinnedHeight(0);
+        return;
       }
-      currentFpsRef.current = 60;
-    }, []);
+      const el = pinnedRowsContainerRef.current;
+      if (!el) return;
+      const syncPinnedHeight = () => {
+        const nextH = el.offsetHeight || effectivePinnedRows.length * actualRowHeight;
+        setMeasuredPinnedHeight((prev) => (prev === nextH ? prev : nextH));
+      };
+      syncPinnedHeight();
+      if (!isDynamicPcEnabled || typeof ResizeObserver === 'undefined') return;
+      const ro = new ResizeObserver(syncPinnedHeight);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, [
+      isResponsiveMode,
+      effectivePinnedRows.length,
+      actualRowHeight,
+      isDynamicPcEnabled,
+      colWidths,
+    ]);
+
+    const effectivePinnedRowsHeight =
+      !isResponsiveMode && effectivePinnedRows.length > 0
+        ? measuredPinnedHeight > 0
+          ? measuredPinnedHeight
+          : effectivePinnedRows.length * actualRowHeight
+        : 0;
+
+    const stickyHeaderTotalHeight =
+      (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
+      (features.showFilterRow ? 34 : 0);
+
+    const hasStickyGroupBanner = Boolean(
+      features.enableGrouping &&
+        stickyGroupRow &&
+        (stickyGroupRow as any)._isGroupRow &&
+        stickyGroupRowIndex !== null
+    );
+    const verticalTrackTopInset =
+      (isResponsiveMode
+        ? 44
+        : stickyHeaderTotalHeight +
+          effectivePinnedRowsHeight +
+          (hasStickyGroupBanner ? actualRowHeight : 0)) + 2;
+
+    const overlayHostRef = useRef<HTMLDivElement | null>(null);
+    const isOverlayInteractionLockedRef = useRef(false);
+    isOverlayInteractionLockedRef.current = Boolean(
+      activeContextMenu || activeEditingCell || isPopupLockActive
+    );
+
+    const {
+      vBarRef,
+      vThumbRef,
+      hBarRef,
+      hThumbRef,
+      notifyScroll: notifyOverlayScrollbar,
+      syncScrollbars: syncOverlayScrollbars,
+      hostInteractionProps: overlayHostInteractionProps,
+      onVerticalTrackMouseDown,
+      onHorizontalTrackMouseDown,
+      onVerticalThumbPointerDown,
+      onHorizontalThumbPointerDown,
+    } = useGridOverlayScrollbar({
+      overlayHostRef,
+      scrollContainerRef,
+      alwaysShow: scrollbarAlwaysOn,
+      isWindowScroll,
+      verticalTrackTopInset,
+      isLockedRef: isOverlayInteractionLockedRef,
+      totalContentHeight,
+      totalGridWidth,
+      viewportHeight,
+    });
+
+    useEffect(() => {
+      syncOverlayScrollbars();
+    }, [dynamicHeightVersion, syncOverlayScrollbars]);
 
     useEffect(() => {
       return () => {
-        if (fpsRafRef.current !== null) {
-          cancelAnimationFrame(fpsRafRef.current);
-          fpsRafRef.current = null;
+        if (scrollStopTimeoutRef.current !== null) {
+          window.clearTimeout(scrollStopTimeoutRef.current);
+          scrollStopTimeoutRef.current = null;
         }
       };
     }, []);
 
-    // Unified Wheel Listener: Cho phép cuộn tự nhiên bên trong Popup con, khóa cuộn Grid khi mở Popup/Editor, và căn dòng (Row Snapping)
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-
-      const handleWheel = (e: WheelEvent) => {
-        const target = e.target as HTMLElement | null;
-        if (target && target.closest(POPUP_SELECTORS)) {
-          return; // Cho phép cuộn tự nhiên bên trong chính popup đó
+    const effectiveSelectedRowIndex = useMemo(() => {
+      if (typeof selectedRowIndex === 'number' && selectedRowIndex >= 0) {
+        return selectedRowIndex;
+      }
+      if (selectedRowKey === undefined || selectedRowKey === null) {
+        return null;
+      }
+      for (let i = 0; i < totalRows; i++) {
+        const r = getRowItem(i);
+        if (
+          r &&
+          !(r as any)._isGroupRow &&
+          !(r as any)._isDetailRow &&
+          getRowKeyForVirtual(r, i) === selectedRowKey
+        ) {
+          return i;
         }
-        if (activeContextMenu || activeEditingCell || isAnyPopupActive()) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-        if (!rowSnapMode) return;
-        if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-        if (e.deltaY === 0) return;
+      }
+      return null;
+    }, [selectedRowIndex, selectedRowKey, totalRows, getRowItem, getRowKeyForVirtual]);
 
-        e.preventDefault();
-
-        const direction = Math.sign(e.deltaY);
-        const rawNotches =
-          e.deltaMode === 1
-            ? Math.max(1, Math.round(Math.abs(e.deltaY) / 3))
-            : Math.max(1, Math.round(Math.abs(e.deltaY) / 100));
-
-        const stepRows = direction * rawNotches * rowsPerWheelStep;
-        const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
-
-        const currentSnappedRow = Math.round(el.scrollTop / actualRowHeight);
-        const targetRow = currentSnappedRow + stepRows;
-        const nextScrollTop = Math.max(0, Math.min(maxScroll, targetRow * actualRowHeight));
-
-        el.scrollTop = nextScrollTop;
-      };
-
-      el.addEventListener('wheel', handleWheel, { passive: false });
-      return () => el.removeEventListener('wheel', handleWheel);
-    }, [rowSnapMode, rowsPerWheelStep, actualRowHeight, activeContextMenu, activeEditingCell]);
+    const chkColKey = useMemo(
+      () => flatColumns.find((c) => isSelectionColumn(c))?.key,
+      [flatColumns]
+    );
+    const showSelectionCol = Boolean(features.enableSelection && Boolean(chkColKey));
 
     // Điều hướng dòng bằng bàn phím (ArrowUp / ArrowDown / PageUp / PageDown / Space)
     useGridKeyboardNav({
@@ -1603,116 +1518,39 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
       activeEditingCell,
       isAnyPopupActive,
       totalRows,
-      selectedRowIndex,
+      selectedRowIndex: effectiveSelectedRowIndex,
       onSelectRow,
-      onToggleCheck,
+      onToggleCheck: showSelectionCol ? onToggleCheck : undefined,
       getRowItem,
       viewportHeight,
       actualRowHeight,
+      getRowTop,
+      getRowHeight: getDynamicRowHeightAtIndex,
+      pinnedRowsHeight: effectivePinnedRowsHeight,
       customHeaderHeight,
       middleElements,
-      showFilterRow,
-      pinnedRowsLength: pinnedRows.length,
+      showFilterRow: features.showFilterRow,
+      pinnedRowsLength: effectivePinnedRows.length,
       stickyGroupRow,
+      isWindowScroll,
     });
 
-    // Auto scrolling test mode (Tối ưu dt mượt 60-144Hz, không đọc scrollHeight gây Forced Reflow)
-    useEffect(() => {
-      if (!autoScrolling) return;
-      let rafId: number;
-      let direction = 1;
-      let lastFrameTime = performance.now();
-      let virtualTop = scrollContainerRef.current?.scrollTop || 0;
-
-      const step = (now: number) => {
-        const el = scrollContainerRef.current;
-        if (el) {
-          const dt = Math.min(50, Math.max(1, now - lastFrameTime));
-          lastFrameTime = now;
-
-          const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || el.clientHeight));
-          const stepPx = (autoScrollSpeed * dt) / 16.667;
-
-          virtualTop += direction * stepPx;
-          if (virtualTop >= maxScroll) {
-            virtualTop = maxScroll;
-            direction = -1;
-          } else if (virtualTop <= 0) {
-            virtualTop = 0;
-            direction = 1;
-          }
-          el.scrollTop = Math.round(virtualTop);
-        }
-        rafId = requestAnimationFrame(step);
-      };
-
-      if (scrollContainerRef.current && !isScrollingAttrSetRef.current) {
-        isScrollingAttrSetRef.current = true;
-        scrollContainerRef.current.setAttribute('data-agv-scrolling', 'true');
-      }
-      startFpsMonitor();
-      rafId = requestAnimationFrame(step);
-      return () => {
-        cancelAnimationFrame(rafId);
-        stopFpsMonitor();
-        // Khi dừng auto-scroll, căn chỉnh snap dòng mượt mà và đưa vận tốc hiển thị về 0 px/s
-        const el = scrollContainerRef.current;
-        if (el) {
-          el.removeAttribute('data-agv-scrolling');
-        }
-        isScrollingAttrSetRef.current = false;
-        if (el && rowSnapMode && actualRowHeight > 0) {
-          const snapped = Math.round(el.scrollTop / actualRowHeight) * actualRowHeight;
-          if (Math.abs(snapped - el.scrollTop) > 0.5) {
-            el.scrollTop = snapped;
-          }
-        }
-        currentVelocityRef.current = 0;
-        windowAccumDistanceRef.current = 0;
-        windowStartTimeRef.current = performance.now();
-        if (onScrollMetrics) {
-          onScrollMetrics({
-            fps: currentFpsRef.current,
-            velocity: 0,
-            startChunk: activeChunkWindowRef.current.start,
-            endChunk: activeChunkWindowRef.current.end,
-            mountedRowCount:
-              (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
-              chunkSize,
-            totalRows,
-          });
-        }
-      };
-    }, [
-      autoScrolling,
-      autoScrollSpeed,
-      rowSnapMode,
-      actualRowHeight,
-      totalContentHeight,
-      viewportHeight,
-      onScrollMetrics,
-      chunkSize,
-      totalRows,
-      startFpsMonitor,
-      stopFpsMonitor,
-    ]);
-
-    // Scroll handler
+    // Scroll handler (tách bạch Window Scroll vs Container Scroll để cuộn ngang không reset virtualScrollTop)
     const handleScroll = useCallback(
       (e: React.UIEvent<HTMLDivElement>) => {
         const target = e.currentTarget;
 
-        // Popup & Editing Scroll Lock: Khi đang sửa hoặc có popup mở thì Grid tuyệt đối không được cuộn (khóa cả ngang lẫn dọc)
-        if (!autoScrolling && (activeContextMenu || activeEditingCell || isAnyPopupActive())) {
-          const lockedPos = lockedScrollPosRef.current;
-          target.scrollTop = lockedPos ? lockedPos.top : lastScrollTopRef.current;
+        // Popup & Editing Scroll Lock: Khi đang sửa hoặc có popup mở thì Grid tuyệt đối không được cuộn
+        if (activeContextMenu || activeEditingCell || isPopupLockActive || isAnyPopupActive()) {
+          const lockedPos = lockedScrollPosRef.current || popupLockedScrollPosRef.current;
+          if (!isWindowScroll) {
+            target.scrollTop = lockedPos ? lockedPos.top : lastScrollTopRef.current;
+          }
           target.scrollLeft = lockedPos ? lockedPos.left : lastScrollLeftRef.current;
           return;
         }
 
-        let currentTop = target.scrollTop;
         const currentScrollLeft = target.scrollLeft;
-
         if (currentScrollLeft !== lastScrollLeftRef.current) {
           lastScrollLeftRef.current = currentScrollLeft;
           if (centerPinnedColKeys.length > 0) {
@@ -1720,205 +1558,169 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           }
         }
 
-        if (rowSnapMode && !autoScrolling) {
-          const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || target.clientHeight));
-          const remainder = currentTop % actualRowHeight;
-          if (remainder !== 0 && currentTop < maxScroll) {
-            const snapped = Math.min(maxScroll, Math.round(currentTop / actualRowHeight) * actualRowHeight);
-            if (Math.abs(snapped - currentTop) > 0.5) {
-              target.scrollTop = snapped;
-              currentTop = snapped;
-            }
+        if (!isWindowScroll) {
+          const currentTop = target.scrollTop;
+          lastScrollTopRef.current = currentTop;
+          virtualScrollTopRef.current = currentTop;
+          updateRowWindow(currentTop, viewportHeight);
+
+          if (features.enableGrouping && groupByColumnKey) {
+            const nextStickyIdx = computeStickyGroupIdx(currentTop);
+            setStickyGroupRowIndex((prev) => (prev === nextStickyIdx ? prev : nextStickyIdx));
           }
         }
 
-        const now = performance.now();
-        const dy = Math.abs(currentTop - lastScrollTopRef.current);
-        windowAccumDistanceRef.current += dy;
+        notifyOverlayScrollbar();
 
-        lastScrollTopRef.current = currentTop;
-        lastScrollTimeRef.current = now;
-
-        let start = activeChunkWindowRef.current.start;
-        let end = activeChunkWindowRef.current.end;
-        let chunkChanged = false;
-        if (totalChunks > 0) {
-          const rawStart = Math.floor(currentTop / chunkPixelHeight);
-          const rawEnd = Math.floor((currentTop + viewportHeight) / chunkPixelHeight);
-          start = Math.max(0, rawStart - overscanChunks);
-          end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
-
-          if (
-            start !== activeChunkWindowRef.current.start ||
-            end !== activeChunkWindowRef.current.end
-          ) {
-            chunkChanged = true;
-            activeChunkWindowRef.current = { start, end };
-            setChunkWindow({ start, end });
+        if (!isScrollingAttrSetRef.current) {
+          isScrollingAttrSetRef.current = true;
+          target.setAttribute('data-agv-scrolling', 'true');
+        }
+        if (scrollStopTimeoutRef.current) {
+          window.clearTimeout(scrollStopTimeoutRef.current);
+        }
+        scrollStopTimeoutRef.current = window.setTimeout(() => {
+          if (isScrollingAttrSetRef.current) {
+            isScrollingAttrSetRef.current = false;
+            scrollContainerRef.current?.removeAttribute('data-agv-scrolling');
           }
-        }
-
-        if (groupByColumnKey) {
-          const nextStickyIdx = computeStickyGroupIdx(currentTop);
-          setStickyGroupRowIndex((prev) => (prev === nextStickyIdx ? prev : nextStickyIdx));
-        }
-
-        if (!autoScrolling) {
-          if (!isScrollingAttrSetRef.current) {
-            isScrollingAttrSetRef.current = true;
-            target.setAttribute('data-agv-scrolling', 'true');
-            startFpsMonitor();
-          }
-          if (scrollStopTimeoutRef.current) {
-            window.clearTimeout(scrollStopTimeoutRef.current);
-          }
-          scrollStopTimeoutRef.current = window.setTimeout(() => {
-            if (isScrollingAttrSetRef.current) {
-              isScrollingAttrSetRef.current = false;
-              scrollContainerRef.current?.removeAttribute('data-agv-scrolling');
-            }
-            const lastFps = currentFpsRef.current;
-            stopFpsMonitor();
-            currentVelocityRef.current = 0;
-            windowAccumDistanceRef.current = 0;
-            windowStartTimeRef.current = performance.now();
-            lastMetricsEmitTimeRef.current = performance.now();
-            if (onScrollMetrics) {
-              onScrollMetrics({
-                fps: lastFps,
-                velocity: 0,
-                startChunk: activeChunkWindowRef.current.start,
-                endChunk: activeChunkWindowRef.current.end,
-                mountedRowCount:
-                  (activeChunkWindowRef.current.end - activeChunkWindowRef.current.start + 1) *
-                  chunkSize,
-                totalRows,
-              });
-            }
-          }, 110);
-        }
-
-        // Đo vận tốc trung bình trên toàn chu kỳ 120ms và tách khỏi frame mount chunk mới
-        const windowElapsed = now - lastMetricsEmitTimeRef.current;
-        if (onScrollMetrics && !chunkChanged && windowElapsed >= 120) {
-          const measureDt = Math.max(1, now - windowStartTimeRef.current);
-          const pxPerSec = autoScrolling
-            ? Math.round(autoScrollSpeed * 60)
-            : Math.round((windowAccumDistanceRef.current / measureDt) * 1000);
-          currentVelocityRef.current = pxPerSec;
-          windowAccumDistanceRef.current = 0;
-          windowStartTimeRef.current = now;
-          lastMetricsEmitTimeRef.current = now;
-          onScrollMetrics({
-            fps: currentFpsRef.current,
-            velocity: pxPerSec,
-            startChunk: start,
-            endChunk: end,
-            mountedRowCount: (end - start + 1) * chunkSize,
-            totalRows,
-          });
-        }
+        }, 110);
       },
       [
-        centerPinnedColKeys.length,
-        computeCenterDock,
-        rowSnapMode,
-        autoScrolling,
-        actualRowHeight,
-        totalContentHeight,
-        totalChunks,
-        chunkPixelHeight,
-        viewportHeight,
-        overscanChunks,
-        onScrollMetrics,
-        chunkSize,
-        totalRows,
         activeContextMenu,
         activeEditingCell,
+        isPopupLockActive,
+        lockedScrollPosRef,
+        popupLockedScrollPosRef,
+        centerPinnedColKeys.length,
+        computeCenterDock,
+        isWindowScroll,
+        updateRowWindow,
+        viewportHeight,
+        features.enableGrouping,
         groupByColumnKey,
         computeStickyGroupIdx,
+        notifyOverlayScrollbar,
       ]
     );
 
-    // Visible chunks list - Tính toán đồng bộ tức thì (Zero-Delay Sync, loại bỏ 2-pass render)
-    const visibleChunkIndices = useMemo(() => {
-      if (totalChunks === 0) return [] as number[];
+    const hasColLevelSpan = useMemo(
+      () => flatColumns.some((c) => Boolean(c.colSpan || c.rowSpan)),
+      [flatColumns]
+    );
+    const isSpanActive = Boolean(
+      !isResponsiveMode &&
+        (features.enableCellSpan || hasColLevelSpan) &&
+        (spanMethod || hasColLevelSpan)
+    );
 
-      const currentTop = scrollContainerRef.current?.scrollTop || 0;
-      const rawStart = Math.floor(currentTop / chunkPixelHeight);
-      const rawEnd = Math.floor((currentTop + (viewportHeight || 600)) / chunkPixelHeight);
-      const start = Math.max(0, Math.min(totalChunks - 1, rawStart - overscanChunks));
-      const end = Math.min(totalChunks - 1, Math.max(start, rawEnd + overscanChunks));
-
-      const indices: number[] = [];
-      for (let c = start; c <= end; c++) {
-        indices.push(c);
-      }
-      return indices;
-    }, [chunkWindow, totalChunks, chunkPixelHeight, viewportHeight, overscanChunks]);
-
-    // Bộ đệm lưu trữ mảng dòng của từng Chunk (Giữ nguyên tham chiếu chunkRows cho các chunk cũ khi cuộn, giúp GridChunkBlock đạt 100% React.memo hit)
-    const chunkRowsCacheRef = useRef<{
-      key: string;
-      getRowRef: any;
-      map: Map<number, T[]>;
-    }>({ key: '', getRowRef: null, map: new Map() });
-
-    // Rows in visible chunks
-    const visibleChunksMap = useMemo(() => {
-      const cacheKey = `${chunkSize}_${totalRows}_${dataVersion ?? 0}`;
-      if (
-        chunkRowsCacheRef.current.key !== cacheKey ||
-        chunkRowsCacheRef.current.getRowRef !== getRowItem
-      ) {
-        chunkRowsCacheRef.current = {
-          key: cacheKey,
-          getRowRef: getRowItem,
-          map: new Map<number, T[]>(),
-        };
-      }
-      const cache = chunkRowsCacheRef.current.map;
-      const map = new Map<number, T[]>();
-      for (const cIdx of visibleChunkIndices) {
-        let chunkRows = cache.get(cIdx);
-        if (!chunkRows) {
-          const startRow = cIdx * chunkSize;
-          const endRow = Math.min(totalRows, startRow + chunkSize);
-          chunkRows = [];
-          for (let i = startRow; i < endRow; i++) {
-            chunkRows.push(getRowItem(i));
-          }
-          cache.set(cIdx, chunkRows);
-        }
-        map.set(cIdx, chunkRows);
-      }
-      if (cache.size > 40) {
-        for (const cachedIdx of cache.keys()) {
-          if (!map.has(cachedIdx)) {
-            cache.delete(cachedIdx);
-            if (cache.size <= 30) break;
-          }
-        }
-      }
-      return map;
-    }, [visibleChunkIndices, chunkSize, totalRows, getRowItem, dataVersion]);
-
-    // Động cơ hiệu ứng trượt dòng FLIP khi Sort chuẩn AG Grid (First - Last - Invert - Play, 300ms GPU)
-    useGridSortFlipAnimation({
-      scrollContainerRef,
-      sortConfig,
-      groupSortConfig,
-      visibleChunksMap,
-      chunkSize,
-      actualRowHeight,
+    const currentWindowRange = useMemo(() => {
+      if (totalRows <= 0) return { start: 0, end: -1 };
+      const rawTop = isWindowScroll
+        ? virtualScrollTopRef.current
+        : (scrollContainerRef.current?.scrollTop ?? virtualScrollTopRef.current);
+      return getVisibleRowRange(rawTop, viewportHeight || 600);
+    }, [
+      rowWindow,
+      totalRows,
+      getVisibleRowRange,
       viewportHeight,
-      getRowKey,
-      autoScrolling,
+      isWindowScroll,
+      dynamicHeightVersion,
+    ]);
+
+    const spanWindowPlan = useMemo<SpanWindowPlan | null>(() => {
+      if (!isSpanActive || totalRows <= 0 || currentWindowRange.end < currentWindowRange.start) {
+        return null;
+      }
+      return computeSpanWindowPlan({
+        startRow: currentWindowRange.start,
+        endRow: currentWindowRange.end,
+        totalRows,
+        baseRowHeight: actualRowHeight,
+        getRowTop,
+        columns: flatColumns,
+        colWidths,
+        columnPins,
+        centerDockStatus,
+        lastEffectiveLeftColKey,
+        getRowItem,
+        spanMethod,
+        maxLookback: maxRowSpanLookback,
+      });
+    }, [
+      isSpanActive,
+      totalRows,
+      currentWindowRange,
+      actualRowHeight,
+      getRowTop,
+      flatColumns,
+      colWidths,
+      columnPins,
+      centerDockStatus,
+      lastEffectiveLeftColKey,
+      getRowItem,
+      spanMethod,
+      maxRowSpanLookback,
+      dataVersion,
+    ]);
+
+    // Danh sách dòng hiển thị theo cửa sổ trượt row-level cố định (~28–32 dòng ở cả Window Scroll lẫn Container Scroll)
+    const visibleRowsList = useMemo(() => {
+      if (totalRows <= 0) return [] as Array<{ rowIndex: number; row: T }>;
+      const { start, end } = currentWindowRange;
+      if (end < start) return [] as Array<{ rowIndex: number; row: T }>;
+
+      const rows: Array<{ rowIndex: number; row: T }> = [];
+      const added = new Set<number>();
+
+      if (spanWindowPlan && spanWindowPlan.anchorRowsBeforeStart.length > 0) {
+        const sortedAnchors = [...spanWindowPlan.anchorRowsBeforeStart].sort((a, b) => a - b);
+        for (let i = 0; i < sortedAnchors.length; i++) {
+          const ar = sortedAnchors[i];
+          if (ar >= 0 && ar < start && !added.has(ar)) {
+            added.add(ar);
+            rows.push({ rowIndex: ar, row: getRowItem(ar) });
+          }
+        }
+      }
+
+      for (let r = start; r <= end; r++) {
+        if (!added.has(r)) {
+          rows.push({ rowIndex: r, row: getRowItem(r) });
+        }
+      }
+      return rows;
+    }, [totalRows, currentWindowRange, spanWindowPlan, getRowItem, dataVersion]);
+
+    useGridCrossHover({
+      enabled: features.enableCrossHover,
+      highlightHeader: features.crossHoverHighlightHeader,
+      isResponsiveMode,
+      isPopupLockActive: Boolean(activeContextMenu || activeEditingCell || isPopupLockActive),
+      scrollContainerRef,
+      visibleVersion: `${currentWindowRange.start}_${currentWindowRange.end}_${dataVersion ?? 0}_${flatColumns.length}`,
     });
 
-    // Anchor Row Preservation: Tự động bảo toàn vị trí dòng đang đọc khi chuyển đổi qua lại giữa PC, Tablet và Phone
+    // Động cơ hiệu ứng trượt dòng FLIP khi Sort (bỏ qua toàn bộ chi phí tracking khi tắt Sort hoặc đang responsive)
+    useGridSortFlipAnimation({
+      enabled: features.enableSorting && !isResponsiveMode,
+      scrollContainerRef,
+      virtualScrollTopRef,
+      sortConfig,
+      sortRules: effectiveSortRules,
+      groupSortConfig,
+      visibleRows: visibleRowsList,
+      actualRowHeight,
+      findRowIndexAtOffset,
+      viewportHeight,
+      getRowKey,
+    });
+
+    // Anchor Row Preservation khi chuyển đổi giữa PC, Tablet và Phone
     const prevActiveModeRef = useRef<string>(activeMode);
     const prevActualRowHeightRef = useRef<number>(actualRowHeight);
+    const prevFindRowIndexAtOffsetRef = useRef<(y: number) => number>(findRowIndexAtOffset);
 
     useLayoutEffect(() => {
       const prevMode = prevActiveModeRef.current;
@@ -1926,39 +1728,95 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
 
       if (prevMode !== activeMode && prevRowH > 0 && actualRowHeight > 0) {
         const scrollEl = scrollContainerRef.current;
-        const currentScrollTop = scrollEl ? scrollEl.scrollTop : lastScrollTopRef.current;
+        const currentScrollTop = isWindowScroll
+          ? virtualScrollTopRef.current
+          : scrollEl
+          ? scrollEl.scrollTop
+          : lastScrollTopRef.current;
 
-        // 1. Xác định chỉ số dòng đang ở đỉnh khung nhìn trước khi đổi mode
-        const anchorRowIndex = Math.max(0, Math.floor(currentScrollTop / prevRowH));
+        const anchorRowIndex = Math.max(
+          0,
+          prevFindRowIndexAtOffsetRef.current
+            ? prevFindRowIndexAtOffsetRef.current(currentScrollTop)
+            : Math.floor(currentScrollTop / prevRowH)
+        );
 
         if (anchorRowIndex > 0) {
-          // 2. Tính toán vị trí cuộn tương ứng với chiều cao dòng của mode mới
           const maxScroll = Math.max(0, totalContentHeight - (viewportHeight || 600));
-          const targetScrollTop = Math.min(maxScroll, anchorRowIndex * actualRowHeight);
+          const targetScrollTop = Math.min(maxScroll, getRowTop(anchorRowIndex));
 
-          // 3. Khôi phục ngay lập tức trước khi paint (zero flicker)
-          if (scrollEl) {
+          if (scrollEl && !isWindowScroll) {
             scrollEl.scrollTop = targetScrollTop;
           }
           lastScrollTopRef.current = targetScrollTop;
-
-          // 4. Đồng bộ hóa ChunkWindow để render đúng các chunk chứa dòng anchor
-          if (totalChunks > 0) {
-            const chunkPixelHeight = chunkSize * actualRowHeight;
-            const rawStart = Math.floor(targetScrollTop / chunkPixelHeight);
-            const rawEnd = Math.floor((targetScrollTop + (viewportHeight || 600)) / chunkPixelHeight);
-            const start = Math.max(0, rawStart - overscanChunks);
-            const end = Math.min(totalChunks - 1, rawEnd + overscanChunks);
-
-            activeChunkWindowRef.current = { start, end };
-            setChunkWindow({ start, end });
-          }
+          virtualScrollTopRef.current = targetScrollTop;
+          updateRowWindow(targetScrollTop, viewportHeight || 600);
         }
       }
 
       prevActiveModeRef.current = activeMode;
       prevActualRowHeightRef.current = actualRowHeight;
-    }, [activeMode, actualRowHeight, chunkSize, overscanChunks, totalChunks, totalContentHeight, viewportHeight]);
+      prevFindRowIndexAtOffsetRef.current = findRowIndexAtOffset;
+    }, [
+      activeMode,
+      actualRowHeight,
+      isWindowScroll,
+      totalContentHeight,
+      viewportHeight,
+      getRowTop,
+      findRowIndexAtOffset,
+      updateRowWindow,
+    ]);
+
+    const activeQueryRuleCount = useMemo(
+      () => countActiveQueryRules(currentQueryTree),
+      [currentQueryTree]
+    );
+
+    const { visibleColumnCount, totalColumnCount } = useMemo(() => {
+      const dataCols = columns.filter(
+        (c) => c.dataType !== DATA_TYPES.SYSTEM && !c.isRowNumber && !c.isSelection
+      );
+      const atomicGroups = (effectiveColumnGroups || []).filter((g) => g.isAtomic);
+      const allAtomicKeys = new Set(atomicGroups.flatMap((g) => g.keys));
+      const nonAtomicCols = dataCols.filter((c) => !allAtomicKeys.has(c.key));
+      const nonAtomicVisible = nonAtomicCols.filter((c) => visibleColKeys.includes(c.key)).length;
+      const atomicVisible = atomicGroups.filter((g) =>
+        g.keys.some((k) => visibleColKeys.includes(k))
+      ).length;
+      return {
+        totalColumnCount: nonAtomicCols.length + atomicGroups.length,
+        visibleColumnCount: nonAtomicVisible + atomicVisible,
+      };
+    }, [columns, effectiveColumnGroups, visibleColKeys]);
+
+    useEffect(() => {
+      onToolbarStateChange?.({
+        activePopup: externalPopup?.type ?? null,
+        quickFilterText: currentQuickFilterText,
+        isQuickFilterActive: Boolean(currentQuickFilterText.trim()),
+        activeQueryRuleCount,
+        visibleColumnCount,
+        totalColumnCount,
+        sortRuleCount: effectiveSortRules.length,
+        enableQuickSearch: features.enableQuickSearch,
+        enableQueryBuilder: features.enableQueryBuilder,
+        enableColumnChooser: features.enableColumnChooser,
+        enableMultiSort: features.enableMultiSort,
+      });
+    }, [
+      onToolbarStateChange,
+      externalPopup,
+      currentQuickFilterText,
+      activeQueryRuleCount,
+      visibleColumnCount,
+      totalColumnCount,
+      effectiveSortRules.length,
+      features.enableQuickSearch,
+      features.enableQueryBuilder,
+      features.enableColumnChooser,
+      features.enableMultiSort,
+    ]);
 
     // Imperative Ref API
     useImperativeHandle(
@@ -1968,8 +1826,16 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           const el = scrollContainerRef.current;
           if (!el || totalRows === 0) return;
           const clamped = Math.max(0, Math.min(totalRows - 1, rowIndex));
-          const targetTop = clamped * actualRowHeight;
-          if (rowSnapMode || behavior === 'auto') {
+          const targetTop = getRowTop(clamped);
+          if (isWindowScroll && typeof window !== 'undefined') {
+            const winTop = Math.max(
+              0,
+              window.scrollY + el.getBoundingClientRect().top + targetTop - stickyHeaderTotalHeight
+            );
+            window.scrollTo({ top: winTop, behavior });
+            return;
+          }
+          if (behavior === 'auto') {
             el.scrollTop = targetTop;
           } else {
             el.scrollTo({ top: targetTop, behavior });
@@ -1977,95 +1843,274 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
         },
         scrollToChunk: (chunkIndex: number, behavior: ScrollBehavior = 'auto') => {
           const el = scrollContainerRef.current;
-          if (!el || totalChunks === 0) return;
-          const clamped = Math.max(0, Math.min(totalChunks - 1, chunkIndex));
-          const targetTop = clamped * chunkPixelHeight;
-          if (rowSnapMode || behavior === 'auto') {
+          if (!el || totalRows === 0) return;
+          const targetRow = Math.max(0, Math.min(totalRows - 1, chunkIndex * chunkSize));
+          const targetTop = getRowTop(targetRow);
+          if (isWindowScroll && typeof window !== 'undefined') {
+            const winTop = Math.max(
+              0,
+              window.scrollY + el.getBoundingClientRect().top + targetTop - stickyHeaderTotalHeight
+            );
+            window.scrollTo({ top: winTop, behavior });
+            return;
+          }
+          if (behavior === 'auto') {
             el.scrollTop = targetTop;
           } else {
             el.scrollTo({ top: targetTop, behavior });
           }
         },
         getScrollContainer: () => scrollContainerRef.current,
+        openPopup: openExternalPopup,
+        togglePopup: toggleExternalPopup,
+        closePopup: closeExternalPopup,
+        expandAllTree: treeDetailActions?.expandAllTree,
+        collapseAllTree: treeDetailActions?.collapseAllTree,
+        expandTreeToDepth: treeDetailActions?.expandTreeToDepth,
+        toggleTreeRow: treeDetailActions?.toggleTreeRow,
+        toggleDetailRow: treeDetailActions?.toggleDetailRow,
+        expandAllDetails: treeDetailActions?.expandAllDetails,
+        collapseAllDetails: treeDetailActions?.collapseAllDetails,
       }),
-      [totalRows, actualRowHeight, rowSnapMode, totalChunks, chunkPixelHeight]
+      [
+        totalRows,
+        chunkSize,
+        getRowTop,
+        isWindowScroll,
+        stickyHeaderTotalHeight,
+        openExternalPopup,
+        toggleExternalPopup,
+        closeExternalPopup,
+        treeDetailActions,
+      ]
+    );
+
+    const layoutSnapshot = useMemo(
+      () =>
+        buildGridLayoutSnapshot({
+          columns: flatColumns,
+          colWidths,
+          rowHeight: actualRowHeight,
+          surfaceTheme,
+          columnPins,
+          leftOffsets,
+          rightOffsets,
+          lastEffectiveLeftColKey,
+          firstEffectiveRightColKey,
+          centerDockStatus,
+          centerLeftOffsets,
+          centerRightOffsets,
+          emptyColKeys,
+          dynamicRowHeight: isDynamicPcEnabled,
+        }),
+      [
+        flatColumns,
+        colWidths,
+        actualRowHeight,
+        surfaceTheme,
+        columnPins,
+        leftOffsets,
+        rightOffsets,
+        lastEffectiveLeftColKey,
+        firstEffectiveRightColKey,
+        centerDockStatus,
+        centerLeftOffsets,
+        centerRightOffsets,
+        emptyColKeys,
+        isDynamicPcEnabled,
+      ]
+    );
+
+    const resolveDelegatedRow = useCallback(
+      (target: EventTarget | null): { rowIndex: number; row: T } | null => {
+        const targetEl = target as HTMLElement | null;
+        if (targetEl?.closest?.('[data-agv-detail-row="true"]')) return null;
+        const rowEl = targetEl?.closest?.('[data-agv-row="true"]') as HTMLElement | null;
+        if (!rowEl) return null;
+        const rawIdx = rowEl.getAttribute('data-row-idx');
+        if (rawIdx === null) return null;
+        const rowIndex = Number(rawIdx);
+        if (!Number.isFinite(rowIndex)) return null;
+        const row =
+          rowIndex < 0
+            ? effectivePinnedRows[-1 - rowIndex]?.row
+            : rowIndex < totalRows
+            ? getRowItem(rowIndex)
+            : undefined;
+        if (!row) return null;
+        return { rowIndex, row };
+      },
+      [effectivePinnedRows, totalRows, getRowItem]
+    );
+
+    const handleViewportClick = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isResponsiveMode) return;
+        const resolved = resolveDelegatedRow(e.target);
+        if (!resolved) return;
+        const { rowIndex, row } = resolved;
+        if (effectiveEditMode === GRID_EDIT_MODES.SINGLE_CLICK && effectiveStartEditCell) {
+          const cellEl = (e.target as HTMLElement | null)?.closest?.('[data-col-key]') as HTMLElement | null;
+          const colKey = cellEl?.getAttribute('data-col-key');
+          const meta = colKey ? layoutSnapshot.colMetaByKey[colKey] : undefined;
+          if (meta && !meta.isEmptyCol && meta.editable) {
+            if (effectiveEditingCell?.rowIndex === rowIndex && effectiveEditingCell?.colKey === meta.key) return;
+            e.stopPropagation();
+            onSelectRow?.(rowIndex, row);
+            effectiveStartEditCell(rowIndex, meta.key);
+            return;
+          }
+        }
+        onSelectRow?.(rowIndex, row);
+      },
+      [
+        isResponsiveMode,
+        resolveDelegatedRow,
+        effectiveEditMode,
+        effectiveStartEditCell,
+        layoutSnapshot,
+        effectiveEditingCell,
+        onSelectRow,
+      ]
+    );
+
+    const handleViewportDoubleClick = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        if (
+          isResponsiveMode ||
+          effectiveEditMode !== GRID_EDIT_MODES.DOUBLE_CLICK ||
+          !effectiveStartEditCell
+        ) {
+          return;
+        }
+        const resolved = resolveDelegatedRow(e.target);
+        if (!resolved) return;
+        const { rowIndex, row } = resolved;
+        const cellEl = (e.target as HTMLElement | null)?.closest?.('[data-col-key]') as HTMLElement | null;
+        const colKey = cellEl?.getAttribute('data-col-key');
+        const meta = colKey ? layoutSnapshot.colMetaByKey[colKey] : undefined;
+        if (!meta || meta.isEmptyCol || !meta.editable) return;
+        if (effectiveEditingCell?.rowIndex === rowIndex && effectiveEditingCell?.colKey === meta.key) return;
+        e.stopPropagation();
+        onSelectRow?.(rowIndex, row);
+        effectiveStartEditCell(rowIndex, meta.key);
+      },
+      [
+        isResponsiveMode,
+        effectiveEditMode,
+        effectiveStartEditCell,
+        resolveDelegatedRow,
+        layoutSnapshot,
+        effectiveEditingCell,
+        onSelectRow,
+      ]
+    );
+
+    const handleViewportContextMenu = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!features.enableContextMenu) return;
+        e.preventDefault();
+        if (isResponsiveMode) return;
+        const resolved = resolveDelegatedRow(e.target);
+        if (!resolved) return;
+        const cellEl = (e.target as HTMLElement | null)?.closest?.('[data-col-key]') as HTMLElement | null;
+        const colKey = cellEl?.getAttribute('data-col-key');
+        const meta = colKey ? layoutSnapshot.colMetaByKey[colKey] : undefined;
+        if (!meta) return;
+        if (meta.isDisableContextMenu) {
+          e.stopPropagation();
+          return;
+        }
+        handleCellContextMenu(resolved.rowIndex, resolved.row, meta.key, e);
+      },
+      [
+        features.enableContextMenu,
+        isResponsiveMode,
+        resolveDelegatedRow,
+        layoutSnapshot,
+        handleCellContextMenu,
+      ]
     );
 
     const theme = getThemeClasses(surfaceTheme);
     const isRowNumberCol = (col: ColumnDef<any> | undefined | null) =>
       Boolean(col?.isRowNumber || col?.key === 'col_stt' || (col?.dataType === DATA_TYPES.SYSTEM && Boolean(col?.title)));
-    const showRowNumber = Boolean(gridSettings.showRowNumber && flatColumns.some(isRowNumberCol));
-    const showSelectionCol = Boolean(gridSettings.showSelectionCol && flatColumns.some(isSelectionColumn));
+    const showRowNumber = Boolean(features.enableRowNumber && flatColumns.some(isRowNumberCol));
+    const tabletTrackMinWidth =
+      isTabletMode && compiledTabletGroups && compiledTabletGroups.length > 0
+        ? computeTabletTrackMinWidth(compiledTabletGroups, showRowNumber, showSelectionCol)
+        : 0;
+    const resolvedMaxHeightStyle: React.CSSProperties =
+      isAutoSizedRoot && features.maxHeight !== undefined
+        ? {
+            maxHeight:
+              typeof features.maxHeight === 'number'
+                ? `${features.maxHeight}px`
+                : features.maxHeight,
+          }
+        : {};
 
     return (
       <div
         ref={containerRef}
         data-theme={surfaceTheme}
-        className={`relative flex-1 flex flex-col min-h-0 overflow-hidden agv-grid-root ${isFullscreen ? 'agv-grid-fullscreen' : ''} ${getThemeClass(surfaceTheme)} ${className}`}
-        style={{ ...gridColVars, ...style }}
-        onContextMenu={(e) => {
-          // Vô hiệu hóa chuột phải mặc định của trình duyệt trong Grid
-          e.preventDefault();
-        }}
+        className={`relative ${isAutoSizedRoot ? 'w-full' : 'flex-1'} flex flex-col min-h-0 overflow-hidden agv-grid-root ${isFullscreen ? 'agv-grid-fullscreen' : ''} ${getThemeClass(surfaceTheme)} ${className}`}
+        style={{ ...gridColVars, ...resolvedMaxHeightStyle, ...style }}
+        onMouseDownCapture={handleContainerMouseDownCapture}
+        onClickCapture={handleContainerSuppressClickCapture}
+        onDoubleClickCapture={handleContainerSuppressClickCapture}
+        onContextMenuCapture={handleContainerContextMenuCapture}
+        onContextMenu={
+          features.enableContextMenu
+            ? (e) => {
+                // Vô hiệu hóa chuột phải mặc định của trình duyệt trong Grid khi menu ngữ cảnh được bật
+                e.preventDefault();
+              }
+            : undefined
+        }
       >
+        <div
+          ref={overlayHostRef}
+          {...overlayHostInteractionProps}
+          data-overlay-scroll-active={scrollbarAlwaysOn ? 'true' : 'false'}
+          className={`agv-grid-scroll-overlay-host relative ${isAutoSizedRoot ? 'flex-initial min-h-0' : 'flex-1 min-h-0'} flex flex-col`}
+        >
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          data-agv-editing={activeEditingCell ? 'true' : undefined}
-          onContextMenu={(e) => {
-            // Vô hiệu hóa chuột phải mặc định của trình duyệt trong vùng cuộn Grid
-            e.preventDefault();
-          }}
+          onClick={!isResponsiveMode ? handleViewportClick : undefined}
+          onDoubleClick={
+            !isResponsiveMode && effectiveEditMode === GRID_EDIT_MODES.DOUBLE_CLICK && effectiveStartEditCell
+              ? handleViewportDoubleClick
+              : undefined
+          }
+          data-agv-editing={effectiveEditingCell ? 'true' : undefined}
+          onContextMenu={features.enableContextMenu ? handleViewportContextMenu : undefined}
           style={{
             willChange: 'scroll-position',
             WebkitOverflowScrolling: 'touch',
             backgroundColor: 'var(--agv-bg-root)',
           }}
-          className={`agv-scroll-viewport flex-1 overflow-auto relative ${theme.viewportBg}`}
+          className={`agv-scroll-viewport agv-scroll-overlay ${isAutoSizedRoot ? 'flex-initial min-h-0' : 'flex-1'} overflow-auto relative ${theme.viewportBg}`}
         >
           {/* Header & Filter Row */}
-          {isTabletMode ? (
-            <div className="sticky top-0 z-30 w-full">
-              <GridTabletHeader
+          {isResponsiveMode ? (
+            <Suspense fallback={null}>
+              <LazyGridResponsiveHeader
+                activeMode={isTabletMode ? 'tablet' : 'phone'}
                 surfaceTheme={surfaceTheme}
+                columns={flatColumns}
+                compiledTabletGroups={compiledTabletGroups}
                 showRowNumber={showRowNumber}
                 showSelectionCol={showSelectionCol}
-                onOpenSortFilter={() => setIsSortFilterModalOpen(true)}
+                totalRows={totalRows}
+                onOpenSortFilter={
+                  features.enableResponsiveSortFilter ? () => setIsSortFilterModalOpen(true) : undefined
+                }
                 hasActiveFilterOrSort={hasActiveFilterOrSort}
+                sortFilterLabel={features.responsiveSortFilterLabel}
               />
-            </div>
-          ) : isPhoneMode ? (
-            <div
-              className="sticky top-0 z-30 px-3 py-2 border-b flex items-center justify-between text-[11px] font-semibold select-none"
-              style={{
-                backgroundColor: 'var(--agv-bg-header, var(--agv-bg-root))',
-                borderColor: 'var(--agv-border)',
-                color: 'var(--agv-text-main)',
-              }}
-            >
-              <span>DANH SÁCH DỮ LIỆU ({totalRows.toLocaleString()} DÒNG)</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsSortFilterModalOpen(true)}
-                  className="min-h-[28px] px-2.5 py-0.5 rounded border text-[11px] font-semibold cursor-pointer transition-colors"
-                  style={{
-                    backgroundColor: hasActiveFilterOrSort
-                      ? 'var(--agv-accent)'
-                      : 'var(--agv-bg-root)',
-                    color: hasActiveFilterOrSort
-                      ? 'var(--agv-accent-text, #ffffff)'
-                      : 'var(--agv-text-main)',
-                    borderColor: 'var(--agv-border)',
-                  }}
-                >
-                  Lọc & Sắp Xếp
-                </button>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--agv-bg-subtle)', color: 'var(--agv-accent)' }}>
-                  Phone View
-                </span>
-              </div>
-            </div>
+            </Suspense>
           ) : (
             <>
               {/* Sticky Header (1-tier 34px or 2-tier 64px) */}
@@ -2084,74 +2129,99 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                 lastEffectiveLeftColKey={lastEffectiveLeftColKey}
                 firstEffectiveRightColKey={firstEffectiveRightColKey}
                 sortConfig={sortConfig}
+                sortRules={effectiveSortRules}
                 surfaceTheme={surfaceTheme}
                 columnFilters={columnFilters}
-                onOpenChecklistFilter={handleOpenChecklistFilter}
+                activeChecklistColKey={activeChecklistColKey}
+                onOpenChecklistFilter={features.enableHeaderFilter ? handleOpenChecklistFilter : undefined}
                 onToggleSort={handleToggleSort}
-                onColumnContextMenu={handleColumnContextMenu}
-                onBandContextMenu={handleBandContextMenu}
-                onMouseDownResize={handleMouseDownResize}
+                onColumnContextMenu={features.enableContextMenu ? handleColumnContextMenu : undefined}
+                onBandContextMenu={features.enableContextMenu ? handleBandContextMenu : undefined}
+                onMouseDownResize={features.enableColumnResize ? handleMouseDownResize : undefined}
                 onToggleGroup={onToggleGroup}
-                onReorderColumns={onReorderColumns}
+                onReorderColumns={features.enableColumnReorder ? onReorderColumns : undefined}
                 headerHeight={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
                 emptyColKeys={emptyColKeys}
-                hasFilterRow={showFilterRow}
+                hasFilterRow={features.showFilterRow}
+                enableSorting={features.enableSorting}
+                enableColumnResize={features.enableColumnResize}
+                enableContextMenu={features.enableContextMenu}
               />
 
               {/* Sticky Inline Filter Row */}
-              {showFilterRow && (
-                <GridFilterRow
-                  totalGridWidth={totalGridWidth}
-                  columns={flatColumns}
-                  colWidths={colWidths}
-                  columnPins={columnPins}
-                  leftOffsets={leftOffsets}
-                  rightOffsets={rightOffsets}
-                  centerDockStatus={centerDockStatus}
-                  centerLeftOffsets={centerLeftOffsets}
-                  centerRightOffsets={centerRightOffsets}
-                  lastEffectiveLeftColKey={lastEffectiveLeftColKey}
-                  firstEffectiveRightColKey={firstEffectiveRightColKey}
-                  surfaceTheme={surfaceTheme}
-                  columnFilters={columnFilters}
-                  onColumnFilterChange={onColumnFilterChange}
-                  onClearAllColumnFilters={onClearAllColumnFilters}
-                  onClearAllCriteria={onClearAllCriteria}
-                  activeFilterCount={activeColumnFilterCount}
-                  hasColumnEmptyCells={effectiveHasColumnEmptyCells}
-                  getColumnDateBounds={effectiveGetColumnDateBounds}
-                  headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
-                  columnSums={columnSums}
-                  hasCheckedRows={Boolean(checkedRowIndices && checkedRowIndices.size > 0)}
-                  emptyColKeys={emptyColKeys}
-                  groupByColumnKey={groupByColumnKey}
-                  quickFilterText={controlledQuickFilterText}
-                  sortConfig={sortConfig}
-                  groupSortConfig={groupSortConfig}
-                  appliedQueryTree={controlledAppliedQueryTree}
-                  pinnedRows={pinnedRows}
-                  onUngroup={onUngroup}
-                  onSortChange={onSortChange}
-                  onToggleGroupSort={onToggleGroupSort}
-                  onQuickFilterTextChange={controlledOnQuickFilterTextChange}
-                  onApplyQueryTree={controlledOnApplyQueryTree}
-                  onUnpinRow={handleUnpinRow}
-                  onClearPinnedRows={handleClearPinnedRows}
-                />
+              {features.showFilterRow && (
+                <Suspense
+                  fallback={
+                    <div
+                      style={{
+                        height: '34px',
+                        width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+                        minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+                        backgroundColor: 'var(--agv-bg-header)',
+                      }}
+                      className="sticky z-25 border-b border-[var(--agv-border)] shrink-0"
+                    />
+                  }
+                >
+                  <LazyGridFilterRow
+                    totalGridWidth={totalGridWidth}
+                    columns={flatColumns}
+                    colWidths={colWidths}
+                    columnPins={columnPins}
+                    leftOffsets={leftOffsets}
+                    rightOffsets={rightOffsets}
+                    centerDockStatus={centerDockStatus}
+                    centerLeftOffsets={centerLeftOffsets}
+                    centerRightOffsets={centerRightOffsets}
+                    lastEffectiveLeftColKey={lastEffectiveLeftColKey}
+                    firstEffectiveRightColKey={firstEffectiveRightColKey}
+                    surfaceTheme={surfaceTheme}
+                    columnFilters={columnFilters}
+                    onColumnFilterChange={onColumnFilterChange}
+                    onClearAllColumnFilters={onClearAllColumnFilters}
+                    onClearAllCriteria={onClearAllCriteria}
+                    activeFilterCount={activeColumnFilterCount}
+                    hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+                    getColumnDateBounds={effectiveGetColumnDateBounds}
+                    headerTopOffset={customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)}
+                    columnSums={showSummaryRow ? columnSums : undefined}
+                    hasCheckedRows={Boolean(checkedRowIndices && checkedRowIndices.size > 0)}
+                    emptyColKeys={emptyColKeys}
+                    groupByColumnKey={features.enableGrouping ? groupByColumnKey : null}
+                    quickFilterText={controlledQuickFilterText}
+                    sortConfig={sortConfig}
+                    sortRules={effectiveSortRules}
+                    groupSortConfig={groupSortConfig}
+                    appliedQueryTree={controlledAppliedQueryTree}
+                    pinnedRows={effectivePinnedRows}
+                    onUngroup={features.enableGrouping ? onUngroup : undefined}
+                    onSortChange={features.enableSorting ? (s) => {
+                      if (onSortRulesChange) {
+                        onSortRulesChange(s ? [s] : []);
+                      } else {
+                        onSortChange?.(s);
+                      }
+                    } : undefined}
+                    onRemoveSortRule={features.enableSorting ? handleRemoveSortRule : undefined}
+                    onToggleGroupSort={features.enableGrouping && features.enableSorting ? onToggleGroupSort : undefined}
+                    onQuickFilterTextChange={controlledOnQuickFilterTextChange}
+                    onApplyQueryTree={controlledOnApplyQueryTree}
+                    onUnpinRow={handleUnpinRow}
+                    onClearPinnedRows={handleClearPinnedRows}
+                  />
+                </Suspense>
               )}
             </>
           )}
 
           {/* Sticky Pinned Rows (Ghim dòng cố định trên đầu bảng trên PC) */}
-          {!isResponsiveMode && pinnedRows.length > 0 && (
+          {!isResponsiveMode && effectivePinnedRows.length > 0 && (
             <div
+              ref={pinnedRowsContainerRef}
               data-agv-fullwidth="true"
               style={{
                 position: 'sticky',
-                top: `${
-                  (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
-                  (showFilterRow ? 34 : 0)
-                }px`,
+                top: `${stickyHeaderTotalHeight}px`,
                 width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 zIndex: 19,
@@ -2159,7 +2229,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
               }}
               className="border-b-2 border-b-[var(--agv-border-strong)] select-none"
             >
-              {pinnedRows.map((p, pinIdx) => {
+              {effectivePinnedRows.map((p, pinIdx) => {
                 const rowKey = p.rowKey;
                 const isSelected =
                   selectedRowKey !== undefined && selectedRowKey !== null
@@ -2205,15 +2275,17 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                     centerLeftOffsets={centerLeftOffsets}
                     centerRightOffsets={centerRightOffsets}
                     renderCell={renderCell}
-                    onCellContextMenu={handleCellContextMenu}
-                    onGroupContextMenu={handleGroupContextMenu}
-                    editMode={editMode}
-                    editingCell={activeEditingCell}
-                    onStartEditCell={handleStartEditCell}
+                    onCellContextMenu={features.enableContextMenu ? handleCellContextMenu : undefined}
+                    onGroupContextMenu={features.enableContextMenu ? handleGroupContextMenu : undefined}
+                    editMode={effectiveEditMode}
+                    editingCell={effectiveEditingCell}
+                    onStartEditCell={effectiveStartEditCell}
                     onEndEditCell={handleEndEditCell}
                     onCellChange={handleInternalCellChange}
                     getColumnDateBounds={getColumnDateBounds}
                     emptyColKeys={emptyColKeys}
+                    layoutSnapshot={layoutSnapshot}
+                    delegatedEvents={!isResponsiveMode}
                   />
                 );
               })}
@@ -2221,16 +2293,12 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           )}
 
           {/* Sticky Group Header (Dính tiêu đề nhóm trên đỉnh khi cuộn dọc) */}
-          {stickyGroupRow && (stickyGroupRow as any)._isGroupRow && stickyGroupRowIndex !== null && (
+          {features.enableGrouping && stickyGroupRow && (stickyGroupRow as any)._isGroupRow && stickyGroupRowIndex !== null && (
             <div
               data-agv-fullwidth="true"
               style={{
                 position: 'sticky',
-                top: `${
-                  (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
-                  (showFilterRow ? 34 : 0) +
-                  pinnedRows.length * actualRowHeight
-                }px`,
+                top: `${stickyHeaderTotalHeight + effectivePinnedRowsHeight}px`,
                 width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 height: 0,
@@ -2260,15 +2328,17 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                 centerLeftOffsets={centerLeftOffsets}
                 centerRightOffsets={centerRightOffsets}
                 renderCell={renderCell}
-                onCellContextMenu={handleCellContextMenu}
-                onGroupContextMenu={handleGroupContextMenu}
-                editMode={editMode}
-                editingCell={activeEditingCell}
-                onStartEditCell={handleStartEditCell}
+                onCellContextMenu={features.enableContextMenu ? handleCellContextMenu : undefined}
+                onGroupContextMenu={features.enableContextMenu ? handleGroupContextMenu : undefined}
+                editMode={effectiveEditMode}
+                editingCell={effectiveEditingCell}
+                onStartEditCell={effectiveStartEditCell}
                 onEndEditCell={handleEndEditCell}
                 onCellChange={handleInternalCellChange}
                 getColumnDateBounds={getColumnDateBounds}
                 emptyColKeys={emptyColKeys}
+                layoutSnapshot={layoutSnapshot}
+                delegatedEvents={!isResponsiveMode}
               />
             </div>
           )}
@@ -2280,43 +2350,78 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             style={{
               height: `${totalContentHeight}px`,
               width: isResponsiveMode ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-              minWidth: isResponsiveMode ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+              minWidth:
+                isTabletMode && tabletTrackMinWidth > 0
+                  ? `${tabletTrackMinWidth}px`
+                  : isResponsiveMode
+                    ? '100%'
+                    : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
               position: 'relative',
+              isolation: 'isolate',
+              zIndex: 1,
             }}
           >
-            {visibleChunkIndices.map((chunkIdx) => {
-              const chunkRows = visibleChunksMap.get(chunkIdx);
-              if (!chunkRows) return null;
-
-              const beforeCount = getExpandedBeforeChunk(chunkIdx);
-              const inChunkCount = getExpandedInChunk(chunkIdx);
-              const chunkTopOffset = Math.round(
-                chunkIdx * chunkSize * actualRowHeight + beforeCount * EXPANDED_CARD_EXTRA_HEIGHT
+            {visibleRowsList.map(({ rowIndex, row }) => {
+              const rowKey = getRowKeyForVirtual(row, rowIndex);
+              const isSelected =
+                selectedRowKey !== undefined && selectedRowKey !== null
+                  ? selectedRowKey === rowKey ||
+                    (selectedRowIndex !== undefined &&
+                      selectedRowIndex !== null &&
+                      selectedRowIndex === rowIndex)
+                  : selectedRowIndex !== undefined &&
+                    selectedRowIndex !== null &&
+                    selectedRowIndex === rowIndex;
+              const isChecked = checkedRowIndices
+                ? checkedRowIndices.has(rowKey as any) ||
+                  ((row as any)?.originalIndex !== undefined &&
+                    checkedRowIndices.has((row as any).originalIndex))
+                : (Boolean(chkColKey) && (row as any)?.cells?.get?.(chkColKey!)?.value === true) ||
+                  (Boolean(chkColKey) && (row as any)?.[chkColKey!] === true) ||
+                  (row as any)?.isChecked === true;
+              const isCardExpanded = isPhoneMode ? Boolean(phoneExpandedRows.has(rowKey)) : false;
+              const rowTop = getRowTop(rowIndex);
+              const slotHeight = getDynamicRowHeightAtIndex(rowIndex);
+              const rowEditingCell =
+                effectiveEditingCell && effectiveEditingCell.rowIndex === rowIndex
+                  ? effectiveEditingCell
+                  : null;
+              const isSyntheticNonDataRow = Boolean(
+                (row as any)?._isDetailRow || (row as any)?._isGroupRow
               );
-              const effectiveChunkHeight =
-                chunkRows.length * actualRowHeight + inChunkCount * EXPANDED_CARD_EXTRA_HEIGHT;
+              const shouldObserveRowSlots = Boolean(
+                (isDynamicRowHeightActive && !getRowHeightProp) || hasDynamicDetailRows
+              );
 
               return (
-                <GridChunkBlock
-                  key={`chunk_${chunkSize}_${chunkIdx}`}
-                  chunkIndex={chunkIdx}
-                  rows={chunkRows}
-                  startRowIndex={chunkIdx * chunkSize}
+                <GridVirtualRowSlot
+                  key={rowKey}
+                  row={row}
+                  rowIndex={rowIndex}
+                  rowKey={rowKey}
+                  rowTop={rowTop}
+                  rowHeight={actualRowHeight}
+                  slotHeight={slotHeight}
+                  dynamicRowHeight={isDynamicRowHeightActive}
                   columns={flatColumns}
                   colWidths={colWidths}
-                  rowHeight={actualRowHeight}
-                  chunkSize={chunkSize}
-                  topOffset={chunkTopOffset}
-                  chunkHeight={effectiveChunkHeight}
-                  phoneExpandedRows={phoneExpandedRows}
-                  onToggleExpandPhoneCard={handleToggleExpandPhoneCard}
+                  layoutSnapshot={layoutSnapshot}
+                  totalGridWidth={totalGridWidth}
+                  isSelected={isSelected}
+                  isChecked={isChecked}
+                  isCardExpanded={isCardExpanded}
                   showRowNumber={showRowNumber}
                   showSelectionCol={showSelectionCol}
-                  selectedRowIndex={selectedRowIndex ?? null}
-                  selectedRowKey={selectedRowKey}
-                  checkedRowIndices={checkedRowIndices}
+                  onToggleExpandPhoneCard={handleToggleExpandPhoneCard}
                   onSelectRow={onSelectRow}
+                  onRowDetail={onRowDetail}
                   onToggleCheck={onToggleCheck}
+                  onCellContextMenu={
+                    features.enableContextMenu ? handleCellContextMenu : undefined
+                  }
+                  onGroupContextMenu={
+                    features.enableContextMenu ? handleGroupContextMenu : undefined
+                  }
                   antiGhostMode={antiGhostMode}
                   surfaceTheme={surfaceTheme}
                   columnPins={columnPins}
@@ -2327,142 +2432,318 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                   centerDockStatus={centerDockStatus}
                   centerLeftOffsets={centerLeftOffsets}
                   centerRightOffsets={centerRightOffsets}
-                  getRowId={getRowId}
                   renderCell={renderCell}
-                  onCellContextMenu={handleCellContextMenu}
-                  onGroupContextMenu={handleGroupContextMenu}
-                  editMode={editMode}
-                  editingCell={activeEditingCell}
-                  onStartEditCell={handleStartEditCell}
+                  editMode={effectiveEditMode}
+                  rowEditingCell={rowEditingCell}
+                  onStartEditCell={effectiveStartEditCell}
                   onEndEditCell={handleEndEditCell}
                   onCellChange={handleInternalCellChange}
                   getColumnDateBounds={getColumnDateBounds}
                   emptyColKeys={emptyColKeys}
                   activeMode={activeMode}
+                  tabletTrackMinWidth={tabletTrackMinWidth}
+                  compiledTabletGroups={compiledTabletGroups}
+                  compiledPhoneCard={compiledPhoneCard}
+                  delegatedEvents={!isResponsiveMode}
+                  observeRowSlot={shouldObserveRowSlots ? observeRowSlot : undefined}
+                  unobserveRowSlot={shouldObserveRowSlots ? unobserveRowSlot : undefined}
+                  rowSpanPlan={spanWindowPlan?.rowPlans.get(rowIndex)}
+                  treeColumnKey={features.enableTreeData ? treeColumnKey : undefined}
+                  treeIndentSize={treeIndentSize}
+                  onToggleTreeExpand={features.enableTreeData ? onToggleTreeExpand : undefined}
+                  detailExpandColKey={features.enableRowDetail ? detailExpandColKey : undefined}
+                  isDetailExpanded={
+                    features.enableRowDetail && !isSyntheticNonDataRow
+                      ? Boolean(isRowDetailExpanded?.(rowKey))
+                      : false
+                  }
+                  canExpandDetail={
+                    features.enableRowDetail && !isSyntheticNonDataRow
+                      ? canExpandRowDetail
+                        ? canExpandRowDetail(row, rowIndex)
+                        : true
+                      : false
+                  }
+                  onToggleRowDetail={features.enableRowDetail ? onToggleRowDetail : undefined}
+                  renderDetailRow={renderDetailRow}
                 />
               );
             })}
           </div>
+
+          {(loading || refreshing) && totalRows > 0 ? (
+            <div className="sticky left-0 bottom-2 px-3 flex justify-end pointer-events-none z-20">
+              <div
+                className="rounded-md border px-3 py-1 text-xs font-medium"
+                style={{
+                  backgroundColor: 'var(--agv-bg-popup, var(--agv-bg-root))',
+                  borderColor: 'var(--agv-border)',
+                  color: 'var(--agv-text-muted)',
+                }}
+              >
+                Đang cập nhật...
+              </div>
+            </div>
+          ) : null}
+
+          {!loading && error && totalRows > 0 ? (
+            <div className="sticky left-0 bottom-2 px-3 z-20">
+              <div
+                role="alert"
+                className="inline-flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-xs"
+                style={{
+                  backgroundColor: 'var(--agv-danger-bg)',
+                  borderColor: 'var(--agv-danger)',
+                  color: 'var(--agv-danger)',
+                }}
+              >
+                <span>{error}</span>
+                {onRetry ? (
+                  <AdvButton variant="default" size="sm" onClick={onRetry}>
+                    Thử lại
+                  </AdvButton>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {totalRows === 0 ? (
+            <div className="sticky left-0 min-h-[200px] flex flex-col items-center justify-center gap-3 p-6 text-center select-none">
+              {loading ? (
+                <span className="text-xs font-medium" style={{ color: 'var(--agv-text-muted)' }}>
+                  Đang tải dữ liệu...
+                </span>
+              ) : error ? (
+                <>
+                  <span className="text-xs font-medium" style={{ color: 'var(--agv-danger)' }}>
+                    {error}
+                  </span>
+                  {onRetry ? (
+                    <AdvButton variant="default" size="sm" onClick={onRetry}>
+                      Thử lại
+                    </AdvButton>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <span className="text-xs font-medium" style={{ color: 'var(--agv-text-muted)' }}>
+                    {emptyText || 'Không có dữ liệu phù hợp'}
+                  </span>
+                  {(activeColumnFilterCount > 0 ||
+                    Boolean(currentQuickFilterText && currentQuickFilterText.trim().length > 0) ||
+                    hasActiveQueryRules(currentQueryTree)) &&
+                  (onClearAllCriteria || onClearAllColumnFilters) ? (
+                    <AdvButton
+                      variant="destructive"
+                      size="sm"
+                      onClick={onClearAllCriteria || onClearAllColumnFilters}
+                    >
+                      Xóa bộ lọc
+                    </AdvButton>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        {/* Universal Context Menu (Header / Band / Row) */}
-        {activeContextMenu && (
-          <ColumnContextMenu
-            menu={activeContextMenu}
-            surfaceTheme={surfaceTheme}
-            columns={columns}
-            columnGroups={effectiveColumnGroups}
-            onClose={() => setActiveContextMenu(null)}
-            onSetPin={handleSetPin}
-            onAutoFitColumn={handleAutoFitColumn}
-            onAutoFitAllColumns={handleAutoFitAllColumns}
-            onHideColumn={handleHideColumn}
-            onShowAllHiddenColumns={handleShowAllHiddenColumns}
-            onSetBandPin={handleSetBandPin}
-            onAutoFitBandColumns={handleAutoFitBandColumns}
-            onHideBand={handleHideBand}
-            onFilterByValue={handleFilterByValue}
-            onScrollToTop={handleScrollToTop}
-            onScrollToBottom={handleScrollToBottom}
-            isRowPinned={
-              activeContextMenu.type === CONTEXT_MENU_TYPES.ROW && activeContextMenu.row
-                ? pinnedRowKeysSet.has(getRowKey(activeContextMenu.row, activeContextMenu.rowIndex))
-                : false
-            }
-            pinnedRowCount={pinnedRows.length}
-            onTogglePinRow={handleTogglePinContextMenuRow}
-            onClearPinnedRows={handleClearPinnedRows}
-            checkedRowCount={checkedRowIndices ? checkedRowIndices.size : 0}
-            onClearCheckedRows={onClearCheckedRows}
-            groupByColumnKey={groupByColumnKey}
-            onToggleGroupByColumn={onToggleGroupByColumn}
-            onCollapseAllGroups={onCollapseAllGroups}
-            onExpandAllGroups={onExpandAllGroups}
-            onUngroup={onUngroup}
-            onCopyGroupTable={onCopyGroupTable}
-            onExportGroupExcel={onExportGroupExcel}
-            formulaMode={formulaMode}
-            onSelectFormulaMode={onFormulaModeChange}
-            emptyColKeys={emptyColKeys}
-            onHideAllEmptyColumns={handleHideAllEmptyColumns}
-            groupSortConfig={groupSortConfig}
-            onToggleGroupSort={onToggleGroupSort}
-            sortConfig={sortConfig}
-            onSortChange={onSortChange}
+        {!isWindowScroll && (
+          <div
+            ref={vBarRef}
+            aria-hidden="true"
+            onMouseDown={onVerticalTrackMouseDown}
+            className="agv-overlay-scroll-bar is-vertical"
+            style={{ display: 'none' }}
+          >
+            <div
+              ref={vThumbRef}
+              onPointerDown={onVerticalThumbPointerDown}
+              className="agv-overlay-scroll-thumb is-vertical"
+            />
+          </div>
+        )}
+        <div
+          ref={hBarRef}
+          aria-hidden="true"
+          onMouseDown={onHorizontalTrackMouseDown}
+          className="agv-overlay-scroll-bar is-horizontal"
+          style={{ display: 'none' }}
+        >
+          <div
+            ref={hThumbRef}
+            onPointerDown={onHorizontalThumbPointerDown}
+            className="agv-overlay-scroll-thumb is-horizontal"
+          />
+        </div>
+        </div>
+
+        {showStatusBar && statusBar ? statusBar : null}
+
+        {/* Popup Interaction Shield: Chặn mọi thao tác chuột, hover, resize, drag, chọn dòng trên Grid khi đang mở Popup */}
+        {isPopupLockActive && !effectiveEditingCell && (
+          <div
+            aria-hidden="true"
+            className="agv-grid-popup-shield absolute inset-0 bg-transparent pointer-events-auto select-none"
+            style={{ zIndex: isToolbarPopupOpen ? 1150 : 1220 }}
+            onMouseDown={(e) => {
+              suppressNextGridClickRef.current = true;
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           />
         )}
 
-        {/* Portal: Checklist Filter Popup (Zero re-render: chỉ popup mở độc lập) */}
-        <AdvChecklistFilterPopup
-          ref={checklistPopupRef}
-          data={data}
-          getRowItem={getRowItem}
-          totalRowCount={totalRows}
-          getCellValue={effectiveGetCellValue}
-          getDistinctValues={getDistinctValues}
-          columnDataTypes={columnDataTypes}
-          distinctValuesCacheRef={distinctValuesCacheRef}
-          surfaceTheme={surfaceTheme}
-          formatChecklistDisplay={formatChecklistDisplay}
-          matchFilterValue={effectiveMatchFilterValue}
-          onApply={handleApplyChecklistFilter}
-          onClear={handleClearChecklistFilter}
-        />
+        {/* Universal Context Menu (Header / Band / Row) */}
+        {features.enableContextMenu && activeContextMenu && (
+          <Suspense fallback={null}>
+            <LazyColumnContextMenu
+              menu={activeContextMenu}
+              surfaceTheme={surfaceTheme}
+              columns={columns}
+              columnGroups={effectiveColumnGroups}
+              onClose={() => setActiveContextMenu(null)}
+              enableColumnPinning={features.enableColumnPinning}
+              enableCenterDock={features.enableCenterDock}
+              onSetPin={
+                features.enableColumnPinning || features.enableCenterDock
+                  ? handleSetPin
+                  : undefined
+              }
+              onAutoFitColumn={features.enableColumnResize ? handleAutoFitColumn : undefined}
+              onAutoFitAllColumns={features.enableColumnResize ? handleAutoFitAllColumns : undefined}
+              onHideColumn={features.enableColumnHide ? handleHideColumn : undefined}
+              onShowAllHiddenColumns={features.enableColumnHide ? handleShowAllHiddenColumns : undefined}
+              onSetBandPin={
+                features.enableColumnPinning || features.enableCenterDock
+                  ? handleSetBandPin
+                  : undefined
+              }
+              onAutoFitBandColumns={features.enableColumnResize ? handleAutoFitBandColumns : undefined}
+              onHideBand={features.enableColumnHide ? handleHideBand : undefined}
+              onFilterByValue={features.enableFiltering ? handleFilterByValue : undefined}
+              onScrollToTop={handleScrollToTop}
+              onScrollToBottom={handleScrollToBottom}
+              isRowPinned={
+                features.enableRowPinning &&
+                activeContextMenu.type === CONTEXT_MENU_TYPES.ROW &&
+                activeContextMenu.row
+                  ? pinnedRowKeysSet.has(getRowKey(activeContextMenu.row, activeContextMenu.rowIndex))
+                  : false
+              }
+              pinnedRowCount={features.enableRowPinning ? effectivePinnedRows.length : 0}
+              onTogglePinRow={features.enableRowPinning ? handleTogglePinContextMenuRow : undefined}
+              onClearPinnedRows={features.enableRowPinning ? handleClearPinnedRows : undefined}
+              checkedRowCount={features.enableSelection && checkedRowIndices ? checkedRowIndices.size : 0}
+              onClearCheckedRows={features.enableSelection ? onClearCheckedRows : undefined}
+              groupByColumnKey={features.enableGrouping ? groupByColumnKey : null}
+              onToggleGroupByColumn={features.enableGrouping ? onToggleGroupByColumn : undefined}
+              onCollapseAllGroups={features.enableGrouping ? onCollapseAllGroups : undefined}
+              onExpandAllGroups={features.enableGrouping ? onExpandAllGroups : undefined}
+              onUngroup={features.enableGrouping ? onUngroup : undefined}
+              onCopyGroupTable={features.enableGrouping ? onCopyGroupTable : undefined}
+              formulaMode={formulaMode}
+              onSelectFormulaMode={onFormulaModeChange}
+              emptyColKeys={emptyColKeys}
+              onHideAllEmptyColumns={features.enableColumnHide ? handleHideAllEmptyColumns : undefined}
+              groupSortConfig={groupSortConfig}
+              onToggleGroupSort={features.enableGrouping && features.enableSorting ? onToggleGroupSort : undefined}
+              sortConfig={sortConfig}
+              onSortChange={features.enableSorting ? onSortChange : undefined}
+            />
+          </Suspense>
+        )}
+
+        {/* Portal: Checklist Filter Popup (chỉ mount khi bấm phễu lần đầu) */}
+        {features.enableHeaderFilter && isChecklistMounted && (
+          <Suspense fallback={null}>
+            <LazyAdvChecklistFilterPopup
+              ref={handleChecklistPopupRef}
+              data={data}
+              getRowItem={getRowItem}
+              totalRowCount={totalRows}
+              getCellValue={effectiveGetCellValue}
+              getDistinctValues={getDistinctValues}
+              columnDataTypes={columnDataTypes}
+              distinctValuesCacheRef={distinctValuesCacheRef}
+              surfaceTheme={surfaceTheme}
+              formatChecklistDisplay={formatChecklistDisplay}
+              matchFilterValue={effectiveMatchFilterValue}
+              onApply={handleApplyChecklistFilter}
+              onClear={handleClearChecklistFilter}
+              onActiveColChange={setActiveChecklistColKey}
+            />
+          </Suspense>
+        )}
 
         {/* Responsive Sort & Filter Modal cho Tablet & Phone */}
-        <ResponsiveSortFilterModal
-          isOpen={isSortFilterModalOpen}
-          onClose={() => setIsSortFilterModalOpen(false)}
-          columns={flatColumns}
-          totalRows={totalRows}
-          sortConfig={sortConfig}
-          onSortChange={onSortChange}
-          searchQuery={currentQuickFilterText}
-          onSearchQueryChange={handleQuickFilterChange}
-          columnFilters={columnFilters}
-          onColumnFilterChange={onColumnFilterChange}
-          onClearAllColumnFilters={onClearAllColumnFilters}
-          surfaceTheme={surfaceTheme}
-        />
+        {features.enableResponsiveSortFilter && isResponsiveMode && (
+          <Suspense fallback={null}>
+            <LazyResponsiveSortFilterModal
+              isOpen={isSortFilterModalOpen}
+              onClose={() => setIsSortFilterModalOpen(false)}
+              columns={flatColumns}
+              totalRows={totalRows}
+              sortConfig={sortConfig}
+              onSortChange={onSortChange}
+              searchQuery={currentQuickFilterText}
+              onSearchQueryChange={handleQuickFilterChange}
+              columnFilters={columnFilters}
+              onColumnFilterChange={onColumnFilterChange}
+              onClearAllColumnFilters={onClearAllColumnFilters}
+              hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+              getColumnDateBounds={effectiveGetColumnDateBounds}
+              surfaceTheme={surfaceTheme}
+              enableSorting={features.enableSorting}
+              enableFiltering={features.enableFiltering}
+              enableQuickSearch={features.enableQuickSearch}
+            />
+          </Suspense>
+        )}
 
-        {/* Floating Toolbar (Right-docked, 6 Buttons, 4 Popups, strictly bounded inside Grid) */}
-        {!isPhoneMode && enableFloatingToolbar && (
-          <GridFloatingToolbar
-            gridContainerRef={containerRef}
-            surfaceTheme={surfaceTheme}
-            headerHeight={
-              (customHeaderHeight ?? (middleElements.some((e) => e.type === 'group') ? 64 : 34)) +
-              (showFilterRow ? 34 : 0)
-            }
-            quickFilterText={currentQuickFilterText}
-            onQuickFilterChange={handleQuickFilterChange}
-            isQuickFilterSmart={isQuickFilterSmart}
-            onToggleQuickFilterSmart={handleToggleQuickFilterSmart}
-            appliedQueryTree={currentQueryTree}
-            onApplyQueryTree={handleApplyQueryTree}
-            totalFilteredRows={totalRows}
-            totalRowCount={totalRows}
-            data={data}
-            getCellValue={effectiveGetCellValue}
-            hasColumnEmptyCells={effectiveHasColumnEmptyCells}
-            getColumnDateBounds={effectiveGetColumnDateBounds}
-            columns={columns}
-            columnGroups={effectiveColumnGroups}
-            visibleColKeys={visibleColKeys}
-            onVisibleColKeysChange={handleVisibleColKeysChange}
-            columnPins={columnPins}
-            onColumnPinChange={handleSetPin}
-            onResetColumns={handleResetColumns}
-            onAutoFitColumn={handleAutoFitColumn}
-            onAutoFitAllColumns={handleAutoFitAllColumns}
-            onReorderColumns={onReorderColumns}
-            settings={gridSettings}
-            onUpdateSettings={handleUpdateGridSettings}
-            onExportExcel={handleExportExcel}
-            isExporting={controlledIsExporting}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={toggleFullscreen}
-          />
+        {/* External Anchored Popover Host (called via imperative openPopup / togglePopup API) */}
+        {externalPopup && (
+          <Suspense fallback={null}>
+            <LazyGridExternalPopupHost
+              popup={externalPopup}
+              onClose={closeExternalPopup}
+              gridId={gridId}
+              surfaceTheme={surfaceTheme}
+              quickFilterText={currentQuickFilterText}
+              onQuickFilterChange={handleQuickFilterChange}
+              isQuickFilterSmart={isQuickFilterSmart}
+              onToggleQuickFilterSmart={handleToggleQuickFilterSmart}
+              appliedQueryTree={currentQueryTree}
+              onApplyQueryTree={handleApplyQueryTree}
+              totalRowCount={totalRows}
+              data={data}
+              getCellValue={effectiveGetCellValue}
+              hasColumnEmptyCells={effectiveHasColumnEmptyCells}
+              getColumnDateBounds={effectiveGetColumnDateBounds}
+              columns={columns}
+              columnGroups={effectiveColumnGroups}
+              visibleColKeys={visibleColKeys}
+              onVisibleColKeysChange={handleVisibleColKeysChange}
+              columnPins={columnPins}
+              onColumnPinChange={features.enableColumnPinning ? handleSetPin : undefined}
+              onResetColumns={handleResetColumns}
+              onAutoFitColumn={features.enableColumnResize ? handleAutoFitColumn : undefined}
+              onReorderColumns={features.enableColumnReorder ? onReorderColumns : undefined}
+              enableColumnHide={features.enableColumnHide}
+              sortRules={effectiveSortRules}
+              onApplySortRules={handleApplyMultiSortRules}
+            />
+          </Suspense>
         )}
       </div>
     );

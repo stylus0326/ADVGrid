@@ -1,45 +1,47 @@
 import { useCallback } from 'react';
 import { ColumnDef, BaseGroupDef, DATA_TYPES } from '../types';
-import { calcColAutoFitWidth, isSelectionColumn } from '../gridUtils';
+import { isSelectionColumn } from '../gridFormatUtils';
 
 interface UseColumnAutoFitParams<T> {
   colMap: Record<string, ColumnDef<T>>;
   effectiveColumns: ColumnDef<T>[];
   columnGroups?: BaseGroupDef[];
-  sampleRows: T[];
+  getRowItem: (idx: number) => T;
   columnSums?: Record<string, number>;
   totalRows: number;
   setColWidth: (key: string, width: number) => void;
   setMultipleColWidths: (updates: Record<string, number>) => void;
 }
 
+function buildSummaryCollector<T>(
+  sampleRows: T[],
+  columnSums?: Record<string, number>
+): (key: string) => (number | string)[] {
+  return (key: string) => {
+    const vals: (number | string)[] = [];
+    if (columnSums && columnSums[key] !== undefined) {
+      vals.push(columnSums[key]);
+    }
+    for (let i = 0; i < sampleRows.length; i++) {
+      const r = sampleRows[i] as any;
+      if (r?._isGroupRow && r?.groupSums?.[key] !== undefined) {
+        vals.push(r.groupSums[key]);
+      }
+    }
+    return vals;
+  };
+}
+
 export function useColumnAutoFit<T>({
   colMap,
   effectiveColumns,
   columnGroups,
-  sampleRows,
+  getRowItem,
   columnSums,
   totalRows,
   setColWidth,
   setMultipleColWidths,
 }: UseColumnAutoFitParams<T>) {
-  // Tập hợp các giá trị tổng (Grand Total & Group Sums) để vừa độ rộng tối ưu không bị cắt số
-  const collectColSummaryVals = useCallback(
-    (key: string) => {
-      const vals: (number | string)[] = [];
-      if (columnSums && columnSums[key] !== undefined) {
-        vals.push(columnSums[key]);
-      }
-      sampleRows.forEach((r: any) => {
-        if (r?._isGroupRow && r?.groupSums?.[key] !== undefined) {
-          vals.push(r.groupSums[key]);
-        }
-      });
-      return vals;
-    },
-    [columnSums, sampleRows]
-  );
-
   const handleAutoFitColumn = useCallback(
     (colKey: string) => {
       const col = colMap[colKey];
@@ -52,71 +54,81 @@ export function useColumnAutoFit<T>({
       ) {
         return;
       }
-      const newW = calcColAutoFitWidth(
-        col,
-        sampleRows,
-        400,
-        65,
-        collectColSummaryVals(colKey),
-        totalRows
-      );
-      setColWidth(colKey, newW);
+      void import('../gridAutoFitUtils').then(({ calcColAutoFitWidth, collectAutoFitSampleRows }) => {
+        const sampleRows = collectAutoFitSampleRows(totalRows, getRowItem, 100);
+        const collectColSummaryVals = buildSummaryCollector(sampleRows, columnSums);
+        const newW = calcColAutoFitWidth(
+          col,
+          sampleRows,
+          400,
+          65,
+          collectColSummaryVals(colKey),
+          totalRows
+        );
+        setColWidth(colKey, newW);
+      });
     },
-    [colMap, sampleRows, setColWidth, collectColSummaryVals, totalRows]
+    [colMap, getRowItem, columnSums, setColWidth, totalRows]
   );
 
   const handleAutoFitAllColumns = useCallback(() => {
-    const updates: Record<string, number> = {};
-    effectiveColumns.forEach((col) => {
-      if (
-        col.resizable === false ||
-        col.dataType === DATA_TYPES.SYSTEM ||
-        col.isRowNumber ||
-        isSelectionColumn(col)
-      ) {
-        return;
-      }
-      updates[col.key] = calcColAutoFitWidth(
-        col,
-        sampleRows,
-        400,
-        65,
-        collectColSummaryVals(col.key),
-        totalRows
-      );
+    void import('../gridAutoFitUtils').then(({ calcColAutoFitWidth, collectAutoFitSampleRows }) => {
+      const sampleRows = collectAutoFitSampleRows(totalRows, getRowItem, 100);
+      const collectColSummaryVals = buildSummaryCollector(sampleRows, columnSums);
+      const updates: Record<string, number> = {};
+      effectiveColumns.forEach((col) => {
+        if (
+          col.resizable === false ||
+          col.dataType === DATA_TYPES.SYSTEM ||
+          col.isRowNumber ||
+          isSelectionColumn(col)
+        ) {
+          return;
+        }
+        updates[col.key] = calcColAutoFitWidth(
+          col,
+          sampleRows,
+          400,
+          65,
+          collectColSummaryVals(col.key),
+          totalRows
+        );
+      });
+      setMultipleColWidths(updates);
     });
-    setMultipleColWidths(updates);
-  }, [effectiveColumns, sampleRows, setMultipleColWidths, collectColSummaryVals, totalRows]);
+  }, [effectiveColumns, getRowItem, columnSums, setMultipleColWidths, totalRows]);
 
   const handleAutoFitBandColumns = useCallback(
     (groupId: string) => {
       const group = columnGroups?.find((g) => g.id === groupId);
       if (!group) return;
-      const updates: Record<string, number> = {};
-      const targetKeys = group.keys;
-
-      targetKeys.forEach((key) => {
-        const col = colMap[key];
-        if (
-          col &&
-          col.resizable !== false &&
-          col.dataType !== DATA_TYPES.SYSTEM &&
-          !col.isRowNumber &&
-          !isSelectionColumn(col)
-        ) {
-          updates[key] = calcColAutoFitWidth(
-            col,
-            sampleRows,
-            400,
-            65,
-            collectColSummaryVals(key),
-            totalRows
-          );
-        }
+      void import('../gridAutoFitUtils').then(({ calcColAutoFitWidth, collectAutoFitSampleRows }) => {
+        const sampleRows = collectAutoFitSampleRows(totalRows, getRowItem, 100);
+        const collectColSummaryVals = buildSummaryCollector(sampleRows, columnSums);
+        const updates: Record<string, number> = {};
+        group.keys.forEach((key) => {
+          const col = colMap[key];
+          if (
+            col &&
+            col.resizable !== false &&
+            col.dataType !== DATA_TYPES.SYSTEM &&
+            !col.isRowNumber &&
+            !isSelectionColumn(col)
+          ) {
+            updates[key] = calcColAutoFitWidth(
+              col,
+              sampleRows,
+              400,
+              65,
+              collectColSummaryVals(key),
+              totalRows
+            );
+          }
+        });
+        setMultipleColWidths(updates);
       });
-      setMultipleColWidths(updates);
     },
-    [columnGroups, colMap, sampleRows, setMultipleColWidths, collectColSummaryVals, totalRows]
+    [columnGroups, colMap, getRowItem, columnSums, setMultipleColWidths, totalRows]
   );
 
   return {

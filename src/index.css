@@ -1,494 +1,293 @@
+@import './styles/design-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-family: var(--font-sans);
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-app-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
-/* Giúp toàn bộ số 0-9 có chiều rộng bằng nhau, thẳng hàng cột dọc */
-.agv-cell-number,
-.agv-cell-date,
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
+/* Hợp đồng nguồn đơn (Single-Source Contract) cho 100% Controls & Popups */
+@layer components {
+  .agv-control {
+    background-color: var(--form-field-label-background, var(--control-background));
+    border: 1px solid var(--control-border);
+    border-radius: var(--control-radius);
+    color: var(--foreground);
+    font-family: var(--font-app-sans);
+    box-sizing: border-box;
+    transition:
+      border-color var(--motion-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-fast) var(--motion-ease-standard),
+      background-color var(--motion-fast) var(--motion-ease-standard),
+      color var(--motion-fast) var(--motion-ease-standard);
+  }
 
-/* Cột mã đặt chỗ (PNR 6 ký tự), STT, mã vé, khu vực: Bắt buộc dùng font Monospace để mọi chữ cái A-Z và số 0-9 đều rộng bằng nhau 100%, thẳng tắp hàng dọc */
-.agv-cell-code,
-.agv-cell-code * {
-  /* Ép font đơn cách cho mã chỗ: mọi chữ cái A-Z và số 0-9 đều rộng bằng nhau */
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace !important;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  text-transform: uppercase;
-}
+  .agv-control::placeholder {
+    color: var(--muted-foreground);
+  }
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background-color: var(--agv-bg-root, #ffffff);
-  color: var(--agv-text-main, #0f172a);
-  font-family: var(--font-sans);
-}
+  /* Hợp đồng nguồn đơn 4 phân loại Nút bấm (default, outline, ghost, destructive) */
+  .agv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--control-radius);
+    font-family: var(--font-app-sans);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition:
+      background-color var(--motion-fast) var(--motion-ease-standard),
+      border-color var(--motion-fast) var(--motion-ease-standard),
+      color var(--motion-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-fast) var(--motion-ease-standard);
+  }
 
-*, ::before, ::after {
-  font-family: inherit;
-}
+  .agv-btn-default {
+    background-color: var(--primary);
+    border: 1px solid transparent;
+    color: var(--primary-foreground);
+  }
 
-body, button, input, select, textarea {
-  font-family: var(--font-sans);
-}
+  .agv-btn-ghost {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: var(--agv-text-main, var(--foreground));
+  }
 
-.agv-app-container, .agv-grid-root {
-  font-family: var(--font-sans) !important;
-}
+  .agv-btn-destructive {
+    background-color: var(--agv-danger-bg, var(--status-danger));
+    border: 1px solid var(--status-danger-border);
+    color: var(--agv-danger, var(--status-danger-foreground));
+  }
 
-/* Khóa cuộn tuyệt đối khi đang sửa ô dữ liệu (In-Cell Editing Scroll Lock) */
-[data-agv-editing="true"] {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-  touch-action: none !important;
-}
+  /* Tuyệt đối không gắn nền lên [data-agv-popup="true"] chung vì các modal backdrop full-screen dùng thuộc tính này */
+  .agv-popup-panel,
+  .agv-portal-dropdown,
+  .agv-comboboxedit-dropdown,
+  .agv-searchlookupedit-dropdown,
+  .agv-lookup-op-menu,
+  .agv-filter-dropdown-menu,
+  .agv-context-menu,
+  .agv-column-chooser,
+  .agv-query-builder-modal,
+  .agv-query-dropdown,
+  .agv-multi-sort-popup,
+  .agv-multi-filter-popup,
+  .agv-multi-filter-op-menu,
+  .agv-criteria-summary-popup,
+  .agv-checklist-filter-popup,
+  .agv-calendar-popover,
+  .agv-preset-dropdown-menu,
+  .agv-custom-select-dropdown {
+    background-color: var(--popup-background);
+    color: var(--popover-foreground);
+    border: 1px solid var(--popup-border);
+    border-radius: var(--popup-radius);
+    box-shadow: var(--popup-shadow);
+    font-family: var(--font-app-sans);
+  }
 
-/* Đồng bộ thanh cuộn (Scrollbar) theo theme */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1)) var(--agv-bg-root, transparent);
-}
+  .agv-popup-menu {
+    padding: 4px;
+  }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
+  .agv-popup-item {
+    display: flex;
+    width: 100%;
+    min-height: 28px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: var(--font-app-sans);
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--popover-foreground);
+    background-color: transparent;
+    cursor: pointer;
+    user-select: none;
+    text-align: left;
+    border: none;
+    box-sizing: border-box;
+  }
 
-::-webkit-scrollbar-track {
-  background: var(--agv-bg-root, transparent);
-}
+  .agv-popup-item:hover:not(:disabled):not([aria-disabled="true"]):not(.is-selected):not([data-selected="true"]) {
+    background-color: var(--popup-item-hover-bg, var(--surface-hover));
+    color: var(--popover-foreground);
+  }
 
-::-webkit-scrollbar-thumb {
-  background: var(--scroll-thumb, var(--agv-border-strong, #cbd5e1));
-  border-radius: 6px;
-  border: 2px solid var(--agv-bg-root, transparent);
-}
+  .agv-popup-item.is-highlighted:not(.is-selected):not([data-selected="true"]) {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--scroll-thumb-hover, var(--agv-text-muted, #94a3b8));
-}
+  .agv-popup-item.is-selected,
+  .agv-popup-item[data-selected="true"] {
+    background-color: var(--popup-item-selected-bg);
+    color: var(--popup-item-selected-fg);
+    font-weight: 500;
+  }
 
-::-webkit-scrollbar-corner {
-  background: var(--agv-bg-root, transparent);
-}
+  .agv-popup-item.is-selected svg,
+  .agv-popup-item[data-selected="true"] svg {
+    color: var(--popup-item-selected-fg);
+  }
 
-/* ==============================================================================
-   PINNED FLOATING TOOLBAR (RIGHT-DOCKED) - THUỘC VỀ GRID, GIỚI HẠN TRONG GRID
-   ============================================================================== */
-.agv-floating-toolbar {
-  position: absolute;
-  right: 0;
-  z-index: 1200;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 10px;
-  min-width: 10px;
-  padding: 6px 0;
-  overflow: hidden;
-  background-color: var(--agv-accent) !important;
-  border: 1px solid var(--agv-accent) !important;
-  border-right: none !important;
-  border-radius: 8px 0 0 8px;
-  box-shadow: none;
-  backdrop-filter: blur(8px);
-  opacity: 0.35;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  transition:
-    width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    padding 0.25s ease,
-    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: width, background-color, border-color, opacity, top;
-}
+  .agv-popup-item:disabled,
+  .agv-popup-item[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
-/* Vùng đệm nhạy rê chuột phía bên trái thanh công cụ */
-.agv-floating-toolbar::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  left: -14px;
-  width: 14px;
-  cursor: pointer;
-}
+  /* Thanh cuộn nổi (Overlay Scrollbar kiểu select-v2): ẩn thanh cuộn gốc, chỉ hiện thumb khi hover/cuộn */
+  .agv-overlay-scroll-viewport {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overscroll-behavior: contain;
+  }
 
-/* Rãnh khía mini màu trắng khi đang thu nhỏ */
-.agv-floating-toolbar::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 3px;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 28px;
-  border-radius: 9999px;
-  background-color: var(--agv-accent-text, #ffffff) !important;
-  opacity: 0.85;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
-}
+  .agv-overlay-scroll-viewport::-webkit-scrollbar,
+  [data-agv-popup="true"] .agv-overlay-scroll-viewport::-webkit-scrollbar,
+  .agv-grid-root .agv-overlay-scroll-viewport::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
 
-/* Các nút bấm bên trong khi đang thu nhỏ: mờ dần */
-.agv-floating-toolbar .agv-float-toolbar-btn,
-.agv-floating-toolbar .agv-float-toolbar-divider,
-.agv-floating-toolbar .agv-floating-search-wrap,
-.agv-floating-toolbar .agv-float-toolbar-handle {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  flex-shrink: 0;
-}
-
-/* Khi hover, khi popup đang mở hoặc khi đang kéo di chuyển: bung rộng ra 38px, tuyệt đối không thu gọn */
-.agv-floating-toolbar:hover,
-.agv-floating-toolbar.is-expanded,
-.agv-floating-toolbar.is-dragging {
-  width: 38px !important;
-  min-width: 38px !important;
-  padding: 6px 4px;
-  opacity: 1 !important;
-  overflow: visible;
-  background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
-  border: 1px solid var(--agv-border-strong) !important;
-  border-right: none !important;
-  box-shadow: 0 4px 16px var(--agv-shadow-pinned);
-  transition:
-    background-color 0s,
-    border-color 0s,
-    opacity 0s,
-    width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-    padding 0.22s ease;
-}
-
-.agv-floating-toolbar:hover::after,
-.agv-floating-toolbar.is-expanded::after,
-.agv-floating-toolbar.is-dragging::after {
-  opacity: 0 !important;
-  transition: opacity 0s !important;
-}
-
-.agv-floating-toolbar:hover .agv-float-toolbar-btn,
-.agv-floating-toolbar.is-expanded .agv-float-toolbar-btn,
-.agv-floating-toolbar.is-dragging .agv-float-toolbar-btn,
-.agv-floating-toolbar:hover .agv-float-toolbar-divider,
-.agv-floating-toolbar.is-expanded .agv-float-toolbar-divider,
-.agv-floating-toolbar.is-dragging .agv-float-toolbar-divider,
-.agv-floating-toolbar:hover .agv-floating-search-wrap,
-.agv-floating-toolbar.is-expanded .agv-floating-search-wrap,
-.agv-floating-toolbar.is-dragging .agv-floating-search-wrap,
-.agv-floating-toolbar:hover .agv-float-toolbar-handle,
-.agv-floating-toolbar.is-expanded .agv-float-toolbar-handle,
-.agv-floating-toolbar.is-dragging .agv-float-toolbar-handle {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transition: opacity 0.1s ease;
-}
-
-/* Tay nắm kéo */
-.agv-float-toolbar-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 12px;
-  cursor: grab;
-  touch-action: none;
-  opacity: 0.6;
-}
-
-.agv-float-toolbar-handle:hover {
-  opacity: 1;
-}
-
-.agv-float-toolbar-handle:active {
-  cursor: grabbing;
-  opacity: 1;
-}
-
-/* Vạch phân cách */
-.agv-float-toolbar-divider {
-  width: 18px;
-  height: 1px;
-  background-color: var(--agv-border);
-  margin: 1px 0;
-}
-
-/* Nút bấm trên thanh nổi (min-height >= 28px) */
-.agv-float-toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
-  border-radius: 6px;
-  background-color: transparent;
-  border: 1px solid transparent;
-  color: var(--agv-text-main);
-  cursor: pointer;
-  padding: 0;
-  position: relative;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.agv-float-toolbar-btn:hover {
-  background-color: var(--agv-bg-item-hover);
-  border-color: var(--agv-border);
-  color: var(--agv-accent);
-}
-
-.agv-float-toolbar-btn:active {
-  background-color: var(--agv-bg-item-active);
-}
-
-.agv-float-toolbar-btn.is-active,
-.agv-float-toolbar-btn.is-active:hover {
-  background-color: var(--agv-accent) !important;
-  border: none !important;
-  color: var(--agv-accent-text, #ffffff) !important;
-  opacity: 1 !important;
-}
-
-.agv-float-toolbar-btn.is-active svg {
-  color: var(--agv-accent-text, #ffffff) !important;
-  stroke: currentColor !important;
-}
-
-/* Chấm báo hiệu có query text */
-.agv-float-dot-badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background-color: var(--agv-accent);
-  box-shadow: 0 0 0 1px var(--agv-bg-control, #ffffff);
-}
-
-.agv-float-toolbar-btn.is-active .agv-float-dot-badge {
-  background-color: var(--agv-accent-text, #ffffff) !important;
-  box-shadow: 0 0 0 1px var(--agv-accent);
-}
-
-/* Huy hiệu đếm số lượng (Badge) */
-.agv-float-count-badge {
-  position: absolute;
-  top: -2px;
-  right: -3px;
-  min-width: 14px;
-  height: 14px;
-  line-height: 14px;
-  padding: 0 3px;
-  border-radius: 9999px;
-  font-size: 9px;
-  font-weight: 700;
-  text-align: center;
-  background-color: var(--agv-accent);
-  color: var(--agv-accent-text, #ffffff);
-  pointer-events: none;
-}
-
-.agv-float-toolbar-btn.is-active .agv-float-count-badge {
-  background-color: var(--agv-accent-text, #ffffff) !important;
-  color: var(--agv-accent) !important;
-}
-
-/* ==============================================================================
-   POPUP 1: QUICK SEARCH FLYOUT
-   ============================================================================== */
-.agv-float-search-flyout {
-  position: absolute;
-  right: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
-  border: 1.5px solid var(--agv-accent) !important;
-  border-radius: 6px;
-  padding: 2px 6px;
-  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15) !important;
-  width: 280px;
-  min-height: 32px;
-  box-sizing: border-box;
-  animation: agv-slide-left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1210;
-}
-
-@keyframes agv-slide-left {
-  from {
+  .agv-overlay-scroll-bar {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
     opacity: 0;
-    transform: translate(10px, -50%) scale(0.96);
+    transition: opacity var(--motion-normal, 180ms) ease;
+    user-select: none;
   }
-  to {
+
+  .agv-overlay-scroll-bar.is-vertical {
+    top: 2px;
+    bottom: 2px;
+    right: 2px;
+    width: 6px;
+  }
+
+  .agv-overlay-scroll-bar.is-horizontal {
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    height: 6px;
+  }
+
+  [data-overlay-scroll-active="true"] > .agv-overlay-scroll-bar {
     opacity: 1;
-    transform: translate(0, -50%) scale(1);
+    pointer-events: auto;
+  }
+
+  .agv-overlay-scroll-thumb {
+    border-radius: 9999px;
+    background-color: var(--scrollbar-thumb, color-mix(in srgb, var(--muted-foreground) 40%, transparent));
+    transition: background-color var(--motion-fast, 120ms) ease;
+    cursor: pointer;
+    will-change: transform;
+  }
+
+  .agv-overlay-scroll-thumb.is-vertical {
+    width: 100%;
+  }
+
+  .agv-overlay-scroll-thumb.is-horizontal {
+    height: 100%;
+  }
+
+  .agv-overlay-scroll-thumb:hover,
+  .agv-overlay-scroll-thumb.is-dragging {
+    background-color: var(--scrollbar-thumb-hover, color-mix(in srgb, var(--brand) 65%, transparent));
+  }
+
+  /* ============================================================================
+     CHECKBOX DRAW CHECK (ĐỒNG BỘ TOÀN HỆ THỐNG THEO THEME)
+     ============================================================================ */
+  .agv-cb-morph-box {
+    border: 2px solid var(--agv-border-strong, var(--control-border, var(--agv-border)));
+    background-color: transparent;
+    color: var(--agv-accent-text, #ffffff);
+    transition:
+      background-color 180ms ease 110ms,
+      border-color 180ms ease 110ms,
+      box-shadow 180ms ease;
+  }
+
+  .agv-cb-morph-box[data-state="checked"],
+  .agv-cb-morph-box[data-state="indeterminate"] {
+    background-color: var(--agv-accent);
+    border-color: var(--agv-accent);
+    color: var(--agv-accent-text, #ffffff);
+    transition:
+      background-color 180ms ease 0ms,
+      border-color 180ms ease 0ms,
+      box-shadow 180ms ease;
+  }
+
+  .agv-morph-checkbox:hover:not([aria-disabled="true"]) .agv-cb-morph-box[data-state="unchecked"] {
+    border-color: var(--agv-accent);
+  }
+
+  .agv-morph-checkbox:focus-visible .agv-cb-morph-box {
+    border-color: var(--agv-accent);
+    box-shadow: 0 0 0 2px var(--agv-focus-halo, color-mix(in srgb, var(--ring) 25%, transparent));
+  }
+
+  .agv-cb-check-path,
+  .agv-cb-indeterminate-path {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    opacity: 0;
+    transition:
+      stroke-dashoffset 200ms ease-in,
+      opacity 60ms ease 140ms;
+  }
+
+  .agv-cb-morph-box[data-state="checked"] .agv-cb-check-path {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition:
+      stroke-dashoffset 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 60ms ease;
+  }
+
+  .agv-cb-morph-box[data-state="indeterminate"] .agv-cb-indeterminate-path {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition:
+      stroke-dashoffset 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 60ms ease;
   }
 }
-
-.agv-float-search-input {
-  width: 100%;
-  min-height: 28px;
-  height: 28px;
-  line-height: 28px;
-  background-color: transparent !important;
-  border: none !important;
-  outline: none !important;
-  padding: 0 24px 0 26px;
-  font-size: 12px;
-  color: var(--agv-text-main) !important;
-  box-sizing: border-box;
-}
-
-.agv-float-search-input::placeholder {
-  color: var(--agv-text-muted) !important;
-  font-size: 11px;
-}
-
-.agv-float-search-mode-btn {
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  min-height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: color 0.15s ease, background-color 0.15s ease;
-  z-index: 2;
-}
-
-.agv-float-search-mode-btn.is-smart {
-  color: var(--agv-accent) !important;
-}
-
-.agv-float-search-mode-btn:not(.is-smart) {
-  color: var(--agv-text-subtle);
-}
-
-.agv-float-search-mode-btn:hover {
-  background-color: var(--agv-bg-item-hover);
-}
-
-.agv-float-search-clear {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  min-height: 24px;
-  color: var(--agv-text-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-}
-
-.agv-float-search-clear:hover {
-  color: var(--agv-text-main);
-  background-color: var(--agv-bg-item-hover);
-}
-
-/* ==============================================================================
-   BACKDROP OVERLAY & POPUP STYLES
-   ============================================================================== */
-.agv-grid-backdrop {
-  background: transparent;
-  cursor: default;
-}
-
-.agv-settings-popup {
-  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
-  border-color: var(--agv-border-strong) !important;
-  color: var(--agv-text-main) !important;
-}
-
-.agv-column-chooser {
-  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
-  border-color: var(--agv-border-strong) !important;
-  color: var(--agv-text-main) !important;
-}
-
-/* Nút tác vụ & Scrollbar trong Column Chooser */
-.agv-chooser-action-btn {
-  cursor: pointer;
-  user-select: none;
-}
-
-.agv-chooser-action-btn:hover {
-  filter: brightness(0.95);
-}
-
-.agv-chooser-item:hover {
-  background-color: var(--agv-bg-item-hover) !important;
-}
-
-.agv-chooser-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.agv-chooser-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.agv-chooser-scroll::-webkit-scrollbar-thumb {
-  background: var(--agv-border-strong);
-  border-radius: 3px;
-}
-.agv-chooser-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--agv-text-subtle);
-}
-
-.agv-query-builder-modal {
-  background-color: var(--agv-bg-popup, var(--agv-bg-root)) !important;
-  border-color: var(--agv-border-strong) !important;
-  color: var(--agv-text-main) !important;
-}
-
-/* Toàn màn hình Grid */
-.agv-grid-root.agv-grid-fullscreen {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 99999 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-}
-
-/* ==========================================================================
-   AGV SPRING DIRECTIONAL POPUPS & SHARED SLIDING TOOLTIP
-   Physics Easing Curve: cubic-bezier(0.16, 1, 0.3, 1) [Snappy natural spring]
-   ========================================================================== */
 
 @keyframes agv-spring-down {
   0% {
@@ -512,28 +311,6 @@ body, button, input, select, textarea {
   }
 }
 
-@keyframes agv-spring-left {
-  0% {
-    opacity: 0;
-    transform: translateX(12px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes agv-spring-zoom {
-  0% {
-    opacity: 0;
-    transform: scale(0.93);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 .agv-spring-down {
   animation: agv-spring-down 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top center;
@@ -546,294 +323,207 @@ body, button, input, select, textarea {
   will-change: transform, opacity;
 }
 
-.agv-spring-left {
-  animation: agv-spring-left 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: right center;
-  will-change: transform, opacity;
+@layer utilities {
+  .font-sans {
+    font-family: var(--font-app-sans);
+  }
+
+  .font-mono {
+    font-family: var(--font-app-sans);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .bg-background {
+    background-color: var(--background);
+  }
+
+  .bg-card {
+    background-color: var(--card);
+  }
+
+  .bg-popover {
+    background-color: var(--popover);
+  }
+
+  .bg-table-header {
+    background-color: var(--table-header);
+  }
+
+  .bg-surface-hover {
+    background-color: var(--surface-hover);
+  }
+
+  .bg-surface-selected {
+    background-color: var(--surface-selected);
+  }
+
+  .bg-surface-subtle {
+    background-color: var(--surface-subtle);
+  }
+
+  .bg-surface-raised {
+    background-color: var(--surface-raised);
+  }
+
+  .bg-control-surface {
+    background-color: var(--form-field-label-background, var(--control-background));
+  }
+
+  .border-border {
+    border-color: var(--border);
+  }
+
+  .border-t-border {
+    border-top-color: var(--border);
+  }
+
+  .border-r-border {
+    border-right-color: var(--border);
+  }
+
+  .border-b-border {
+    border-bottom-color: var(--border);
+  }
+
+  .border-l-border {
+    border-left-color: var(--border);
+  }
+
+  .divide-border > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border);
+  }
+
+  .border-control {
+    border-color: var(--control-border);
+  }
 }
 
-.agv-spring-zoom {
-  animation: agv-spring-zoom 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top left;
-  will-change: transform, opacity;
+/* ==============================================================================
+   TRẠNG THÁI TƯƠNG TÁC NGUỒN ĐƠN (.agv-control / .agv-focus-ring)
+   Đặt sau @tailwind utilities để tuyệt đối không bị class Tailwind ring/hover ghi đè
+   ============================================================================== */
+.agv-control:not(button):hover:not(:disabled):not([aria-disabled="true"]):not(:focus):not(:focus-within):not([data-state="open"]):not([aria-expanded="true"]):not(.is-open):not(.is-focused):not([aria-invalid="true"]),
+button.agv-control[data-agv-trigger="true"]:hover:not(:disabled):not([aria-disabled="true"]):not(:focus):not(:focus-visible):not([data-state="open"]):not([aria-expanded="true"]):not(.is-open):not(.is-focused):not([aria-invalid="true"]),
+button.agv-control:not([data-agv-trigger="true"]):hover:not(:disabled):not([aria-disabled="true"]):not(:focus-visible):not([aria-invalid="true"]):not([data-active="true"]) {
+  border-color: var(--control-border-hover);
 }
 
-/* Shared Sliding Tooltip */
-.agv-sliding-tooltip-wrap {
-  position: absolute;
-  right: calc(100% + 8px);
-  pointer-events: none;
-  z-index: 1300;
-  will-change: transform, opacity;
+.agv-btn:disabled,
+.agv-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-.agv-sliding-tooltip-pill {
-  min-height: 28px;
+.agv-btn-default:hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--agv-accent-hover, color-mix(in srgb, var(--primary) 90%, #000000));
+}
+
+.agv-btn-outline:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: var(--surface-hover);
+}
+
+.agv-btn-ghost:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: var(--agv-bg-item-hover, var(--surface-hover));
+  color: var(--agv-text-main, var(--foreground));
+}
+
+.agv-btn-destructive:hover:not(:disabled):not([aria-disabled="true"]):not([data-active="true"]) {
+  background-color: color-mix(in srgb, var(--agv-danger) 14%, var(--agv-danger-bg));
+  border-color: var(--agv-danger);
+  color: var(--agv-danger);
+}
+
+.agv-btn[data-active="true"] {
+  background-color: var(--agv-accent);
+  border-color: var(--agv-accent);
+  color: var(--popup-item-selected-fg, #ffffff);
+}
+
+.agv-btn-destructive.agv-focus-ring:focus-visible,
+.agv-btn-destructive:focus-visible {
+  outline: none;
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--destructive);
+}
+
+.agv-inline-clear-ghost,
+.agv-inline-clear-destructive {
+  background: transparent;
+  border: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  padding: 0 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  background-color: var(--agv-bg-root);
+  justify-content: center;
+  color: var(--agv-text-muted);
+  transition: color var(--motion-fast) var(--motion-ease-standard);
+}
+
+.agv-inline-clear-ghost:hover:not(:disabled) {
   color: var(--agv-text-main);
-  border: 1px solid var(--agv-border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
-  backdrop-filter: blur(8px);
 }
 
-/* Animate UI Spring Tooltip */
-@keyframes agv-tooltip-spring-up {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -100%) scale(0.85);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -100%) scale(1);
-  }
+.agv-inline-clear-destructive:hover:not(:disabled) {
+  color: var(--agv-danger);
 }
 
-@keyframes agv-tooltip-spring-down {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 0) scale(0.85);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
+input.agv-control:focus,
+input.agv-control:focus-visible,
+textarea.agv-control:focus,
+textarea.agv-control:focus-visible,
+select.agv-control:focus,
+select.agv-control:focus-visible,
+.agv-control-box:focus-within,
+.agv-control[data-agv-trigger="true"]:focus,
+.agv-control[data-agv-trigger="true"]:focus-visible,
+.agv-control[data-agv-trigger="true"]:focus-within,
+.agv-control[data-state="open"],
+.agv-control[aria-expanded="true"],
+.agv-control.is-open,
+.agv-control.is-focused {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
 }
 
-.agv-tooltip-spring-up {
-  animation: agv-tooltip-spring-up 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  will-change: transform, opacity;
+.agv-focus-ring:focus-visible,
+button.agv-control:not([data-agv-trigger="true"]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--ring);
 }
 
-.agv-tooltip-spring-down {
-  animation: agv-tooltip-spring-down 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  will-change: transform, opacity;
+button.agv-control:not([data-agv-trigger="true"]):focus-visible {
+  border-color: var(--brand);
 }
 
-/* Subtle Virtualized Row Entry Animation */
-@keyframes agv-row-enter {
-  0% {
-    opacity: 0.88;
-  }
-  100% {
-    opacity: 1;
-  }
+.agv-control[aria-invalid="true"],
+.agv-control[aria-invalid="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--destructive);
 }
 
-.agv-row-enter {
-  animation: agv-row-enter 100ms ease-out;
+.agv-control[aria-invalid="true"]:focus,
+.agv-control[aria-invalid="true"]:focus-visible,
+.agv-control[aria-invalid="true"]:focus-within,
+.agv-control[aria-invalid="true"][data-state="open"],
+.agv-control[aria-invalid="true"][aria-expanded="true"],
+.agv-control[aria-invalid="true"].is-open,
+.agv-control[aria-invalid="true"].is-focused {
+  outline: none;
+  border-color: var(--destructive);
+  box-shadow: inset 0 0 0 1px var(--destructive);
 }
 
-/* Tạm mở giới hạn contain của Chunk trong đúng 300ms khi chạy hiệu ứng trượt dòng Sort (FLIP chuẩn AG Grid)
-   để các dòng trượt xuyên qua ranh giới giữa 2 chunk liền kề mượt mà, không bị cắt khuất */
-.agv-scroll-viewport[data-agv-sorting="true"] .agv-chunk-block {
-  contain: layout style !important;
-  overflow: visible !important;
+.agv-control.agv-incell-control {
+  height: 100%;
+  min-height: 28px;
+  max-height: 30px;
 }
 
-.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter {
-  animation: none !important;
+/* Bảo vệ tối thiểu mọi icon SVG trong button/control không bao giờ bị ép nhỏ hơn 8x8 */
+button svg,
+[role="button"] svg,
+.agv-control svg {
+  min-width: 8px;
+  min-height: 8px;
+  flex-shrink: 0;
 }
-
-/* ============================================================================
-   Phân Biệt Dòng Focus (isSelected), Dòng Active/Checked (isChecked) &
-   Hiệu Ứng Rê Chuột Toàn Dòng Hiệu Năng Cao (Zero-Reflow Row Hover)
-   - 100% Flat background-color & color thông qua kế thừa biến CSS cấp dòng
-     (--agv-row-data-bg, --agv-row-sticky-bg, --agv-group-row-bg)
-   - Không thay đổi kích thước hộp (0% layout reflow), không gắn :hover lên 23 ô con
-   - Tự động khóa tính toán :hover khi đang cuộn tốc độ cao ([data-agv-scrolling="true"])
-   - Ô STT làm "Đầu kim Focus" (nền Accent chữ trắng) khi dòng được Focus (Kiểu A)
-   ============================================================================ */
-.agv-group-row {
-  --agv-group-row-bg: var(--agv-bg-card, var(--agv-bg-root));
-  background-color: var(--agv-group-row-bg);
-}
-
-.agv-grid-row {
-  background-color: var(--agv-row-data-bg, var(--agv-bg-row));
-}
-
-.agv-grid-row[data-row-parity="even"] {
-  --agv-row-data-bg: var(--agv-bg-row);
-  --agv-row-sticky-bg: var(--agv-bg-header);
-}
-
-.agv-grid-row[data-row-parity="odd"] {
-  --agv-row-data-bg: var(--agv-bg-row-alt);
-  --agv-row-sticky-bg: var(--agv-bg-header);
-}
-
-.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) {
-  --agv-row-data-bg: var(--agv-bg-selected);
-  --agv-row-sticky-bg: var(--agv-bg-selected);
-}
-
-.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) > [data-cell-role="stt"] {
-  background-color: var(--agv-bg-header);
-}
-
-.agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]) {
-  --agv-row-data-bg: var(--agv-bg-focused);
-  --agv-row-sticky-bg: var(--agv-bg-focused);
-}
-
-.agv-grid-row[data-row-focused="true"][data-row-checked="true"] {
-  --agv-row-data-bg: var(--agv-bg-checked-focused);
-  --agv-row-sticky-bg: var(--agv-bg-checked-focused);
-}
-
-/* Hiệu ứng rê chuột phủ màu nhẹ toàn dòng (chỉ kích hoạt khi bảng không đang cuộn tốc độ cao) */
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-group-row:hover {
-  --agv-group-row-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row:not([data-row-focused="true"]):not([data-row-checked="true"]):hover {
-  --agv-row-data-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
-  --agv-row-sticky-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover {
-  --agv-row-data-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
-  --agv-row-sticky-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover > [data-cell-role="stt"] {
-  background-color: var(--agv-bg-selected-hover, var(--agv-bg-hover));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]):hover {
-  --agv-row-data-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
-  --agv-row-sticky-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"][data-row-checked="true"]:hover {
-  --agv-row-data-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
-  --agv-row-sticky-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
-}
-
-/* Ô STT làm "Đầu kim Focus" luôn giữ nền Accent chữ trắng kể cả khi rê chuột */
-.agv-grid-row[data-row-focused="true"] > [data-cell-role="stt"] {
-  background-color: var(--agv-accent) !important;
-  color: var(--agv-accent-text, #ffffff) !important;
-  --agv-stt-cell-text: var(--agv-accent-text, #ffffff);
-}
-
-/* ==========================================================================
-   AGV PHONE CARD (Responsive Mobile State Matrix)
-   Đồng bộ 100% Theme Tokens với GridRow (PC) & GridTabletRow (Tablet):
-   Normal, Hover, Focus, Checked (Active), Checked + Focus
-   ========================================================================== */
-.agv-phone-card {
-  --agv-card-bg: var(--agv-bg-card, var(--agv-bg-root));
-  --agv-card-border: var(--agv-border);
-  background-color: var(--agv-card-bg);
-  border-color: var(--agv-card-border);
-}
-
-.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]) {
-  --agv-card-bg: var(--agv-bg-selected);
-  --agv-card-border: var(--agv-accent);
-}
-
-.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]) {
-  --agv-card-bg: var(--agv-bg-focused);
-  --agv-card-border: var(--agv-accent);
-}
-
-.agv-phone-card[data-card-focused="true"][data-card-checked="true"] {
-  --agv-card-bg: var(--agv-bg-checked-focused);
-  --agv-card-border: var(--agv-accent);
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover,
-.agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover {
-  --agv-card-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
-  --agv-card-border: var(--agv-border-strong, var(--agv-border));
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover,
-.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover {
-  --agv-card-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
-  --agv-card-border: var(--agv-accent);
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover,
-.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover {
-  --agv-card-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
-  --agv-card-border: var(--agv-accent);
-}
-
-.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover,
-.agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover {
-  --agv-card-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
-  --agv-card-border: var(--agv-accent);
-}
-
-/* Đảm bảo các phần tử draggable="true" (Header cột/nhóm) luôn kéo thả được trong vùng select-none */
-[draggable="true"] {
-  -webkit-user-drag: element;
-}
-
-
-/* Khóa cursor: col-resize, user-select: none trên body và tắt draggable khi đang nhấn giữ vạch resize */
-body.agv-resizing-column,
-body.agv-resizing-column * {
-  cursor: col-resize !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}
-
-body.agv-resizing-column .agv-grid-root * {
-  pointer-events: none !important;
-  transition: none !important;
-  animation: none !important;
-}
-
-body.agv-resizing-column [draggable="true"] {
-  -webkit-user-drag: none !important;
-}
-
-/* Cô lập hoàn toàn thanh kéo độ rộng cột khỏi sự kiện drag của ô Header cha để chuột kéo mượt 120fps */
-.agv-col-resize-handle {
-  -webkit-user-drag: none !important;
-  user-select: none !important;
-  touch-action: none;
-}
-
-/* Khóa con trỏ chuột toàn cục và tắt hiệu ứng hover phụ khi đang kéo giãn độ rộng cột */
-html[data-agv-resizing="true"],
-html[data-agv-resizing="true"] * {
-  cursor: col-resize !important;
-  user-select: none !important;
-}
-
-html[data-agv-resizing="true"] [draggable="true"] {
-  -webkit-user-drag: none !important;
-}
-
-.agv-col-resize-handle[data-resizing-active="true"] > span {
-  background-color: var(--agv-accent) !important;
-}
-
-/* Cô lập phạm vi layout của từng dòng dữ liệu / dòng nhóm giúp giảm tối đa chi phí reflow khi kéo giãn độ rộng cột */
-.agv-grid-row,
-.agv-group-row {
-  contain: layout style;
-}
-
-/* Khóa hit-testing & transition phụ trên thân bảng khi đang kéo giãn độ rộng cột để chuột di chuyển 120fps mượt tuyệt đối */
-html[data-agv-resizing="true"] .agv-scroll-viewport {
-  pointer-events: none !important;
-}
-
-html[data-agv-resizing="true"] .agv-scroll-viewport * {
-  transition: none !important;
-}
-

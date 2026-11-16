@@ -3,3 +3,8 @@ export * from './useColumnAutoFit';
 export * from './useInCellEditor';
 export * from './useGridKeyboardNav';
 export * from './useGridSortFlipAnimation';
+export * from './useGridPopupLock';
+export * from './useGridColumnLayout';
+export * from './useDynamicRowHeights';
+export * from './useGridOverlayScrollbar';
+export * from './useGridCrossHover';

@@ -1,0 +1,253 @@
+/* ==============================================================================
+   GRIDV3 CORE STYLESHEET (SHARED BY BASICGRID & DATAGRID)
+   Toàn bộ selector được cô lập trong .agv-grid-root, .agv-app-container
+   và [data-agv-popup="true"] để không xung đột với host application.
+   ============================================================================== */
+
+.agv-grid-root,
+.agv-app-container,
+[data-agv-popup="true"] {
+  --font-sans: var(--font-app-sans, 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif);
+  --font-mono: var(--font-app-sans, 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+/* Giúp toàn bộ số 0-9 có chiều rộng bằng nhau, thẳng hàng cột dọc */
+.agv-cell-number,
+.agv-cell-date,
+.agv-grid-root .tabular-nums,
+[data-agv-popup="true"] .tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Cột mã code / STT / mã vé: Căn thẳng cột dọc với Roboto + tabular-nums */
+.agv-cell-code,
+.agv-cell-code * {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Khóa cuộn tuyệt đối khi đang sửa ô dữ liệu (In-Cell Editing Scroll Lock) */
+[data-agv-editing="true"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+/* Đồng bộ thanh cuộn (Scrollbar) theo b2b-pnt, cô lập trong Grid & Popups */
+.agv-grid-root,
+.agv-grid-root *,
+[data-agv-popup="true"],
+[data-agv-popup="true"] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track, transparent);
+}
+
+/* Chặn scroll-chaining ở gốc popup và vùng có thanh cuộn thực sự (tránh gắn * lên ô truncate/overflow:hidden gây kẹt cuộn) */
+[data-agv-popup="true"],
+[data-agv-popup="true"] .overflow-auto,
+[data-agv-popup="true"] .overflow-y-auto,
+[data-agv-popup="true"] .overflow-x-auto,
+[data-agv-popup="true"] .overflow-scroll,
+[data-agv-popup="true"] .overflow-y-scroll,
+[data-agv-popup="true"] .overflow-x-scroll,
+[data-agv-popup="true"] .agv-chooser-scroll {
+  overscroll-behavior: contain;
+}
+
+.agv-grid-root::-webkit-scrollbar,
+.agv-grid-root *::-webkit-scrollbar,
+[data-agv-popup="true"]::-webkit-scrollbar,
+[data-agv-popup="true"] *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.agv-grid-root::-webkit-scrollbar-track,
+.agv-grid-root *::-webkit-scrollbar-track,
+[data-agv-popup="true"]::-webkit-scrollbar-track,
+[data-agv-popup="true"] *::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, transparent);
+}
+
+.agv-grid-root::-webkit-scrollbar-thumb,
+.agv-grid-root *::-webkit-scrollbar-thumb,
+[data-agv-popup="true"]::-webkit-scrollbar-thumb,
+[data-agv-popup="true"] *::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+.agv-grid-root::-webkit-scrollbar-thumb:hover,
+.agv-grid-root *::-webkit-scrollbar-thumb:hover,
+[data-agv-popup="true"]::-webkit-scrollbar-thumb:hover,
+[data-agv-popup="true"] *::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.agv-grid-root::-webkit-scrollbar-corner,
+.agv-grid-root *::-webkit-scrollbar-corner,
+[data-agv-popup="true"]::-webkit-scrollbar-corner,
+[data-agv-popup="true"] *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Ẩn thanh cuộn gốc của thân bảng Grid để thay bằng thanh cuộn nổi overlay */
+.agv-grid-root .agv-scroll-viewport.agv-scroll-overlay {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.agv-grid-root .agv-scroll-viewport.agv-scroll-overlay::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.agv-grid-scroll-overlay-host > .agv-overlay-scroll-bar {
+  z-index: 32;
+}
+
+/* Khi cột bật wrapText ở chế độ dòng cao động PC: gỡ chặn dòng đơn của .truncate ở phần tử con trực tiếp */
+.agv-grid-root .agv-cell-wrap > .truncate {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+@keyframes agv-row-enter {
+  0% {
+    opacity: 0.88;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.agv-row-enter {
+  animation: agv-row-enter 100ms ease-out;
+}
+
+.agv-scroll-viewport[data-agv-sorting="true"] .agv-chunk-block {
+  contain: layout style !important;
+  overflow: visible !important;
+}
+
+.agv-scroll-viewport[data-agv-sorting="true"] .agv-row-enter {
+  animation: none !important;
+}
+
+/* ============================================================================
+   ZERO-REFLOW ROW HOVER, FOCUS & SELECTION STATE MATRIX
+   ============================================================================ */
+.agv-group-row {
+  --agv-group-row-bg: var(--agv-bg-card, var(--agv-bg-root));
+  background-color: var(--agv-group-row-bg);
+}
+
+.agv-grid-row {
+  background-color: var(--agv-row-data-bg, var(--agv-bg-row));
+}
+
+.agv-grid-row[data-row-parity="even"] {
+  --agv-row-data-bg: var(--agv-bg-row);
+  --agv-row-sticky-bg: var(--agv-bg-header);
+}
+
+.agv-grid-row[data-row-parity="odd"] {
+  --agv-row-data-bg: var(--agv-bg-row-alt);
+  --agv-row-sticky-bg: var(--agv-bg-header);
+}
+
+.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) {
+  --agv-row-data-bg: var(--agv-bg-selected);
+  --agv-row-sticky-bg: var(--agv-bg-selected);
+}
+
+.agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) > [data-cell-role="stt"] {
+  background-color: var(--agv-bg-header);
+}
+
+.agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]) {
+  --agv-row-data-bg: var(--agv-bg-focused);
+  --agv-row-sticky-bg: var(--agv-bg-focused);
+}
+
+.agv-grid-row[data-row-focused="true"][data-row-checked="true"] {
+  --agv-row-data-bg: var(--agv-bg-checked-focused);
+  --agv-row-sticky-bg: var(--agv-bg-checked-focused);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-group-row:hover {
+  --agv-group-row-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row:not([data-row-focused="true"]):not([data-row-checked="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover > [data-cell-role="stt"] {
+  background-color: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]):hover {
+  --agv-row-data-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+  --agv-row-sticky-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"][data-row-checked="true"]:hover {
+  --agv-row-data-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+  --agv-row-sticky-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+}
+
+.agv-grid-row[data-row-focused="true"] > [data-cell-role="stt"] {
+  background-color: var(--surface-selected) !important;
+  color: var(--brand-gold-on-light) !important;
+  font-weight: 700;
+  --agv-stt-cell-text: var(--brand-gold-on-light);
+}
+
+.agv-grid-row,
+.agv-group-row {
+  contain: layout style;
+}
+
+.agv-grid-row[data-agv-span-row="true"] {
+  contain: style;
+}
+
+/* ============================================================================
+   CROSS HOVERING (HIGHLIGHT DÒNG + CỘT + GIAO ĐIỂM)
+   ============================================================================ */
+[data-agv-header-root="true"] [data-col-key][data-cross-hover="header"] {
+  background-color: var(--agv-bg-hover) !important;
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row [data-col-key][data-cross-hover="col"]:not([data-span-spacer="true"]),
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row [data-col-key][data-cross-hover="col"]:not([data-span-spacer="true"]) > [data-span-anchor-inner="true"] {
+  background-color: color-mix(in srgb, var(--agv-accent) 7%, var(--agv-row-data-bg, var(--agv-bg-row))) !important;
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row [data-col-key][data-cross-hover="cell"]:not([data-span-spacer="true"]),
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row [data-col-key][data-cross-hover="cell"]:not([data-span-spacer="true"]) > [data-span-anchor-inner="true"] {
+  background-color: color-mix(in srgb, var(--agv-accent) 15%, var(--agv-row-data-bg, var(--agv-bg-row))) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--agv-accent) 36%, transparent);
+}
+
+.agv-grid-row [data-span-spacer="true"] {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

@@ -1,6 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getPortalThemeVars, getThemeClass, SURFACE_THEMES } from './enterpriseEditorUtils';
+import {
+  areEditorCoordsEqual,
+  getPortalThemeVars,
+  getThemeClass,
+  SURFACE_THEMES,
+} from './enterpriseEditorUtils';
 
 export interface AdvHoverCardProps {
   trigger: React.ReactNode;
@@ -19,7 +24,7 @@ export const AdvHoverCard: React.FC<AdvHoverCardProps> = ({
   openDelay = 150,
   closeDelay = 200,
   width = 280,
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = SURFACE_THEMES.LIGHT,
   className = '',
   contentClassName = '',
 }) => {
@@ -60,8 +65,15 @@ export const AdvHoverCard: React.FC<AdvHoverCardProps> = ({
       ? Math.max(12, Math.round(rect.top - cardH - 6))
       : Math.round(rect.bottom + 6);
 
-    setCoords({ top, left, isFlipUp: shouldFlip });
+    const next = { top, left, isFlipUp: shouldFlip };
+    setCoords((prev) => (prev && areEditorCoordsEqual(prev, next) ? prev : next));
   }, [width]);
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      updateCoords();
+    }
+  }, [isOpen, updateCoords]);
 
   const handleMouseEnter = () => {
     clearTimeout(closeTimerRef.current);
@@ -121,17 +133,17 @@ export const AdvHoverCard: React.FC<AdvHoverCardProps> = ({
               ref={cardRef}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              className={`pointer-events-auto absolute p-3.5 rounded-lg border shadow-xl select-none ${
+              className={`agv-popup-panel pointer-events-auto absolute p-3.5 select-none ${
                 coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
               } ${contentClassName}`}
               style={{
                 top: `${coords.top}px`,
                 left: `${coords.left}px`,
                 width: typeof width === 'number' ? `${width}px` : width,
-                backgroundColor: 'var(--agv-bg-popup)',
-                borderColor: 'var(--agv-border)',
-                color: 'var(--agv-text-main)',
-                boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 4px 10px -2px rgba(0, 0, 0, 0.1)',
+                backgroundColor: 'var(--popup-background)',
+                borderColor: 'var(--popup-border)',
+                color: 'var(--popover-foreground)',
+                boxShadow: 'var(--popup-shadow)',
               }}
             >
               {content}

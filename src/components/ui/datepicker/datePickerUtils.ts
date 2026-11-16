@@ -1,23 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { SURFACE_THEMES } from '../../../themes';
+import { getThemeClass } from '../../../themes';
 
-export function getThemeClass(theme?: string): string {
-  switch (theme) {
-    case SURFACE_THEMES.DARK:
-    case SURFACE_THEMES.CALIBRATED_DARK:
-    case SURFACE_THEMES.DEEP_DARK:
-      return 'agv-theme-dark agv-dark';
-    case SURFACE_THEMES.E_INK:
-    case SURFACE_THEMES.EINK:
-      return 'agv-theme-eink agv-e-ink theme-eink';
-    case SURFACE_THEMES.BEZIER_ARTHOUSE:
-      return 'agv-theme-bezier agv-bezier-arthouse';
-    case SURFACE_THEMES.LIGHT:
-    case SURFACE_THEMES.DAYLIGHT:
-    default:
-      return 'agv-theme-light agv-light';
-  }
-}
+export { getThemeClass };
 
 export const MONTH_LABELS = [
   'Tháng 1',
@@ -67,11 +51,12 @@ export const REGEX_YMD_DATE = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/;
 export const REGEX_DMY_OPT_YEAR = /^(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}))?/;
 export const REGEX_DMY_STRICT = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/;
 export const REGEX_DM_ONLY = /^(\d{1,2})[/-](\d{1,2})$/;
+export const REGEX_DATA_WEEK = /^data_week_(\d{4})_w(\d{1,2})$/;
 export const REGEX_DATA_QUARTER = /^data_quarter_(\d{4})_q([1-4])$/;
 export const REGEX_DATA_MONTH = /^data_month_(\d{4})_m(\d{1,2})$/;
 export const REGEX_DATA_YEAR = /^data_year_(\d{4})$/;
 export const REGEX_BARE_YEAR = /^(\d{4})$/;
-export const REGEX_ANY_YEAR_TOKEN = /(?:data_year_|data_quarter_|data_month_)(\d{4})/;
+export const REGEX_ANY_YEAR_TOKEN = /(?:data_year_|data_quarter_|data_month_|data_week_)(\d{4})/;
 export const REGEX_UNDERSCORE_YEAR = /_(\d{4})/;
 export const REGEX_MULTI_SPLIT = /[,;]/;
 export const REGEX_RANGE_INPUT_SPLIT = /[;\u2014]|\.\.|\s-\s/;
@@ -157,77 +142,7 @@ export function parseDateToTimestamp(
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-export function formatDisplayDate(
-  str: unknown,
-  omitYear: boolean = false,
-  includeTime: boolean = false
-): string {
-  if (!str) return '';
-  if (str instanceof Date) {
-    if (Number.isNaN(str.getTime())) return '';
-    const dd = pad2(str.getDate());
-    const mm = pad2(str.getMonth() + 1);
-    const timeStr = includeTime
-      ? ` ${pad2(str.getHours())}:${pad2(str.getMinutes())}`
-      : '';
-    return omitYear ? `${dd}/${mm}${timeStr}` : `${dd}/${mm}/${str.getFullYear()}${timeStr}`;
-  }
-  const s = String(str).trim();
-  if (!s) return '';
-
-  const timeMatch = REGEX_TIME_HM.exec(s);
-  const timeSuffix =
-    includeTime && timeMatch
-      ? ` ${pad2(timeMatch[1])}:${pad2(timeMatch[2])}`
-      : '';
-
-  const ymd = REGEX_YMD_DATE.exec(s);
-  if (ymd) {
-    const dd = pad2(ymd[3]);
-    const mm = pad2(ymd[2]);
-    return omitYear ? `${dd}/${mm}${timeSuffix}` : `${dd}/${mm}/${ymd[1]}${timeSuffix}`;
-  }
-
-  const dmy = REGEX_DMY_OPT_YEAR.exec(s);
-  if (dmy) {
-    const dd = pad2(dmy[1]);
-    const mm = pad2(dmy[2]);
-    if (omitYear || !dmy[3]) return `${dd}/${mm}${timeSuffix}`;
-    return `${dd}/${mm}/${dmy[3]}${timeSuffix}`;
-  }
-
-  return s;
-}
-
-/**
- * Định dạng ngày/tháng/năm chuẩn bảng dữ liệu (DD/MM/YYYY)
- * Đồng bộ 100% hiển thị giữa dữ liệu gốc và giá trị chọn từ date controls (AdvDatePicker / AdvDateRangePicker)
- */
-export function formatGridDateValue(
-  val: unknown,
-  includeTime: boolean = false
-): string {
-  if (val === null || val === undefined) return '';
-  const s = String(val).trim();
-  if (!s) return '';
-
-  // 1. Khoảng ngày: chứa " - " hoặc ".."
-  if (s.includes(' - ')) {
-    const parts = s.split(' - ');
-    const from = formatDisplayDate(parts[0], false, includeTime);
-    const to = formatDisplayDate(parts[1], false, includeTime);
-    return from && to ? `${from} - ${to}` : from || to || s;
-  }
-  if (s.includes('..')) {
-    const parts = s.split('..');
-    const from = formatDisplayDate(parts[0], false, includeTime);
-    const to = formatDisplayDate(parts[1], false, includeTime);
-    return from && to ? `${from} - ${to}` : from || to || s;
-  }
-
-  // 2. Ngày đơn hoặc ngày giờ
-  return formatDisplayDate(s, false, includeTime);
-}
+export { formatDisplayDate, formatGridDateValue } from '../../grid/gridFormatUtils';
 
 export function parseDMYToDate(str: unknown, fallbackYear?: number): Date | null {
   if (!str) return null;
@@ -432,6 +347,16 @@ export function computePresetDateRange(
           return { from: `${y}-${startMonth}-01`, to: `${y}-${endMonth}-${endDay}` };
         }
       }
+      if (presetId.startsWith('data_week_')) {
+        const match = REGEX_DATA_WEEK.exec(presetId);
+        if (match) {
+          const y = parseInt(match[1], 10);
+          const w = parseInt(match[2], 10);
+          if (w >= 1 && w <= 53) {
+            return getISOWeekDateRange(y, w);
+          }
+        }
+      }
       if (presetId.startsWith('data_month_')) {
         const match = REGEX_DATA_MONTH.exec(presetId);
         if (match) {
@@ -445,6 +370,45 @@ export function computePresetDateRange(
       return { from: '', to: '' };
     }
   }
+}
+
+/** Trả về số tuần ISO (1-53) và năm ISO tương ứng với một ngày cho trước. */
+export function getISOWeekAndYear(date: Date): { week: number; year: number } {
+  const utcDate = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  );
+  const dayNum = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+  const isoYear = utcDate.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil(
+    ((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+  return { week, year: isoYear };
+}
+
+/** Trả về khoảng ngày Thứ 2 -> Chủ nhật (YYYY-MM-DD) của tuần ISO trong năm ISO. */
+export function getISOWeekDateRange(
+  isoYear: number,
+  week: number
+): { from: string; to: string } {
+  const jan4 = new Date(isoYear, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const week1Monday = new Date(isoYear, 0, 4 - (jan4Day - 1));
+  const start = new Date(
+    week1Monday.getFullYear(),
+    week1Monday.getMonth(),
+    week1Monday.getDate() + (week - 1) * 7
+  );
+  const end = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + 6
+  );
+  return {
+    from: formatDateToYMD(start),
+    to: formatDateToYMD(end),
+  };
 }
 
 export function normalizePresetList(list: string[]): string[] {
@@ -519,11 +483,13 @@ export function getPresetLabel(presetId: string, customYear?: number): string {
     if (parts.length === 1) return getPresetLabel(parts[0], customYear);
 
     const itemMatches: Array<{
-      type: 'q' | 'm' | 'y';
+      type: 'w' | 'q' | 'm' | 'y';
       year: string;
       val: string;
       order: number;
     } | null> = parts.map((p) => {
+      const wm = REGEX_DATA_WEEK.exec(p);
+      if (wm) return { type: 'w', year: wm[1], val: wm[2], order: Number(wm[2]) };
       const qm = REGEX_DATA_QUARTER.exec(p);
       if (qm) return { type: 'q', year: qm[1], val: qm[2], order: Number(qm[2]) * 10 };
       const mm = REGEX_DATA_MONTH.exec(p);
@@ -535,7 +501,7 @@ export function getPresetLabel(presetId: string, customYear?: number): string {
 
     if (itemMatches.every((it) => it !== null)) {
       const validMatches = itemMatches as Array<{
-        type: 'q' | 'm' | 'y';
+        type: 'w' | 'q' | 'm' | 'y';
         year: string;
         val: string;
         order: number;
@@ -544,6 +510,7 @@ export function getPresetLabel(presetId: string, customYear?: number): string {
       if (validMatches.every((it) => it.year === firstY)) {
         const sorted = [...validMatches].sort((a, b) => a.order - b.order);
         const shortLabels = sorted.map((it) => {
+          if (it.type === 'w') return `Tuần ${it.val}`;
           if (it.type === 'q') return `Q${ROMAN_QUARTERS[Number(it.val)] || 'IV'}`;
           if (it.type === 'm') return `T${it.val}`;
           return `Năm ${it.val}`;
@@ -616,6 +583,12 @@ export function getPresetLabel(presetId: string, customYear?: number): string {
         if (match) {
           const roman = ROMAN_QUARTERS[Number(match[2])] || 'IV';
           return `Quý ${roman} (${match[1]})`;
+        }
+      }
+      if (presetId.startsWith('data_week_')) {
+        const match = REGEX_DATA_WEEK.exec(presetId);
+        if (match) {
+          return `Tuần ${match[2]} (${match[1]})`;
         }
       }
       if (presetId.startsWith('data_month_')) {
@@ -761,7 +734,16 @@ export function usePopupDismiss(
       }
     };
 
-    const scheduleReposition = () => {
+    const scheduleReposition = (e?: Event) => {
+      if (
+        e?.type === 'scroll' &&
+        popupRef?.current &&
+        typeof Node !== 'undefined' &&
+        e.target instanceof Node &&
+        popupRef.current.contains(e.target)
+      ) {
+        return;
+      }
       if (rafId !== null) return;
       rafId = window.requestAnimationFrame(() => {
         rafId = null;

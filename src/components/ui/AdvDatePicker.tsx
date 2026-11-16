@@ -136,7 +136,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   onDoubleClick,
   theme = '',
   size = 'default',
-  showPreset = true,
+  showPreset = false,
   showTime = false,
   autoFocus = false,
   defaultOpen = false,
@@ -153,6 +153,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   const value = propValue !== undefined ? propValue : internalVal;
 
   const [presetValue, setPresetValue] = useState<string>(() => {
+    if (!showPreset) return '';
     if (propPreset) return propPreset;
     if (
       propValue &&
@@ -164,10 +165,14 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   });
 
   useEffect(() => {
+    if (!showPreset) {
+      setPresetValue('');
+      return;
+    }
     if (propPreset !== undefined) {
       setPresetValue(propPreset);
     }
-  }, [propPreset]);
+  }, [showPreset, propPreset]);
 
   const emitChange = useCallback(
     (
@@ -202,6 +207,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
       return;
     }
     if (
+      showPreset &&
       value &&
       (value.startsWith('data_') || REGEX_BARE_YEAR.test(value.trim()))
     ) {
@@ -212,7 +218,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
       setInputText(getPresetLabel(pId));
       return;
     }
-    if (presetValue) {
+    if (showPreset && presetValue) {
       const r = computePresetDateRange(presetValue);
       if (value === r.from || value === presetValue) {
         setInputText(
@@ -227,7 +233,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
     if (parsedCurrentDate) {
       setTimeVal({ h: parsedCurrentDate.getHours(), m: parsedCurrentDate.getMinutes() });
     }
-  }, [value, presetValue, showTime, parsedCurrentDate]);
+  }, [value, presetValue, showPreset, showTime, parsedCurrentDate]);
 
   const discreteRanges = useMemo(() => {
     if (!presetValue) return null;
@@ -409,7 +415,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
     if (presetValue && raw === getPresetLabel(presetValue)) {
       return;
     }
-    if (REGEX_BARE_YEAR.test(raw)) {
+    if (showPreset && REGEX_BARE_YEAR.test(raw)) {
       const pId = `data_year_${raw}`;
       const range = computePresetDateRange(pId);
       setPresetValue(pId);
@@ -431,7 +437,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
     } else {
       setInputText(formatDisplayDate(value, false, showTime));
     }
-  }, [isOpen, inputText, presetValue, effMinYMD, effMaxYMD, value, showTime, emitChange]);
+  }, [isOpen, inputText, presetValue, showPreset, effMinYMD, effMaxYMD, value, showTime, emitChange]);
 
   const checkSingleMonthSelected = useCallback(
     (y: number, m: number) => {
@@ -529,7 +535,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
     [minTs, maxTs, todayTs, discreteRanges, parsedTs, handleSelectDate]
   );
 
-  const sizeClass = size === 'xs' ? 'is-xs' : size === 'sm' ? 'is-sm' : 'is-md';
+  const sizeClass = size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
 
   return (
     <div className={`agv-datepicker-container ${className}`} ref={triggerRef}>
@@ -564,7 +570,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
               setInputText('');
               emitChange('', { from: '', to: '', preset: '' });
             }}
-            className="agv-datepicker-clear-btn"
+            className="agv-datepicker-clear-btn agv-inline-clear-destructive"
           >
             ×
           </button>
@@ -582,9 +588,8 @@ export const AdvDatePicker = memo(function AdvDatePicker({
                 : { top: `${coords.top}px`, bottom: 'auto' }),
               left: `${coords.left}px`,
               zIndex: 999999999,
-              boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
             }}
-            className={`agv-calendar-popover ${
+            className={`agv-calendar-popover agv-popup-panel ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${showPreset ? 'agv-has-preset agv-daterange-popover' : ''} ${theme ? getThemeClass(theme) : ''}`}
             data-theme={theme || undefined}
@@ -599,7 +604,7 @@ export const AdvDatePicker = memo(function AdvDatePicker({
                   min={effMin}
                   max={effMax}
                   dateAnalysis={dateAnalysis}
-                  label="Mốc nhanh:"
+                  label="Mốc thời gian:"
                   theme={theme}
                   onSelect={(presetId: string, isMulti?: boolean) => {
                     setPresetValue(presetId);

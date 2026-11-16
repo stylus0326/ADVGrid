@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { MorphChevronIcon } from '../ui/MorphIcons';
+import { AdvButton } from '../ui/AdvButton';
+import { AdvAnchoredPopover } from '../ui/AdvPopover';
 import {
   PinPosition,
   PIN_POSITIONS,
@@ -13,56 +15,14 @@ import {
   DATA_TYPES,
   FORMULA_MODES,
   FormulaMode,
+  CONTEXT_MENU_TYPES,
+  ContextMenuType,
+  ContextMenuData,
 } from './types';
-import { getThemeClasses } from './constants';
-import { computeContextMenuCoords, copyTextToClipboard } from './gridUtils';
+import { copyTextToClipboard } from './gridClipboardUtils';
 
-export { FORMULA_MODES };
-export type { FormulaMode };
-
-/**
- * Danh mục phân loại menu ngữ cảnh chuột phải
- */
-export const CONTEXT_MENU_TYPES = {
-  HEADER: 'header',
-  ROW: 'row',
-  BAND: 'band',
-  GROUP: 'group',
-} as const;
-export type ContextMenuType = (typeof CONTEXT_MENU_TYPES)[keyof typeof CONTEXT_MENU_TYPES];
-
-export type ContextMenuData =
-  | {
-      type: typeof CONTEXT_MENU_TYPES.HEADER;
-      x: number;
-      y: number;
-      column: ColumnDef;
-      currentPin: PinPosition;
-      hasHiddenColumns?: boolean;
-    }
-  | {
-      type: typeof CONTEXT_MENU_TYPES.BAND;
-      x: number;
-      y: number;
-      groupDef: BaseGroupDef;
-      childColumns: ColumnDef[];
-      currentPin: PinPosition;
-    }
-  | {
-      type: typeof CONTEXT_MENU_TYPES.ROW;
-      x: number;
-      y: number;
-      rowIndex: number;
-      row: any;
-      column?: ColumnDef;
-      cellValue?: any;
-    }
-  | {
-      type: typeof CONTEXT_MENU_TYPES.GROUP;
-      x: number;
-      y: number;
-      groupRow: any;
-    };
+export { FORMULA_MODES, CONTEXT_MENU_TYPES };
+export type { FormulaMode, ContextMenuType, ContextMenuData };
 
 export interface ColumnContextMenuProps {
   menu: ContextMenuData;
@@ -97,7 +57,6 @@ export interface ColumnContextMenuProps {
   onExpandAllGroups?: () => void;
   onUngroup?: () => void;
   onCopyGroupTable?: (groupRow: any, includeHeaders: boolean) => void;
-  onExportGroupExcel?: (groupRow: any) => void;
   // Formula Callbacks
   formulaMode?: FormulaMode;
   onSelectFormulaMode?: (mode: FormulaMode) => void;
@@ -110,6 +69,10 @@ export interface ColumnContextMenuProps {
   // Sorting for Formula Column
   sortConfig?: SortConfig | null;
   onSortChange?: (sort: SortConfig | null) => void;
+  sortRules?: SortConfig[];
+  // Module feature gates
+  enableColumnPinning?: boolean;
+  enableCenterDock?: boolean;
 }
 
 export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
@@ -141,8 +104,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   onExpandAllGroups,
   onUngroup,
   onCopyGroupTable,
-  onExportGroupExcel,
-  formulaMode = FORMULA_MODES.AVG,
+  formulaMode = FORMULA_MODES.MAX,
   onSelectFormulaMode,
   emptyColKeys,
   onHideAllEmptyColumns,
@@ -150,240 +112,260 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   onToggleGroupSort,
   sortConfig,
   onSortChange,
+  enableColumnPinning = true,
+  enableCenterDock = true,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isAutoFitExpanded, setIsAutoFitExpanded] = useState(false);
   const [isGroupActionsExpanded, setIsGroupActionsExpanded] = useState(false);
-  const themeClasses = getThemeClasses(surfaceTheme);
 
-  // Cơ chế đóng khi nhấp chuột ra ngoài (Click Outside) hoặc bấm ESC
-  useEffect(() => {
-    const handleGlobalMouseDown = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
+  const renderPinButtons = (
+    currentPin: PinPosition,
+    canPinSide: boolean,
+    canPinCenter: boolean,
+    onSelect: (pin: PinPosition) => void
+  ) => {
+    const pinOptions: Array<{ pin: PinPosition; label: string }> = [];
+    if (canPinSide) pinOptions.push({ pin: PIN_POSITIONS.LEFT, label: 'Trái' });
+    if (canPinCenter) pinOptions.push({ pin: PIN_POSITIONS.CENTER, label: 'Giữa' });
+    if (canPinSide) pinOptions.push({ pin: PIN_POSITIONS.RIGHT, label: 'Phải' });
+    if (pinOptions.length === 0) return null;
+    const gridColsClass =
+      pinOptions.length === 3 ? 'grid-cols-3' : pinOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1';
+    return (
+      <div className={`grid ${gridColsClass} gap-1`}>
+        {pinOptions.map(({ pin, label }) => {
+          const isActive = currentPin === pin;
+          return (
+            <button
+              key={pin}
+              type="button"
+              onClick={() => {
+                onSelect(isActive ? PIN_POSITIONS.NONE : pin);
+                onClose();
+              }}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-sm border text-center cursor-pointer select-none min-h-[28px] ${
+                isActive
+                  ? 'bg-[var(--popup-item-selected-bg)] border-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)]'
+                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]'
+              }`}
+            >
+              <span className="text-xs font-semibold">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleGlobalMouseDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleGlobalMouseDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
-
-  // Tính toán tọa độ hiển thị an toàn chống tràn mép màn hình
-  const isHeaderEmpty = menu.type === CONTEXT_MENU_TYPES.HEADER && emptyColKeys?.has(menu.column.key);
-  const isNumericGroupSort =
-    menu.type === CONTEXT_MENU_TYPES.HEADER &&
-    Boolean(groupByColumnKey) &&
-    menu.column.dataType === DATA_TYPES.NUMBER &&
-    !isHeaderEmpty;
-  const activeCol =
-    menu.type === CONTEXT_MENU_TYPES.HEADER
-      ? menu.column
-      : menu.type === CONTEXT_MENU_TYPES.ROW
-      ? menu.column
-      : undefined;
-  const isColFormula = Boolean(activeCol?.isFormula);
-  const isColChart = Boolean(activeCol?.isChart);
-  const isMinMaxFormula = isColFormula && (formulaMode === FORMULA_MODES.MIN || formulaMode === FORMULA_MODES.MAX);
-  const menuWidth = isHeaderEmpty ? 190 : 220;
-  const menuHeight =
-    menu.type === CONTEXT_MENU_TYPES.HEADER
-      ? isColFormula
-        ? isMinMaxFormula ? 335 : 285
-        : isColChart
-        ? 120
-        : isHeaderEmpty
-        ? menu.hasHiddenColumns
-          ? 110
-          : 75
-        : isNumericGroupSort
-        ? 265
-        : 220
-      : menu.type === CONTEXT_MENU_TYPES.BAND
-      ? 180
-      : menu.type === CONTEXT_MENU_TYPES.GROUP
-      ? 230
-      : isColFormula
-      ? isMinMaxFormula ? 470 : 420
-      : 310;
-  const coords = computeContextMenuCoords(menu.x, menu.y, menuWidth, menuHeight);
-
+  const resolvedMenu = ((): { width: number; content: React.ReactNode } | null => {
   // ============================================================================
   // 1. RENDER MENU TIÊU ĐỀ CỘT (HEADER CONTEXT MENU)
   // ============================================================================
   if (menu.type === CONTEXT_MENU_TYPES.HEADER) {
     const { column, currentPin, hasHiddenColumns } = menu;
-    const isPinned = currentPin !== PIN_POSITIONS.NONE;
     const isFormulaCol = Boolean(column.isFormula);
     const isChartCol = Boolean(column.isChart);
     const isEmptyCol = !!emptyColKeys?.has(column.key);
     const colDisplayName = column.title || column.key;
 
+    const canPinSide = enableColumnPinning && Boolean(onSetPin) && column.pinnable !== false;
+    const canPinCenter = enableCenterDock && Boolean(onSetPin) && column.pinnable !== false;
+    const canPinCol = canPinSide || canPinCenter;
+    const isPinned =
+      (canPinSide && (currentPin === PIN_POSITIONS.LEFT || currentPin === PIN_POSITIONS.RIGHT)) ||
+      (canPinCenter && currentPin === PIN_POSITIONS.CENTER);
+
     // Menu chuột phải siêu tinh gọn cho cột rỗng (chỉ giữ Ẩn cột rỗng & Ẩn tất cả cột rỗng)
     if (isEmptyCol) {
-      return (
-        <div
-          ref={containerRef}
-          style={{
-            position: 'fixed',
-            left: `${coords.left}px`,
-            top: `${coords.top}px`,
-            zIndex: 9999,
-            boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onContextMenu={(e) => e.preventDefault()}
-          className={`agv-context-menu w-[190px] p-1.5 rounded-md border backdrop-blur-md select-none transition-all agv-spring-zoom ${themeClasses.contextMenuBg}`}
-          data-agv-popup="true"
-        >
+      const canHideEmpty = Boolean(onHideColumn) && column.hideable !== false;
+      const canHideAllEmpty = Boolean(onHideAllEmptyColumns);
+      const canShowHiddenEmpty = Boolean(hasHiddenColumns && onShowAllHiddenColumns);
+
+      if (!canHideEmpty && !canHideAllEmpty && !canShowHiddenEmpty) {
+        return null;
+      }
+
+      return {
+        width: 190,
+        content: (
           <div className="py-0.5 space-y-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                onHideColumn?.(column.key);
-                onClose();
-              }}
-              className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-              style={{ color: 'var(--agv-text-main)' }}
-            >
-              <span>Ẩn cột rỗng</span>
-            </button>
-            {onHideAllEmptyColumns && (
+            {canHideEmpty && (
               <button
                 type="button"
                 onClick={() => {
-                  onHideAllEmptyColumns();
+                  onHideColumn?.(column.key);
                   onClose();
                 }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                <span>Ẩn cột rỗng</span>
+              </button>
+            )}
+            {canHideAllEmpty && (
+              <button
+                type="button"
+                onClick={() => {
+                  onHideAllEmptyColumns?.();
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
                 style={{ color: 'var(--agv-text-main)' }}
               >
                 <span>Ẩn tất cả cột rỗng</span>
               </button>
             )}
-            {hasHiddenColumns && (
+            {canShowHiddenEmpty && (
               <>
-                <div className="my-1 border-b border-[var(--agv-border)]" />
+                {(canHideEmpty || canHideAllEmpty) && (
+                  <div className="my-1 border-b border-[var(--agv-border)]" />
+                )}
                 <button
                   type="button"
                   onClick={() => {
                     onShowAllHiddenColumns?.();
                     onClose();
                   }}
-                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)]"
+                  className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] text-[var(--agv-accent)]"
                 >
                   <span className="font-semibold">Hiện lại các cột đã ẩn</span>
                 </button>
               </>
             )}
           </div>
-        </div>
-      );
+        ),
+      };
     }
 
-    return (
-      <div
-        ref={containerRef}
-        style={{
-          position: 'fixed',
-          left: `${coords.left}px`,
-          top: `${coords.top}px`,
-          zIndex: 9999,
-          boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-        className={`agv-context-menu w-[215px] p-1.5 rounded-md border backdrop-blur-md select-none transition-all agv-spring-zoom ${themeClasses.contextMenuBg}`}
-        data-agv-popup="true"
-      >
-        {/* Tiêu đề & Cụm 3 nút Ghim cột */}
-        <div className="p-1 border-b border-[var(--agv-border)]">
-          <div
-            className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-0.5 truncate flex items-center justify-between"
-            style={{ color: 'var(--agv-text-muted)' }}
+    const canFormula = isFormulaCol && Boolean(onSelectFormulaMode);
+    const canGroupCol =
+      Boolean(onToggleGroupByColumn) &&
+      column.groupable !== false &&
+      column.dataType !== DATA_TYPES.SYSTEM &&
+      !column.isRowNumber &&
+      !column.isSelection &&
+      !isChartCol &&
+      !isFormulaCol;
+    const parentBand = columnGroups?.find((g) => g.keys.includes(column.key));
+    const canHideItem =
+      column.hideable !== false && (parentBand?.isAtomic ? Boolean(onHideBand) : Boolean(onHideColumn));
+    const canShowHidden = Boolean(hasHiddenColumns && onShowAllHiddenColumns);
+    const canGroupSort =
+      Boolean(groupByColumnKey) &&
+      column.dataType === DATA_TYPES.NUMBER &&
+      Boolean(onToggleGroupSort);
+    const hasBandAutoFit = Boolean(parentBand && !parentBand.isStandalone && onAutoFitBandColumns);
+    const hasAllAutoFit = Boolean((!parentBand || parentBand.isStandalone) && onAutoFitAllColumns);
+    const canAutoFit =
+      !isChartCol &&
+      (Boolean(onAutoFitColumn) ||
+        hasBandAutoFit ||
+        hasAllAutoFit ||
+        (isFormulaCol && Boolean(onToggleGroupByColumn)));
+
+    const hasDirectTaskItems = canGroupCol || canHideItem || canShowHidden || canGroupSort;
+    const hasTasksSection = hasDirectTaskItems || canAutoFit;
+
+    if (!canPinCol && !canFormula && !hasTasksSection) {
+      return null;
+    }
+
+    const autoFitButtons = (
+      <>
+        {/* Nhóm theo cột thu gọn riêng cho cột công thức (isFormula) */}
+        {isFormulaCol && onToggleGroupByColumn && (
+          <button
+            type="button"
+            disabled={isEmptyCol}
+            onClick={() => {
+              if (isEmptyCol) return;
+              onToggleGroupByColumn(column.key);
+              onClose();
+            }}
+            className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs min-h-[28px] ${
+              isEmptyCol
+                ? 'opacity-40 cursor-not-allowed'
+                : 'cursor-pointer hover:bg-[var(--popup-item-hover-bg)]'
+            } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
           >
-            <span className="truncate">
-              Ghim: <span className="font-extrabold text-[var(--agv-accent)]">{colDisplayName}</span>
-            </span>
-            {isPinned && (
-              <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
-            )}
+            <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
+          </button>
+        )}
+
+        {onAutoFitColumn && (
+          <button
+            type="button"
+            onClick={() => {
+              onAutoFitColumn(column.key);
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+            style={{ color: 'var(--agv-text-main)' }}
+          >
+            <span>Vừa độ rộng cột</span>
+          </button>
+        )}
+
+        {hasBandAutoFit && parentBand && (
+          <button
+            type="button"
+            onClick={() => {
+              onAutoFitBandColumns?.(parentBand.id);
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+            style={{ color: 'var(--agv-text-main)' }}
+          >
+            <span>Vừa độ rộng các cột trong tầng</span>
+          </button>
+        )}
+
+        {hasAllAutoFit && (
+          <button
+            type="button"
+            onClick={() => {
+              onAutoFitAllColumns?.();
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+            style={{ color: 'var(--agv-text-main)' }}
+          >
+            <span>Vừa độ rộng tất cả cột</span>
+          </button>
+        )}
+      </>
+    );
+
+    return {
+      width: 215,
+      content: (
+        <>
+          {/* Tiêu đề & Cụm 3 nút Ghim cột */}
+        {canPinCol && (
+          <div className={`p-1 ${canFormula || hasTasksSection ? 'border-b border-[var(--agv-border)]' : ''}`}>
+            <div
+              className="text-xs font-bold uppercase tracking-wider mb-1.5 px-0.5 truncate flex items-center justify-between gap-1.5"
+              style={{ color: 'var(--agv-text-muted)' }}
+            >
+              <span className="truncate">
+                Ghim: <span className="font-extrabold text-[var(--agv-accent)]">{colDisplayName}</span>
+              </span>
+              {isPinned && (
+                <span className="shrink-0 text-xs font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
+              )}
+            </div>
+
+            {renderPinButtons(currentPin, canPinSide, canPinCenter, (nextPin) => {
+              onSetPin?.(column.key, nextPin);
+            })}
           </div>
-
-          <div className="grid grid-cols-3 gap-1">
-            {/* Nút Trái */}
-            <button
-              type="button"
-              onClick={() => {
-                onSetPin?.(
-                  column.key,
-                  currentPin === PIN_POSITIONS.LEFT ? PIN_POSITIONS.NONE : PIN_POSITIONS.LEFT
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.LEFT
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <span className="text-[10px] font-semibold">Trái</span>
-            </button>
-
-            {/* Nút Giữa */}
-            <button
-              type="button"
-              onClick={() => {
-                onSetPin?.(
-                  column.key,
-                  currentPin === PIN_POSITIONS.CENTER ? PIN_POSITIONS.NONE : PIN_POSITIONS.CENTER
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.CENTER
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <span className="text-[10px] font-semibold">Giữa</span>
-            </button>
-
-            {/* Nút Phải */}
-            <button
-              type="button"
-              onClick={() => {
-                onSetPin?.(
-                  column.key,
-                  currentPin === PIN_POSITIONS.RIGHT ? PIN_POSITIONS.NONE : PIN_POSITIONS.RIGHT
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.RIGHT
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <span className="text-[10px] font-semibold">Phải</span>
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Tùy chọn Công Thức riêng cho cột công thức (isFormula) */}
-        {isFormulaCol && onSelectFormulaMode && (
-          <div className="py-1 border-b border-[var(--agv-border)]">
+        {canFormula && onSelectFormulaMode && (
+          <div className={`py-1 ${hasTasksSection ? 'border-b border-[var(--agv-border)]' : ''}`}>
             <div
-              className="text-[10px] font-bold uppercase tracking-wider mb-1 px-2.5 truncate"
+              className="text-xs font-bold uppercase tracking-wider mb-1 px-2.5 truncate"
               style={{ color: 'var(--agv-text-muted)' }}
             >
               Công thức
@@ -406,10 +388,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       onSelectFormulaMode(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
+                    className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] ${
                       isActive
-                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
-                        : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
+                        ? 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)] font-semibold'
+                        : 'text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -446,10 +428,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     <button
                       type="button"
                       onClick={handleCycleSort}
-                      className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
+                      className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] ${
                         isMonthSort
-                          ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
-                          : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
+                          ? 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)] font-semibold'
+                          : 'text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]'
                       }`}
                     >
                       <span>{label}</span>
@@ -462,194 +444,132 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
         )}
 
         {/* Các tác vụ cột */}
-        <div className="py-1 space-y-0.5">
-          {onToggleGroupByColumn && column.dataType !== DATA_TYPES.SYSTEM && !column.isRowNumber && !column.isSelection && !isChartCol && !isFormulaCol && (
-            <button
-              type="button"
-              disabled={isEmptyCol}
-              onClick={() => {
-                if (isEmptyCol) return;
-                onToggleGroupByColumn(column.key);
-                onClose();
-              }}
-              className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition min-h-[28px] ${
-                isEmptyCol
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'cursor-pointer hover:bg-[var(--agv-bg-item-hover)]'
-              } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
-            >
-              <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
-            </button>
-          )}
+        {hasTasksSection && (
+          <div className="py-1 space-y-0.5">
+            {canGroupCol && (
+              <button
+                type="button"
+                disabled={isEmptyCol}
+                onClick={() => {
+                  if (isEmptyCol) return;
+                  onToggleGroupByColumn?.(column.key);
+                  onClose();
+                }}
+                className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs min-h-[28px] ${
+                  isEmptyCol
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'cursor-pointer hover:bg-[var(--popup-item-hover-bg)]'
+                } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
+              >
+                <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
+              </button>
+            )}
 
-          {(() => {
-            const parentBand = columnGroups?.find((g) => g.keys.includes(column.key));
-            if (parentBand && parentBand.isAtomic) {
-              return (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onHideBand?.(parentBand.id);
-                    onClose();
-                  }}
-                  className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]"
-                >
-                  <span>Ẩn nhóm {parentBand.title || parentBand.id || ''}</span>
-                </button>
-              );
-            }
+            {canHideItem && parentBand?.isAtomic && (
+              <button
+                type="button"
+                onClick={() => {
+                  onHideBand?.(parentBand.id);
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] text-[var(--agv-text-main)]"
+              >
+                <span>Ẩn nhóm {parentBand.title || parentBand.id || ''}</span>
+              </button>
+            )}
 
-            return (
+            {canHideItem && !parentBand?.isAtomic && (
               <button
                 type="button"
                 onClick={() => {
                   onHideColumn?.(column.key);
                   onClose();
                 }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-text-main)]"
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] text-[var(--agv-text-main)]"
               >
                 <span>Ẩn cột này</span>
               </button>
-            );
-          })()}
+            )}
 
-          {hasHiddenColumns && (
-            <button
-              type="button"
-              onClick={() => {
-                onShowAllHiddenColumns?.();
-                onClose();
-              }}
-              className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)]"
-            >
-              <span className="font-semibold">Hiện lại các cột đã ẩn</span>
-            </button>
-          )}
-
-          {/* Sắp xếp nhóm theo Tổng (Phương án B chuẩn Toolbar3: chỉ hiện khi có gom nhóm và cột là số) */}
-          {Boolean(groupByColumnKey) && column.dataType === DATA_TYPES.NUMBER && onToggleGroupSort && (
-            <div className="pt-1 mt-1 border-t border-[var(--agv-border)]">
-              {(() => {
-                const isCurrentColSorted = groupSortConfig?.colKey === column.key;
-                const currentDir = isCurrentColSorted ? groupSortConfig.direction : null;
-                const label =
-                  currentDir === SORT_DIRECTIONS.DESC
-                    ? 'Sắp xếp nhóm: Tổng giảm dần'
-                    : currentDir === SORT_DIRECTIONS.ASC
-                    ? 'Sắp xếp nhóm: Tổng tăng dần'
-                    : 'Sắp xếp nhóm theo Tổng';
-
-                return (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onToggleGroupSort(column.key);
-                      onClose();
-                    }}
-                    className={`w-full flex items-center justify-center px-2.5 py-1.5 rounded-md text-center text-xs font-semibold transition cursor-pointer select-none min-h-[28px] ${
-                      isCurrentColSorted
-                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                        : 'text-[var(--agv-text-main)] bg-[var(--agv-bg-popup)] border border-[var(--agv-border)] hover:bg-[var(--agv-bg-item-hover)]'
-                    }`}
-                  >
-                    <span>{label}</span>
-                  </button>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* Thanh mỏng mở rộng tùy chọn Vừa độ rộng (mặc định ẩn, không chữ, chỉ có mũi tên) - Ẩn trên cột biểu đồ */}
-          {!isChartCol && (
-            <div className="pt-0.5 mt-0.5 border-t border-[var(--agv-border)]">
+            {canShowHidden && (
               <button
                 type="button"
-                onClick={() => setIsAutoFitExpanded((prev) => !prev)}
-                className="w-full flex items-center justify-center py-0.5 rounded transition cursor-pointer hover:bg-[var(--agv-bg-hover)] text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)]"
-                style={{ minHeight: '18px', height: '18px' }}
+                onClick={() => {
+                  onShowAllHiddenColumns?.();
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] text-[var(--agv-accent)]"
               >
-                <MorphChevronIcon
-                  expanded={isAutoFitExpanded}
-                  type="down-up"
-                  size={12}
-                  spring="snappy"
-                />
+                <span className="font-semibold">Hiện lại các cột đã ẩn</span>
               </button>
+            )}
 
-              {isAutoFitExpanded && (
-                <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
-                  {/* Nhóm theo cột thu gọn riêng cho cột công thức (isFormula) */}
-                  {isFormulaCol && onToggleGroupByColumn && (
+            {/* Sắp xếp nhóm theo Tổng (Phương án B chuẩn Toolbar3: chỉ hiện khi có gom nhóm và cột là số) */}
+            {canGroupSort && onToggleGroupSort && (
+              <div className={canGroupCol || canHideItem || canShowHidden ? 'pt-1 mt-1 border-t border-[var(--agv-border)]' : ''}>
+                {(() => {
+                  const isCurrentColSorted = groupSortConfig?.colKey === column.key;
+                  const currentDir = isCurrentColSorted ? groupSortConfig.direction : null;
+                  const label =
+                    currentDir === SORT_DIRECTIONS.DESC
+                      ? 'Sắp xếp nhóm: Tổng giảm dần'
+                      : currentDir === SORT_DIRECTIONS.ASC
+                      ? 'Sắp xếp nhóm: Tổng tăng dần'
+                      : 'Sắp xếp nhóm theo Tổng';
+
+                  return (
                     <button
                       type="button"
-                      disabled={isEmptyCol}
                       onClick={() => {
-                        if (isEmptyCol) return;
-                        onToggleGroupByColumn(column.key);
+                        onToggleGroupSort(column.key);
                         onClose();
                       }}
-                      className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition min-h-[28px] ${
-                        isEmptyCol
-                          ? 'opacity-40 cursor-not-allowed'
-                          : 'cursor-pointer hover:bg-[var(--agv-bg-item-hover)]'
-                      } ${groupByColumnKey === column.key ? 'text-[var(--agv-accent)] font-semibold' : 'text-[var(--agv-text-main)]'}`}
+                      className={`w-full flex items-center justify-center px-2.5 py-1.5 rounded-md text-center text-xs font-semibold cursor-pointer select-none min-h-[28px] ${
+                        isCurrentColSorted
+                          ? 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)]'
+                          : 'text-[var(--agv-text-main)] bg-[var(--agv-bg-popup)] border border-[var(--agv-border)] hover:bg-[var(--popup-item-hover-bg)]'
+                      }`}
                     >
-                      <span>{groupByColumnKey === column.key ? 'Hủy nhóm cột' : 'Nhóm theo cột'}</span>
+                      <span>{label}</span>
                     </button>
-                  )}
+                  );
+                })()}
+              </div>
+            )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onAutoFitColumn?.(column.key);
-                      onClose();
-                    }}
-                    className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                    style={{ color: 'var(--agv-text-main)' }}
+            {/* Thanh mỏng mở rộng tùy chọn Vừa độ rộng (hoặc hiện thẳng nếu chỉ còn tác vụ Vừa độ rộng) */}
+            {canAutoFit && (
+              canPinCol || canFormula || hasDirectTaskItems ? (
+                <div className="pt-0.5 mt-0.5 border-t border-[var(--agv-border)]">
+                  <AdvButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAutoFitExpanded((prev) => !prev)}
+                    className="w-full"
                   >
-                    <span>Vừa độ rộng cột</span>
-                  </button>
+                    <MorphChevronIcon
+                      expanded={isAutoFitExpanded}
+                      type="down-up"
+                      size={12}
+                      spring="snappy"
+                    />
+                  </AdvButton>
 
-                  {(() => {
-                    const parentBand = columnGroups.find(
-                      (g) => !g.isStandalone && g.keys.includes(column.key)
-                    );
-                    if (parentBand) {
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onAutoFitBandColumns?.(parentBand.id);
-                            onClose();
-                          }}
-                          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                          style={{ color: 'var(--agv-text-main)' }}
-                        >
-                          <span>Vừa độ rộng các cột trong tầng</span>
-                        </button>
-                      );
-                    }
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAutoFitAllColumns?.();
-                          onClose();
-                        }}
-                        className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                        style={{ color: 'var(--agv-text-main)' }}
-                      >
-                        <span>Vừa độ rộng tất cả cột</span>
-                      </button>
-                    );
-                  })()}
+                  {isAutoFitExpanded && (
+                    <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
+                      {autoFitButtons}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
+              ) : (
+                <div className="space-y-0.5">{autoFitButtons}</div>
+              )
+            )}
+          </div>
+        )}
+        </>
+      ),
+    };
   }
 
   // ============================================================================
@@ -657,145 +577,114 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   // ============================================================================
   if (menu.type === CONTEXT_MENU_TYPES.BAND) {
     const { groupDef, currentPin } = menu;
-    const isPinned = currentPin !== PIN_POSITIONS.NONE;
+    const canPinSide = enableColumnPinning && Boolean(onSetBandPin);
+    const canPinCenter = enableCenterDock && Boolean(onSetBandPin);
+    const canPinBand = canPinSide || canPinCenter;
+    const isPinned =
+      (canPinSide && (currentPin === PIN_POSITIONS.LEFT || currentPin === PIN_POSITIONS.RIGHT)) ||
+      (canPinCenter && currentPin === PIN_POSITIONS.CENTER);
+    const canHide = Boolean(onHideBand) && menu.childColumns.every((c) => c.hideable !== false);
+    const canAutoFit = groupDef.id !== 'grp_analytics' && Boolean(onAutoFitBandColumns);
 
-    return (
-      <div
-        ref={containerRef}
-        style={{
-          position: 'fixed',
-          left: `${coords.left}px`,
-          top: `${coords.top}px`,
-          zIndex: 9999,
-          boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-        className={`agv-context-menu w-[215px] p-1.5 rounded-md border backdrop-blur-md select-none transition-all agv-spring-zoom ${themeClasses.contextMenuBg}`}
-        data-agv-popup="true"
-      >
-        {/* Tiêu đề & Cụm 3 nút Ghim nhóm tầng */}
-        <div className="p-1 border-b border-[var(--agv-border)]">
-          <div
-            className="text-[10px] font-bold uppercase tracking-wider mb-1.5 px-0.5 truncate flex items-center justify-between"
-            style={{ color: 'var(--agv-text-muted)' }}
-          >
-            <span className="truncate">
-              Ghim tầng: <span className="font-extrabold text-[var(--agv-accent)]">{groupDef.title}</span>
-            </span>
-            {isPinned && (
-              <span className="text-[9px] font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
-            )}
-          </div>
+    if (!canPinBand && !canHide && !canAutoFit) {
+      return null;
+    }
 
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                onSetBandPin?.(
-                  groupDef.id,
-                  currentPin === PIN_POSITIONS.LEFT ? PIN_POSITIONS.NONE : PIN_POSITIONS.LEFT
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.LEFT
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
+    return {
+      width: 215,
+      content: (
+        <>
+          {/* Tiêu đề & Cụm nút Ghim nhóm tầng */}
+        {canPinBand && (
+          <div className={`p-1 ${canHide || canAutoFit ? 'border-b border-[var(--agv-border)]' : ''}`}>
+            <div
+              className="text-xs font-bold uppercase tracking-wider mb-1.5 px-0.5 truncate flex items-center justify-between gap-1.5"
+              style={{ color: 'var(--agv-text-muted)' }}
             >
-              <span className="text-[10px] font-semibold">Trái</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                onSetBandPin?.(
-                  groupDef.id,
-                  currentPin === PIN_POSITIONS.CENTER ? PIN_POSITIONS.NONE : PIN_POSITIONS.CENTER
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.CENTER
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <span className="text-[10px] font-semibold">Giữa</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                onSetBandPin?.(
-                  groupDef.id,
-                  currentPin === PIN_POSITIONS.RIGHT ? PIN_POSITIONS.NONE : PIN_POSITIONS.RIGHT
-                );
-                onClose();
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg border text-center transition cursor-pointer select-none min-h-[28px] ${
-                currentPin === PIN_POSITIONS.RIGHT
-                  ? 'bg-[var(--agv-accent)] border-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                  : 'bg-[var(--agv-bg-root)] border-[var(--agv-border)] text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-              }`}
-            >
-              <span className="text-[10px] font-semibold">Phải</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Các tác vụ trên nhóm tầng */}
-        <div className="py-1 space-y-0.5">
-          <button
-            type="button"
-            onClick={() => {
-              onHideBand?.(groupDef.id);
-              onClose();
-            }}
-            className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-            style={{ color: 'var(--agv-text-main)' }}
-          >
-            <span>Ẩn toàn bộ nhóm tầng</span>
-          </button>
-
-          {/* Thanh mỏng mở rộng tùy chọn Vừa độ rộng - Ẩn đối với nhóm Chu kỳ năm & Công thức */}
-          {groupDef.id !== 'grp_analytics' && (
-            <div className="pt-0.5 mt-0.5 border-t border-[var(--agv-border)]">
-              <button
-                type="button"
-                onClick={() => setIsAutoFitExpanded((prev) => !prev)}
-                className="w-full flex items-center justify-center py-0.5 rounded transition cursor-pointer hover:bg-[var(--agv-bg-hover)] text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)]"
-                style={{ minHeight: '18px', height: '18px' }}
-              >
-                <MorphChevronIcon
-                  expanded={isAutoFitExpanded}
-                  type="down-up"
-                  size={12}
-                  spring="snappy"
-                />
-              </button>
-
-              {isAutoFitExpanded && (
-                <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onAutoFitBandColumns?.(groupDef.id);
-                      onClose();
-                    }}
-                    className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                    style={{ color: 'var(--agv-text-main)' }}
-                  >
-                    <span>Vừa độ rộng các cột trong tầng</span>
-                  </button>
-                </div>
+              <span className="truncate">
+                Ghim tầng: <span className="font-extrabold text-[var(--agv-accent)]">{groupDef.title}</span>
+              </span>
+              {isPinned && (
+                <span className="shrink-0 text-xs font-normal text-[var(--agv-warning)] lowercase">bỏ ghim</span>
               )}
             </div>
-          )}
-        </div>
-      </div>
-    );
+
+            {renderPinButtons(currentPin, canPinSide, canPinCenter, (nextPin) => {
+              onSetBandPin?.(groupDef.id, nextPin);
+            })}
+          </div>
+        )}
+
+        {/* Các tác vụ trên nhóm tầng */}
+        {(canHide || canAutoFit) && (
+          <div className="py-1 space-y-0.5">
+            {canHide && (
+              <button
+                type="button"
+                onClick={() => {
+                  onHideBand?.(groupDef.id);
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                <span>Ẩn toàn bộ nhóm tầng</span>
+              </button>
+            )}
+
+            {/* Thanh mỏng mở rộng tùy chọn Vừa độ rộng */}
+            {canAutoFit && (
+              canPinBand || canHide ? (
+                <div className="pt-0.5 mt-0.5 border-t border-[var(--agv-border)]">
+                  <AdvButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAutoFitExpanded((prev) => !prev)}
+                    className="w-full"
+                  >
+                    <MorphChevronIcon
+                      expanded={isAutoFitExpanded}
+                      type="down-up"
+                      size={12}
+                      spring="snappy"
+                    />
+                  </AdvButton>
+
+                  {isAutoFitExpanded && (
+                    <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAutoFitBandColumns?.(groupDef.id);
+                          onClose();
+                        }}
+                        className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                        style={{ color: 'var(--agv-text-main)' }}
+                      >
+                        <span>Vừa độ rộng các cột trong tầng</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAutoFitBandColumns?.(groupDef.id);
+                    onClose();
+                  }}
+                  className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                  style={{ color: 'var(--agv-text-main)' }}
+                >
+                  <span>Vừa độ rộng các cột trong tầng</span>
+                </button>
+              )
+            )}
+          </div>
+        )}
+        </>
+      ),
+    };
   }
 
   // ============================================================================
@@ -803,123 +692,154 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
   // ============================================================================
   if (menu.type === CONTEXT_MENU_TYPES.GROUP) {
     const { groupRow } = menu;
+    const canUngroup = Boolean(onUngroup);
+    const canCollapseAll = Boolean(onCollapseAllGroups);
+    const canExpandAll = Boolean(onExpandAllGroups);
+    const canCopyGroup = Boolean(onCopyGroupTable);
+    const hasExpandSection = canCollapseAll || canExpandAll;
+    const hasSecondarySection = canCopyGroup;
 
-    return (
-      <div
-        ref={containerRef}
-        style={{
-          position: 'fixed',
-          top: `${coords.top}px`,
-          left: `${coords.left}px`,
-          zIndex: 9999,
-          boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-        }}
-        className={`agv-context-menu w-[215px] p-1.5 rounded-md border backdrop-blur-md select-none transition-all agv-spring-zoom ${themeClasses.contextMenuBg}`}
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-        data-agv-popup="true"
-      >
-        {/* 1. Hủy nhóm cột (Đưa lên đầu, đồng bộ màu xanh accent, chữ đậm và không icon với Header Menu) */}
-        <button
-          type="button"
-          onClick={() => {
-            onUngroup?.();
-            onClose();
-          }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-item-hover)] text-[var(--agv-accent)] font-semibold"
-        >
-          <span>Hủy nhóm cột</span>
-        </button>
+    if (!canUngroup && !hasExpandSection && !hasSecondarySection) {
+      return null;
+    }
 
-        <div className="my-1 border-b border-[var(--agv-border)]" />
-
-        {/* 2. Thu gọn tất cả */}
-        <button
-          type="button"
-          onClick={() => {
-            onCollapseAllGroups?.();
-            onClose();
-          }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-          style={{ color: 'var(--agv-text-main)' }}
-        >
-          <span>Thu gọn tất cả</span>
-        </button>
-
-        {/* 3. Mở rộng tất cả */}
-        <button
-          type="button"
-          onClick={() => {
-            onExpandAllGroups?.();
-            onClose();
-          }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-          style={{ color: 'var(--agv-text-main)' }}
-        >
-          <span>Mở rộng tất cả</span>
-        </button>
-
-        {/* Thanh mỏng mở rộng 3 tác vụ Sao chép / Xuất Excel */}
-        <div className="pt-0.5 mt-0.5 border-t border-[var(--agv-border)]">
+    return {
+      width: 215,
+      content: (
+        <>
+          {/* 1. Hủy nhóm cột */}
+        {canUngroup && (
           <button
             type="button"
-            onClick={() => setIsGroupActionsExpanded((prev) => !prev)}
-            className="w-full flex items-center justify-center py-0.5 rounded transition cursor-pointer hover:bg-[var(--agv-bg-hover)] text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)]"
-            style={{ minHeight: '18px', height: '18px' }}
+            onClick={() => {
+              onUngroup?.();
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] text-[var(--agv-accent)] font-semibold"
           >
-            <MorphChevronIcon
-              expanded={isGroupActionsExpanded}
-              type="down-up"
-              size={12}
-              spring="snappy"
-            />
+            <span>Hủy nhóm cột</span>
           </button>
+        )}
 
-          {isGroupActionsExpanded && (
-            <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
-              {/* 4. Sao chép bảng */}
-              <button
-                type="button"
-                onClick={() => {
-                  onCopyGroupTable?.(groupRow, false);
-                  onClose();
-                }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                style={{ color: 'var(--agv-text-main)' }}
-              >
-                <span>Sao chép bảng</span>
-              </button>
+        {canUngroup && hasExpandSection && (
+          <div className="my-1 border-b border-[var(--agv-border)]" />
+        )}
 
-              {/* 5. Sao chép bảng kèm tên cột */}
-              <button
-                type="button"
-                onClick={() => {
-                  onCopyGroupTable?.(groupRow, true);
-                  onClose();
-                }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                style={{ color: 'var(--agv-text-main)' }}
-              >
-                <span>Sao chép bảng kèm tên cột</span>
-              </button>
+        {/* 2. Thu gọn tất cả */}
+        {canCollapseAll && (
+          <button
+            type="button"
+            onClick={() => {
+              onCollapseAllGroups?.();
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+            style={{ color: 'var(--agv-text-main)' }}
+          >
+            <span>Thu gọn tất cả</span>
+          </button>
+        )}
 
-              {/* 6. Xuất Excel bảng */}
-              <button
-                type="button"
-                onClick={() => {
-                  onExportGroupExcel?.(groupRow);
-                  onClose();
-                }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-                style={{ color: 'var(--agv-text-main)' }}
-              >
-                <span>Xuất Excel bảng</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+        {/* 3. Mở rộng tất cả */}
+        {canExpandAll && (
+          <button
+            type="button"
+            onClick={() => {
+              onExpandAllGroups?.();
+              onClose();
+            }}
+            className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+            style={{ color: 'var(--agv-text-main)' }}
+          >
+            <span>Mở rộng tất cả</span>
+          </button>
+        )}
+
+        {/* Thanh mỏng mở rộng tác vụ Sao chép bảng */}
+        {hasSecondarySection && (
+          <div className={canUngroup || hasExpandSection ? 'pt-0.5 mt-0.5 border-t border-[var(--agv-border)]' : ''}>
+            {canUngroup || hasExpandSection ? (
+              <>
+                <AdvButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsGroupActionsExpanded((prev) => !prev)}
+                  className="w-full"
+                >
+                  <MorphChevronIcon
+                    expanded={isGroupActionsExpanded}
+                    type="down-up"
+                    size={12}
+                    spring="snappy"
+                  />
+                </AdvButton>
+
+                {isGroupActionsExpanded && (
+                  <div className="pt-0.5 space-y-0.5 animate-in fade-in duration-150">
+                    {canCopyGroup && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onCopyGroupTable?.(groupRow, false);
+                            onClose();
+                          }}
+                          className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                          style={{ color: 'var(--agv-text-main)' }}
+                        >
+                          <span>Sao chép bảng</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onCopyGroupTable?.(groupRow, true);
+                            onClose();
+                          }}
+                          className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                          style={{ color: 'var(--agv-text-main)' }}
+                        >
+                          <span>Sao chép bảng kèm tên cột</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-0.5">
+                {canCopyGroup && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCopyGroupTable?.(groupRow, false);
+                        onClose();
+                      }}
+                      className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                      style={{ color: 'var(--agv-text-main)' }}
+                    >
+                      <span>Sao chép bảng</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCopyGroupTable?.(groupRow, true);
+                        onClose();
+                      }}
+                      className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                      style={{ color: 'var(--agv-text-main)' }}
+                    >
+                      <span>Sao chép bảng kèm tên cột</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        </>
+      ),
+    };
   }
 
   // ============================================================================
@@ -944,27 +864,15 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
     onClose();
   };
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'fixed',
-        left: `${coords.left}px`,
-        top: `${coords.top}px`,
-        zIndex: 9999,
-        boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-      }}
-      onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.preventDefault()}
-      className={`agv-context-menu w-[215px] p-1.5 rounded-md border backdrop-blur-md select-none transition-all agv-spring-zoom ${themeClasses.contextMenuBg}`}
-      data-agv-popup="true"
-    >
+  return {
+    width: 215,
+    content: (
       <div className="py-0.5 space-y-0.5">
         {/* Nếu click trên ô công thức (isFormula), cho phép đổi công thức trực tiếp */}
         {isFormulaCol && onSelectFormulaMode && (
           <div className="pb-1 mb-1 border-b border-[var(--agv-border)]">
             <div
-              className="text-[10px] font-bold uppercase tracking-wider mb-1 px-2.5 truncate"
+              className="text-xs font-bold uppercase tracking-wider mb-1 px-2.5 truncate"
               style={{ color: 'var(--agv-text-muted)' }}
             >
               Công thức
@@ -987,10 +895,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       onSelectFormulaMode(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
+                    className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] ${
                       isActive
-                        ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
-                        : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
+                        ? 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)] font-semibold'
+                        : 'text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -1027,10 +935,10 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     <button
                       type="button"
                       onClick={handleCycleSort}
-                      className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] ${
+                      className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] ${
                         isMonthSort
-                          ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-semibold'
-                          : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
+                          ? 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)] font-semibold'
+                          : 'text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]'
                       }`}
                     >
                       <span>{label}</span>
@@ -1046,14 +954,14 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
         <button
           type="button"
           onClick={handleCopyCell}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+          className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
           style={{ color: 'var(--agv-text-main)' }}
         >
           <span>Sao chép giá trị ô</span>
         </button>
 
         {/* Lọc theo giá trị ô */}
-        {column && (
+        {column && onFilterByValue && (
           <button
             type="button"
             disabled={isCellEmptyCol || column.filterable === false}
@@ -1065,13 +973,13 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                   : row?.cells instanceof Map
                   ? row.cells.get(column.key)?.value
                   : row?.[column.key];
-              onFilterByValue?.(column.key, val);
+              onFilterByValue(column.key, val);
               onClose();
             }}
-            className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition min-h-[28px] ${
+            className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs min-h-[28px] ${
               isCellEmptyCol || column.filterable === false
                 ? 'opacity-40 cursor-not-allowed'
-                : 'cursor-pointer hover:bg-[var(--agv-bg-hover)]'
+                : 'cursor-pointer hover:bg-[var(--popup-item-hover-bg)]'
             }`}
             style={{ color: 'var(--agv-text-main)' }}
           >
@@ -1091,7 +999,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                     onTogglePinRow();
                     onClose();
                   }}
-                  className={`w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)] ${
+                  className={`w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)] ${
                     isRowPinned ? 'text-[var(--agv-accent)] font-semibold' : ''
                   }`}
                   style={isRowPinned ? undefined : { color: 'var(--agv-text-main)' }}
@@ -1105,7 +1013,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                       onClearPinnedRows();
                       onClose();
                     }}
-                    className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+                    className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
                     style={{ color: 'var(--agv-text-main)' }}
                   >
                     <span>Bỏ ghim tất cả dòng ({pinnedRowCount})</span>
@@ -1120,7 +1028,7 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
                   onClearCheckedRows();
                   onClose();
                 }}
-                className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
                 style={{ color: 'var(--agv-text-main)' }}
               >
                 <span>Bỏ chọn tất cả dòng ({checkedRowCount.toLocaleString('vi-VN')})</span>
@@ -1129,34 +1037,72 @@ export const ColumnContextMenu: React.FC<ColumnContextMenuProps> = ({
           </>
         )}
 
-        <div className="my-1 border-b border-[var(--agv-border)]" />
+        {(onScrollToTop || onScrollToBottom) && (
+          <>
+            <div className="my-1 border-b border-[var(--agv-border)]" />
 
-        {/* Cuộn lên đầu */}
-        <button
-          type="button"
-          onClick={() => {
-            onScrollToTop?.();
-            onClose();
-          }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-          style={{ color: 'var(--agv-text-main)' }}
-        >
-          <span>Cuộn lên đầu</span>
-        </button>
+            {/* Cuộn lên đầu */}
+            {onScrollToTop && (
+              <button
+                type="button"
+                onClick={() => {
+                  onScrollToTop();
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                <span>Cuộn lên đầu</span>
+              </button>
+            )}
 
-        {/* Cuộn cuối trang */}
-        <button
-          type="button"
-          onClick={() => {
-            onScrollToBottom?.();
-            onClose();
-          }}
-          className="w-full flex items-center px-2.5 py-1.5 rounded-md text-left text-xs transition cursor-pointer min-h-[28px] hover:bg-[var(--agv-bg-hover)]"
-          style={{ color: 'var(--agv-text-main)' }}
-        >
-          <span>Cuộn cuối trang</span>
-        </button>
+            {/* Cuộn cuối trang */}
+            {onScrollToBottom && (
+              <button
+                type="button"
+                onClick={() => {
+                  onScrollToBottom();
+                  onClose();
+                }}
+                className="w-full flex items-center px-2.5 py-1.5 rounded-sm text-left text-xs cursor-pointer min-h-[28px] hover:bg-[var(--popup-item-hover-bg)]"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                <span>Cuộn cuối trang</span>
+              </button>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    ),
+  };
+  })();
+
+  if (!resolvedMenu) return null;
+
+  return (
+    <AdvAnchoredPopover
+      isOpen={true}
+      virtualAnchor={{ left: menu.x, top: menu.y }}
+      onClose={onClose}
+      placement="bottom-start"
+      showArrow={true}
+      offset={10}
+      width={resolvedMenu.width}
+      minWidth={resolvedMenu.width}
+      paddingClassName="p-0"
+      contentClassName="text-xs agv-context-menu"
+      zIndex={9999}
+      theme={surfaceTheme}
+      ignoreClickOutsideSelectors=""
+    >
+      <div
+        onContextMenu={(e) => e.preventDefault()}
+        className="p-1 rounded-md overflow-hidden select-none"
+      >
+        {resolvedMenu.content}
+      </div>
+    </AdvAnchoredPopover>
   );
 };
+
+export default ColumnContextMenu;

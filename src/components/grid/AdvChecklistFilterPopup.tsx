@@ -11,8 +11,13 @@ import { createPortal } from 'react-dom';
 import { Search, X, FilterX } from 'lucide-react';
 import { getThemeClass } from '../../themes';
 import { normalizeSearchText } from '../ui/enterpriseEditorUtils';
+import { AdvOverlayScroll } from '../ui/AdvOverlayScroll';
+import { AdvAnchoredPopover } from '../ui/AdvPopover';
+import { useVirtualList } from '../ui/useVirtualList';
 import { AdvCheckbox } from './AdvCheckbox';
-import { isNoInputFilterOp } from './gridUtils';
+import { MorphChevronIcon } from '../ui/MorphIcons';
+import { AdvButton } from '../ui/AdvButton';
+import { isNoInputFilterOp, parseDatePartsYMD, toDateKeyYMD } from './gridFormatUtils';
 import { FILTER_MODES, DATA_TYPES, SURFACE_THEMES } from './types';
 import { NO_AUTOFILL_PROPS } from './constants';
 
@@ -148,33 +153,20 @@ export interface AdvChecklistVirtualListProps {
 export const AdvChecklistVirtualList: React.FC<AdvChecklistVirtualListProps> = React.memo(
   ({ items, selectedSet, onToggle, formatDisplay, colKey, showBlanksInList }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const [scrollTop, setScrollTop] = useState(0);
+    const virtual = useVirtualList({
+      itemCount: items.length,
+      itemHeight: 28,
+      viewportRef: containerRef,
+      overscan: 6,
+      threshold: 1,
+      defaultViewportHeight: 224,
+    });
 
-    const ITEM_HEIGHT = 26;
-    const VIEWPORT_HEIGHT = 208; // 8 items hiển thị trong khung 208px
-    const BUFFER = 6;
-
-    const totalItems = items.length;
-    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER);
-    const endIndex = Math.min(
-      totalItems,
-      Math.ceil((scrollTop + VIEWPORT_HEIGHT) / ITEM_HEIGHT) + BUFFER
-    );
-
-    const visibleItems = items.slice(startIndex, endIndex);
-    const topSpacer = startIndex * ITEM_HEIGHT;
-    const bottomSpacer = Math.max(0, (totalItems - endIndex) * ITEM_HEIGHT);
+    const visibleItems = items.slice(virtual.startIndex, virtual.endIndex);
 
     useEffect(() => {
-      if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
-      }
-      setScrollTop(0);
+      virtual.resetScroll();
     }, [items]);
-
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-      setScrollTop(e.currentTarget.scrollTop);
-    };
 
     if (items.length === 0 && !showBlanksInList) {
       return (
@@ -185,16 +177,17 @@ export const AdvChecklistVirtualList: React.FC<AdvChecklistVirtualListProps> = R
     }
 
     return (
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="max-h-52 overflow-y-auto px-2 py-1 pb-1.5 overscroll-contain select-none"
-        style={{ maxHeight: '208px' }}
+      <AdvOverlayScroll
+        viewportRef={containerRef}
+        onScroll={virtual.handleScroll}
+        viewportClassName="max-h-56 overflow-y-auto overflow-x-hidden p-1 overscroll-contain select-none"
+        viewportStyle={{ maxHeight: '224px' }}
+        contentSignature={items.length}
       >
-        {topSpacer > 0 && (
+        {virtual.topSpacer > 0 && (
           <div
             className="agv-checklist-spacer-top pointer-events-none select-none"
-            style={{ height: `${topSpacer}px` }}
+            style={{ height: `${virtual.topSpacer}px` }}
             aria-hidden="true"
           />
         )}
@@ -206,7 +199,7 @@ export const AdvChecklistVirtualList: React.FC<AdvChecklistVirtualListProps> = R
             <div
               key={String(val)}
               onClick={() => onToggle(val)}
-              className="flex h-[26px] cursor-pointer select-none items-center gap-2 rounded px-1.5 text-xs text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]"
+              className="flex h-[28px] min-h-[28px] cursor-pointer select-none items-center gap-2 rounded-sm px-2 text-xs text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
             >
               <AdvCheckbox checked={isChecked} />
               <span className="truncate">
@@ -215,18 +208,385 @@ export const AdvChecklistVirtualList: React.FC<AdvChecklistVirtualListProps> = R
             </div>
           );
         })}
-        {bottomSpacer > 0 && (
+        {virtual.bottomSpacer > 0 && (
           <div
             className="agv-checklist-spacer-bottom pointer-events-none select-none"
-            style={{ height: `${bottomSpacer}px` }}
+            style={{ height: `${virtual.bottomSpacer}px` }}
             aria-hidden="true"
           />
         )}
-      </div>
+      </AdvOverlayScroll>
     );
   }
 );
 AdvChecklistVirtualList.displayName = 'AdvChecklistVirtualList';
+
+/* ==============================================================================
+   4B. CÂY LỌC THỜI GIAN PHÂN CẤP (Năm -> Tháng -> Ngày) & ẢO HÓA DOM
+   ============================================================================== */
+interface ChecklistDateDayNode {
+  key: string; // 'YYYY-MM-DD'
+  day: number;
+  dayLabel: string; // '01'..'31'
+  fullLabel: string; // '01/08/2026'
+}
+
+interface ChecklistDateMonthNode {
+  key: string; // 'YYYY-MM'
+  year: number;
+  month: number;
+  label: string; // 'Tháng 08'
+  days: ChecklistDateDayNode[];
+  dayKeys: string[];
+}
+
+interface ChecklistDateYearNode {
+  key: string; // 'YYYY'
+  year: number;
+  label: string; // '2026'
+  months: ChecklistDateMonthNode[];
+  dayKeys: string[];
+  isDefaultExpanded: boolean;
+}
+
+type ChecklistDateTreeRow =
+  | { kind: 'year'; node: ChecklistDateYearNode; isExpanded: boolean }
+  | { kind: 'month'; node: ChecklistDateMonthNode; isExpanded: boolean }
+  | { kind: 'day'; node: ChecklistDateDayNode }
+  | { kind: 'raw'; value: string };
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function buildFilteredDateTree(
+  rawValues: string[],
+  q: string,
+  noToneQ: string
+): {
+  years: ChecklistDateYearNode[];
+  unparsed: string[];
+  matchingKeys: string[];
+} {
+  const yearMap = new Map<
+    number,
+    Map<number, Map<number, ChecklistDateDayNode>>
+  >();
+  const unparsedAll: string[] = [];
+  const seenUnparsed = new Set<string>();
+
+  for (let i = 0; i < rawValues.length; i++) {
+    const raw = rawValues[i];
+    const parsed = parseDatePartsYMD(raw);
+    if (!parsed) {
+      const str = String(raw).trim();
+      if (str && !seenUnparsed.has(str)) {
+        seenUnparsed.add(str);
+        unparsedAll.push(str);
+      }
+      continue;
+    }
+
+    let monthMap = yearMap.get(parsed.year);
+    if (!monthMap) {
+      monthMap = new Map();
+      yearMap.set(parsed.year, monthMap);
+    }
+    let dayMap = monthMap.get(parsed.month);
+    if (!dayMap) {
+      dayMap = new Map();
+      monthMap.set(parsed.month, dayMap);
+    }
+    if (!dayMap.has(parsed.day)) {
+      const dd = pad2(parsed.day);
+      const mm = pad2(parsed.month);
+      dayMap.set(parsed.day, {
+        key: parsed.key,
+        day: parsed.day,
+        dayLabel: dd,
+        fullLabel: `${dd}/${mm}/${parsed.year}`,
+      });
+    }
+  }
+
+  const sortedYears = Array.from(yearMap.keys()).sort((a, b) => b - a);
+  const years: ChecklistDateYearNode[] = [];
+  const matchingKeys: string[] = [];
+
+  for (let yi = 0; yi < sortedYears.length; yi++) {
+    const y = sortedYears[yi];
+    const yStr = String(y);
+    const yMatches = Boolean(q) && yStr.includes(q);
+    const monthMap = yearMap.get(y)!;
+    const sortedMonths = Array.from(monthMap.keys()).sort((a, b) => a - b);
+
+    const months: ChecklistDateMonthNode[] = [];
+    const yDayKeys: string[] = [];
+
+    for (let mi = 0; mi < sortedMonths.length; mi++) {
+      const m = sortedMonths[mi];
+      const mPad = pad2(m);
+      const mLabel = `Tháng ${mPad}`;
+      const mSearchStr = `${mLabel} thang ${m} thang ${mPad} ${mPad}/${yStr} ${m}/${yStr} ${yStr}-${mPad}`.toLowerCase();
+      const mMatches =
+        Boolean(q) &&
+        (mSearchStr.includes(q) || normalizeSearchText(mSearchStr).includes(noToneQ));
+
+      const dayMap = monthMap.get(m)!;
+      const sortedDays = Array.from(dayMap.keys()).sort((a, b) => a - b);
+      const days: ChecklistDateDayNode[] = [];
+      const mDayKeys: string[] = [];
+
+      for (let di = 0; di < sortedDays.length; di++) {
+        const dNode = dayMap.get(sortedDays[di])!;
+        if (q && !yMatches && !mMatches) {
+          const dayMatches =
+            dNode.dayLabel.includes(q) ||
+            dNode.fullLabel.includes(q) ||
+            dNode.key.includes(q);
+          if (!dayMatches) continue;
+        }
+        days.push(dNode);
+        mDayKeys.push(dNode.key);
+        yDayKeys.push(dNode.key);
+        matchingKeys.push(dNode.key);
+      }
+
+      if (days.length > 0) {
+        months.push({
+          key: `${yStr}-${mPad}`,
+          year: y,
+          month: m,
+          label: mLabel,
+          days,
+          dayKeys: mDayKeys,
+        });
+      }
+    }
+
+    if (months.length > 0) {
+      years.push({
+        key: yStr,
+        year: y,
+        label: yStr,
+        months,
+        dayKeys: yDayKeys,
+        isDefaultExpanded: yi === 0,
+      });
+    }
+  }
+
+  const unparsed = q
+    ? unparsedAll.filter((v) => {
+        const lower = v.toLowerCase();
+        return lower.includes(q) || normalizeSearchText(lower).includes(noToneQ);
+      })
+    : unparsedAll;
+
+  for (let i = 0; i < unparsed.length; i++) {
+    matchingKeys.push(unparsed[i]);
+  }
+
+  return { years, unparsed, matchingKeys };
+}
+
+interface AdvChecklistDateTreeListProps {
+  years: ChecklistDateYearNode[];
+  unparsed: string[];
+  isSearching: boolean;
+  selectedSet: Set<any>;
+  onToggleMany: (keys: string[], shouldSelect: boolean) => void;
+  expandedMap: Record<string, boolean>;
+  onToggleExpand: (nodeKey: string, defaultExpanded: boolean) => void;
+  showBlanksInList: boolean;
+}
+
+const AdvChecklistDateTreeList: React.FC<AdvChecklistDateTreeListProps> = React.memo(
+  ({
+    years,
+    unparsed,
+    isSearching,
+    selectedSet,
+    onToggleMany,
+    expandedMap,
+    onToggleExpand,
+    showBlanksInList,
+  }) => {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    const flatRows = useMemo<ChecklistDateTreeRow[]>(() => {
+      const rows: ChecklistDateTreeRow[] = [];
+      for (let yi = 0; yi < years.length; yi++) {
+        const yNode = years[yi];
+        const yExpanded = isSearching
+          ? true
+          : (expandedMap[yNode.key] ?? yNode.isDefaultExpanded);
+        rows.push({ kind: 'year', node: yNode, isExpanded: yExpanded });
+        if (!yExpanded) continue;
+
+        for (let mi = 0; mi < yNode.months.length; mi++) {
+          const mNode = yNode.months[mi];
+          const mExpanded = isSearching ? true : Boolean(expandedMap[mNode.key]);
+          rows.push({ kind: 'month', node: mNode, isExpanded: mExpanded });
+          if (!mExpanded) continue;
+
+          for (let di = 0; di < mNode.days.length; di++) {
+            rows.push({ kind: 'day', node: mNode.days[di] });
+          }
+        }
+      }
+      for (let i = 0; i < unparsed.length; i++) {
+        rows.push({ kind: 'raw', value: unparsed[i] });
+      }
+      return rows;
+    }, [years, unparsed, isSearching, expandedMap]);
+
+    const virtual = useVirtualList({
+      itemCount: flatRows.length,
+      itemHeight: 28,
+      viewportRef: containerRef,
+      overscan: 6,
+      threshold: 1,
+      defaultViewportHeight: 224,
+    });
+
+    const visibleRows = flatRows.slice(virtual.startIndex, virtual.endIndex);
+
+    useEffect(() => {
+      if (isSearching) {
+        virtual.resetScroll();
+      }
+    }, [isSearching, years.length]);
+
+    if (flatRows.length === 0 && !showBlanksInList) {
+      return (
+        <div className="max-h-52 px-2 py-4 text-center text-xs italic text-[var(--agv-text-muted)]">
+          Không tìm thấy giá trị phù hợp
+        </div>
+      );
+    }
+
+    return (
+      <AdvOverlayScroll
+        viewportRef={containerRef}
+        onScroll={virtual.handleScroll}
+        viewportClassName="max-h-56 overflow-y-auto overflow-x-hidden p-1 overscroll-contain select-none"
+        viewportStyle={{ maxHeight: '224px' }}
+        contentSignature={flatRows.length}
+      >
+        {virtual.topSpacer > 0 && (
+          <div
+            className="agv-checklist-spacer-top pointer-events-none select-none"
+            style={{ height: `${virtual.topSpacer}px` }}
+            aria-hidden="true"
+          />
+        )}
+        {visibleRows.map((row) => {
+          if (row.kind === 'year') {
+            const { node, isExpanded } = row;
+            let selectedCount = 0;
+            for (let i = 0; i < node.dayKeys.length; i++) {
+              if (selectedSet.has(node.dayKeys[i])) selectedCount++;
+            }
+            const isAll = selectedCount > 0 && selectedCount === node.dayKeys.length;
+            const isSome = selectedCount > 0 && selectedCount < node.dayKeys.length;
+
+            return (
+              <div
+                key={`y:${node.key}`}
+                onClick={() => onToggleMany(node.dayKeys, !isAll)}
+                className="flex h-[28px] min-h-[28px] cursor-pointer select-none items-center gap-1 rounded-sm pl-1 pr-2 text-xs font-medium text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
+              >
+                <AdvButton
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand(node.key, node.isDefaultExpanded);
+                  }}
+                  aria-label={isExpanded ? `Thu gọn năm ${node.label}` : `Mở rộng năm ${node.label}`}
+                  className="rounded-sm"
+                >
+                  <MorphChevronIcon expanded={isExpanded} size={14} spring="snappy" />
+                </AdvButton>
+                <AdvCheckbox checked={isAll} indeterminate={isSome} />
+                <span className="ml-1 truncate">{node.label}</span>
+              </div>
+            );
+          }
+
+          if (row.kind === 'month') {
+            const { node, isExpanded } = row;
+            let selectedCount = 0;
+            for (let i = 0; i < node.dayKeys.length; i++) {
+              if (selectedSet.has(node.dayKeys[i])) selectedCount++;
+            }
+            const isAll = selectedCount > 0 && selectedCount === node.dayKeys.length;
+            const isSome = selectedCount > 0 && selectedCount < node.dayKeys.length;
+
+            return (
+              <div
+                key={`m:${node.key}`}
+                onClick={() => onToggleMany(node.dayKeys, !isAll)}
+                className="flex h-[28px] min-h-[28px] cursor-pointer select-none items-center gap-1 rounded-sm pl-4 pr-2 text-xs text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
+              >
+                <AdvButton
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand(node.key, false);
+                  }}
+                  aria-label={isExpanded ? `Thu gọn ${node.label}` : `Mở rộng ${node.label}`}
+                  className="rounded-sm"
+                >
+                  <MorphChevronIcon expanded={isExpanded} size={14} spring="snappy" />
+                </AdvButton>
+                <AdvCheckbox checked={isAll} indeterminate={isSome} />
+                <span className="ml-1 truncate">{node.label}</span>
+              </div>
+            );
+          }
+
+          if (row.kind === 'day') {
+            const { node } = row;
+            const isChecked = selectedSet.has(node.key);
+            return (
+              <div
+                key={`d:${node.key}`}
+                onClick={() => onToggleMany([node.key], !isChecked)}
+                className="flex h-[28px] min-h-[28px] cursor-pointer select-none items-center gap-2 rounded-sm pl-[60px] pr-2 text-xs text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
+              >
+                <AdvCheckbox checked={isChecked} />
+                <span className="truncate">{node.dayLabel}</span>
+              </div>
+            );
+          }
+
+          const isChecked = selectedSet.has(row.value);
+          return (
+            <div
+              key={`r:${row.value}`}
+              onClick={() => onToggleMany([row.value], !isChecked)}
+              className="flex h-[28px] min-h-[28px] cursor-pointer select-none items-center gap-2 rounded-sm px-2 text-xs text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
+            >
+              <AdvCheckbox checked={isChecked} />
+              <span className="truncate">{row.value}</span>
+            </div>
+          );
+        })}
+        {virtual.bottomSpacer > 0 && (
+          <div
+            className="agv-checklist-spacer-bottom pointer-events-none select-none"
+            style={{ height: `${virtual.bottomSpacer}px` }}
+            aria-hidden="true"
+          />
+        )}
+      </AdvOverlayScroll>
+    );
+  }
+);
+AdvChecklistDateTreeList.displayName = 'AdvChecklistDateTreeList';
 
 /* ==============================================================================
    5. ADVCHECKLIST FILTER POPUP (Isolated Component - Zero Re-render bảng chính)
@@ -234,11 +594,11 @@ AdvChecklistVirtualList.displayName = 'AdvChecklistVirtualList';
 export interface AdvChecklistFilterPopupRef {
   open: (
     colKey: string,
-    coords: { top: number; left: number; bottom?: number; isFlipUp?: boolean },
+    coords: { top: number; left: number; bottom?: number; isFlipUp?: boolean; anchorEl?: HTMLElement | null },
     curFilter: any
   ) => void;
   close: () => void;
-  updateCoords: (coords: { top: number; left: number; bottom?: number; isFlipUp?: boolean }) => void;
+  updateCoords: (coords: { top: number; left: number; bottom?: number; isFlipUp?: boolean; anchorEl?: HTMLElement | null }) => void;
   isOpen: () => boolean;
   isOpenFor: (colKey: string) => boolean;
   getActiveCol: () => string | null;
@@ -266,6 +626,7 @@ export interface AdvChecklistFilterPopupProps {
   ) => boolean;
   onApply: (colKey: string, selected: Set<any>, includeBlanks: boolean) => void;
   onClear: (colKey: string) => void;
+  onActiveColChange?: (colKey: string | null) => void;
 }
 
 export const AdvChecklistFilterPopup = forwardRef<
@@ -280,32 +641,56 @@ export const AdvChecklistFilterPopup = forwardRef<
     getDistinctValues,
     columnDataTypes = {},
     distinctValuesCacheRef,
-    surfaceTheme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+    surfaceTheme = SURFACE_THEMES.LIGHT,
     portalRoot,
     formatChecklistDisplay = (_k, v) => String(v ?? ''),
     matchFilterValue,
     onApply,
     onClear,
+    onActiveColChange,
   } = props;
 
   const [activeCol, setActiveCol] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number; bottom?: number; isFlipUp?: boolean }>({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top: number; left: number; bottom?: number; isFlipUp?: boolean; anchorEl?: HTMLElement | null }>({ top: 0, left: 0 });
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<any>>(new Set());
   const [includeBlanks, setIncludeBlanks] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<any>(null);
+  const [expandedDateNodes, setExpandedDateNodes] = useState<Record<string, boolean>>({});
+  const columnDataTypesRef = useRef(columnDataTypes);
+  columnDataTypesRef.current = columnDataTypes;
   const popupRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    onActiveColChange?.(activeCol);
+  }, [activeCol, onActiveColChange]);
+
+  useEffect(() => {
+    return () => {
+      onActiveColChange?.(null);
+    };
+  }, [onActiveColChange]);
 
   useImperativeHandle(
     ref,
     () => ({
-      open: (colKey: string, nextCoords: { top: number; left: number; bottom?: number; isFlipUp?: boolean }, curFilter: any) => {
+      open: (colKey: string, nextCoords: { top: number; left: number; bottom?: number; isFlipUp?: boolean; anchorEl?: HTMLElement | null }, curFilter: any) => {
         setActiveCol(colKey);
         setCoords(nextCoords);
         setSearch('');
+        setExpandedDateNodes({});
         setCurrentFilter(curFilter || null);
         if (Array.isArray(curFilter?.selectedValues) && curFilter.selectedValues.length > 0) {
-          setSelected(new Set(curFilter.selectedValues));
+          const isDateCol = columnDataTypesRef.current[colKey] === DATA_TYPES.DATE;
+          if (isDateCol) {
+            setSelected(
+              new Set(
+                curFilter.selectedValues.map((v: any) => toDateKeyYMD(v) || String(v).trim())
+              )
+            );
+          } else {
+            setSelected(new Set(curFilter.selectedValues));
+          }
         } else {
           setSelected(new Set());
         }
@@ -314,7 +699,7 @@ export const AdvChecklistFilterPopup = forwardRef<
       close: () => {
         setActiveCol(null);
       },
-      updateCoords: (nextCoords: { top: number; left: number; bottom?: number; isFlipUp?: boolean }) => {
+      updateCoords: (nextCoords: { top: number; left: number; bottom?: number; isFlipUp?: boolean; anchorEl?: HTMLElement | null }) => {
         setCoords(nextCoords);
       },
       isOpen: () => activeCol !== null,
@@ -326,7 +711,7 @@ export const AdvChecklistFilterPopup = forwardRef<
 
   // Click outside listener tự động đóng popup theo quy tắc AGENTS.md
   useEffect(() => {
-    if (!activeCol) return;
+    if (!activeCol || coords.anchorEl) return;
 
     const handlePointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement | null;
@@ -343,7 +728,7 @@ export const AdvChecklistFilterPopup = forwardRef<
       document.removeEventListener('mousedown', handlePointerDown, true);
       document.removeEventListener('touchstart', handlePointerDown, true);
     };
-  }, [activeCol]);
+  }, [activeCol, coords.anchorEl]);
 
   // Kiểm tra xem Row Filter có đang hoạt động trên cột này không
   const isRowFilterActive = useMemo(() => {
@@ -404,8 +789,15 @@ export const AdvChecklistFilterPopup = forwardRef<
   // Lọc danh sách theo từ khóa tìm kiếm bên trong popup
   const q = search.trim().toLowerCase();
   const noToneQ = q ? normalizeSearchText(q) : '';
+  const isDateCol = dType === DATA_TYPES.DATE;
 
-  const filteredValues = q
+  const dateTreeData = isDateCol
+    ? buildFilteredDateTree(baseValues, q, noToneQ)
+    : null;
+
+  const filteredValues = isDateCol
+    ? dateTreeData!.matchingKeys
+    : q
     ? baseValues.filter((v) => {
         const s = String(v).toLowerCase();
         if (s.includes(q)) return true;
@@ -466,6 +858,23 @@ export const AdvChecklistFilterPopup = forwardRef<
     }
   };
 
+  const handleToggleDateKeys = (keys: string[], shouldSelect: boolean) => {
+    const next = new Set(selected);
+    for (let i = 0; i < keys.length; i++) {
+      if (shouldSelect) next.add(keys[i]);
+      else next.delete(keys[i]);
+    }
+    setSelected(next);
+    onApply(activeCol, next, includeBlanks);
+  };
+
+  const handleToggleDateExpand = (nodeKey: string, defaultExpanded: boolean) => {
+    setExpandedDateNodes((prev) => ({
+      ...prev,
+      [nodeKey]: !(prev[nodeKey] ?? defaultExpanded),
+    }));
+  };
+
   const hasSelected = selected.size > 0 || includeBlanks;
 
   const handleClearSelected = (e: React.MouseEvent) => {
@@ -475,39 +884,11 @@ export const AdvChecklistFilterPopup = forwardRef<
     onClear(activeCol);
   };
 
-  const popupContent = (
-    <div
-      ref={popupRef}
-      style={{
-        position: 'fixed',
-        ...(coords.isFlipUp
-          ? { bottom: `${coords.bottom}px`, top: 'auto' }
-          : { top: `${coords.top}px`, bottom: 'auto' }),
-        left: `${coords.left}px`,
-        zIndex: 99999999,
-        backgroundColor: 'var(--agv-bg-popup)',
-        borderColor: 'var(--agv-border-popup, var(--agv-border))',
-        boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-        color: 'var(--agv-text-main)',
-        width: '270px',
-        maxWidth: '90vw',
-        maxHeight: 'calc(100vh - 20px)',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-      className={`agv-checklist-filter-popup flex flex-col rounded-md border text-xs overflow-hidden select-none ${
-        coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-      } ${getThemeClass(
-        surfaceTheme as any
-      )}`}
-      data-theme={surfaceTheme}
-      data-agv-popup="true"
-      onClick={(e) => e.stopPropagation()}
-      onWheel={(e) => e.stopPropagation()}
-    >
+  const checklistBody = (
+    <>
       {/* 1. Ô tìm kiếm giá trị (No Autofill theo chuẩn AGENTS.md) */}
       <div className="border-b border-[var(--agv-border)] p-1.5">
-        <div className="relative flex items-center w-full h-[28px] min-h-[28px] rounded border border-[var(--agv-border)] bg-[var(--agv-bg-root)] px-2">
+        <div className="agv-control agv-control-box relative flex items-center w-full h-[28px] min-h-[28px] px-2">
           <Search size={14} className="text-[var(--agv-text-muted)] mr-1.5 shrink-0" />
           <input
             name="agv_checklist_search_no_autofill"
@@ -527,7 +908,7 @@ export const AdvChecklistFilterPopup = forwardRef<
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="text-agv-text-muted hover:text-agv-accent p-0.5 transition cursor-pointer shrink-0 mr-1"
+              className="agv-inline-clear-ghost p-0.5 shrink-0 mr-1"
             >
               <X size={10} strokeWidth={2.5} />
             </button>
@@ -540,7 +921,7 @@ export const AdvChecklistFilterPopup = forwardRef<
             disabled={!hasSelected}
             className={`p-1 transition shrink-0 flex items-center justify-center rounded ${
               hasSelected
-                ? 'text-[var(--agv-danger, #ef4444)] hover:bg-[var(--agv-bg-item-hover)] cursor-pointer'
+                ? 'text-[var(--agv-danger)] hover:bg-[var(--agv-danger-bg)] cursor-pointer'
                 : 'text-[var(--agv-text-muted)] opacity-25 cursor-not-allowed'
             }`}
           >
@@ -550,10 +931,10 @@ export const AdvChecklistFilterPopup = forwardRef<
       </div>
 
       {/* 2. Tùy chọn (Tất cả) & (Trống) */}
-      <div className="border-b border-[var(--agv-border)] bg-[var(--agv-bg-popup)] px-2 pb-1 pt-1 text-xs">
+      <div className="border-b border-[var(--agv-border)] bg-[var(--agv-bg-popup)] p-1 text-xs">
         <div
           onClick={handleToggleAll}
-          className="flex cursor-pointer select-none items-center gap-2 rounded px-1.5 py-1 text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]"
+          className="flex min-h-[28px] cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1 text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
         >
           <AdvCheckbox checked={isAllChecked} indeterminate={isSomeChecked} />
           <span className="font-medium text-[var(--agv-text-main)]">(Tất cả)</span>
@@ -566,7 +947,7 @@ export const AdvChecklistFilterPopup = forwardRef<
               setIncludeBlanks(nextInclude);
               onApply(activeCol, selected, nextInclude);
             }}
-            className="flex cursor-pointer select-none items-center gap-2 rounded px-1.5 py-1 text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]"
+            className="flex min-h-[28px] cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1 text-[var(--agv-text-main)] hover:bg-[var(--popup-item-hover-bg)]"
           >
             <AdvCheckbox checked={includeBlanks} />
             <span className="italic text-[var(--agv-text-muted)]">(Trống)</span>
@@ -574,26 +955,94 @@ export const AdvChecklistFilterPopup = forwardRef<
         )}
       </div>
 
-      {/* 3. Danh sách giá trị phân biệt - Ảo hóa DOM (Virtual List ~15-20 node) */}
-      <AdvChecklistVirtualList
-        items={filteredValues}
-        selectedSet={selected}
-        onToggle={(val) => {
-          const next = new Set(selected);
-          if (next.has(val)) next.delete(val);
-          else next.add(val);
-          setSelected(next);
-          onApply(activeCol, next, includeBlanks);
-        }}
-        formatDisplay={formatChecklistDisplay}
-        colKey={activeCol}
-        showBlanksInList={showBlanksInList}
-      />
-    </div>
+      {/* 3. Danh sách giá trị phân biệt - Ảo hóa DOM (Cây Năm/Tháng/Ngày cho cột DATE hoặc List phẳng) */}
+      {isDateCol && dateTreeData ? (
+        <AdvChecklistDateTreeList
+          years={dateTreeData.years}
+          unparsed={dateTreeData.unparsed}
+          isSearching={q.length > 0}
+          selectedSet={selected}
+          onToggleMany={handleToggleDateKeys}
+          expandedMap={expandedDateNodes}
+          onToggleExpand={handleToggleDateExpand}
+          showBlanksInList={showBlanksInList}
+        />
+      ) : (
+        <AdvChecklistVirtualList
+          items={filteredValues}
+          selectedSet={selected}
+          onToggle={(val) => {
+            const next = new Set(selected);
+            if (next.has(val)) next.delete(val);
+            else next.add(val);
+            setSelected(next);
+            onApply(activeCol, next, includeBlanks);
+          }}
+          formatDisplay={formatChecklistDisplay}
+          colKey={activeCol}
+          showBlanksInList={showBlanksInList}
+        />
+      )}
+    </>
   );
 
+  if (coords.anchorEl) {
+    return (
+      <AdvAnchoredPopover
+        isOpen={Boolean(activeCol)}
+        anchorEl={coords.anchorEl}
+        onClose={() => setActiveCol(null)}
+        placement="bottom-end"
+        showArrow={true}
+        offset={10}
+        width={270}
+        minWidth={240}
+        maxWidth="90vw"
+        paddingClassName="p-0"
+        contentClassName="text-xs"
+        zIndex={99999999}
+        theme={surfaceTheme}
+        ignoreClickOutsideSelectors=".agv-header-filter-btn, [data-checklist-trigger], [data-agv-popover-trigger='true']"
+      >
+        <div className="flex max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-md text-xs select-none">
+          {checklistBody}
+        </div>
+      </AdvAnchoredPopover>
+    );
+  }
+
   return createPortal(
-    popupContent,
+    <div
+      ref={popupRef}
+      style={{
+        position: 'fixed',
+        ...(coords.isFlipUp
+          ? { bottom: `${coords.bottom}px`, top: 'auto' }
+          : { top: `${coords.top}px`, bottom: 'auto' }),
+        left: `${coords.left}px`,
+        zIndex: 99999999,
+        backgroundColor: 'var(--popup-background)',
+        borderColor: 'var(--popup-border)',
+        boxShadow: 'var(--popup-shadow)',
+        color: 'var(--agv-text-main)',
+        width: '270px',
+        maxWidth: '90vw',
+        maxHeight: 'calc(100vh - 20px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      className={`agv-checklist-filter-popup agv-popup-panel flex flex-col rounded-md border text-xs overflow-hidden select-none ${
+        coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
+      } ${getThemeClass(
+        surfaceTheme as any
+      )}`}
+      data-theme={surfaceTheme}
+      data-agv-popup="true"
+      onClick={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+    >
+      {checklistBody}
+    </div>,
     portalRoot || (typeof document !== 'undefined' ? document.body : (null as any))
   );
 });

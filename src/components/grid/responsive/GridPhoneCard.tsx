@@ -1,13 +1,23 @@
-import React, { memo } from 'react';
-import { SurfaceTheme } from '../types';
-import { MorphCheckbox, MorphChevronIcon } from '../../ui/MorphIcons';
-import { formatGridNumber, getOrComputeMonthStats } from '../gridUtils';
-import { TwelveMonthChartCell } from '../../../demo/TwelveMonthChartCell';
+import React, { memo, useMemo } from 'react';
+import { CellRenderParams, ColumnDef, SurfaceTheme } from '../types';
+import { MorphCheckbox } from '../../ui/MorphCheckbox';
+import { MorphChevronIcon } from '../../ui/MorphIcons';
+import { AdvButton } from '../../ui/AdvButton';
+import {
+  type CompiledPhoneCard,
+  type CompiledTabletLine,
+  compilePhoneCard,
+  extractResponsiveRawValue,
+  renderResponsiveField,
+  resolveCompiledLineLabel,
+} from './responsiveColumnUtils';
 
 export interface GridPhoneCardProps<T = any> {
   row: T;
   rowIndex: number;
   rowKey: string | number;
+  columns: ColumnDef<T>[];
+  compiledPhoneCard?: CompiledPhoneCard<T>;
   rowHeight: number;
   isSelected: boolean;
   isChecked: boolean;
@@ -15,16 +25,22 @@ export interface GridPhoneCardProps<T = any> {
   showRowNumber?: boolean;
   showSelectionCol?: boolean;
   onToggleExpand?: (rowKey: string | number, rowIndex: number) => void;
-  onSelectRow?: (rowIndex: number, row: any) => void;
-  onToggleCheck?: (rowIndex: number, row: any, e: React.MouseEvent) => void;
+  onSelectRow?: (rowIndex: number, row: T) => void;
+  onRowDetail?: (row: T, rowIndex: number) => void;
+  onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+  onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
   surfaceTheme: SurfaceTheme;
+  renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
+  allowTextSelection?: boolean;
 }
 
-export const GridPhoneCard = memo(<T extends any>({
+function GridPhoneCardInner<T = any>({
   row,
   rowIndex,
   rowKey,
-  rowHeight = 104,
+  columns,
+  compiledPhoneCard,
+  rowHeight = 108,
   isSelected,
   isChecked,
   isExpanded = false,
@@ -32,48 +48,115 @@ export const GridPhoneCard = memo(<T extends any>({
   showSelectionCol = true,
   onToggleExpand,
   onSelectRow,
+  onRowDetail,
   onToggleCheck,
-  surfaceTheme,
-}: GridPhoneCardProps<T>) => {
+  onCellContextMenu,
+  renderCell,
+  allowTextSelection = false,
+}: GridPhoneCardProps<T>) {
+  const plan = useMemo(
+    () => compiledPhoneCard ?? compilePhoneCard(columns),
+    [compiledPhoneCard, columns]
+  );
 
   const r = row as any;
-  const nodeTitle = r.col_node || r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
-  const rowId = r.col_id || r.id || (typeof rowKey === 'string' && isNaN(Number(rowKey)) ? rowKey : undefined) || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
-  const region = r.col_region || r.region || 'US-East';
-  const status = (r.col_status || r.status || 'ONLINE').toUpperCase();
-  const cpu = typeof r.col_dec_cpu === 'number' ? r.col_dec_cpu : typeof r.cpu === 'number' ? r.cpu : 45.5;
-  const sla = typeof r.col_dec_sla === 'number' ? r.col_dec_sla : typeof r.sla === 'number' ? r.sla : 99.8;
-  const ngaygd = r.col_date || r.ngaygd || r.date || '28/10/2026';
-  const thoigian = r.col_time || r.thoigian || r.time || '15:30:00';
-  const formulaVal = r.col_formula !== undefined ? r.col_formula : 78.4;
+  const slotHeight =
+    isExpanded && plan.hasExpandableDrawer ? rowHeight + plan.extraHeight : rowHeight;
+  const cardHeight = slotHeight - 8;
 
-  let statusBadgeStyle: React.CSSProperties = {
-    backgroundColor: 'var(--agv-bg-subtle, rgba(16, 185, 129, 0.12))',
-    color: 'var(--agv-success, #10b981)',
-    border: '1px solid var(--agv-border-subtle, rgba(16, 185, 129, 0.25))',
-  };
-  if (status === 'DEGRADED') {
-    statusBadgeStyle = {
-      backgroundColor: 'var(--agv-bg-subtle, rgba(245, 158, 11, 0.12))',
-      color: 'var(--agv-warning, #f59e0b)',
-      border: '1px solid var(--agv-border-subtle, rgba(245, 158, 11, 0.25))',
-    };
-  } else if (status === 'OVERLOAD') {
-    statusBadgeStyle = {
-      backgroundColor: 'var(--agv-bg-subtle, rgba(239, 68, 68, 0.12))',
-      color: 'var(--agv-danger, #ef4444)',
-      border: '1px solid var(--agv-border-subtle, rgba(239, 68, 68, 0.25))',
-    };
+  if (r?._isGroupRow) {
+    return (
+      <div
+        style={{
+          height: `${rowHeight}px`,
+          maxHeight: `${rowHeight}px`,
+          padding: '4px 8px',
+          boxSizing: 'border-box',
+        }}
+        className="agv-phone-card-slot w-full shrink-0"
+      >
+        <div
+          onClick={() => r.onToggleCollapse?.()}
+          data-row-idx={rowIndex}
+          style={{
+            height: `${rowHeight - 8}px`,
+            maxHeight: `${rowHeight - 8}px`,
+            boxSizing: 'border-box',
+            backgroundColor: 'var(--agv-bg-header, var(--agv-bg-row-alt))',
+            borderColor: 'var(--agv-border)',
+          }}
+          className="agv-group-row w-full rounded-xl border p-3 text-xs select-none cursor-pointer flex items-center justify-between gap-2"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <MorphChevronIcon expanded={Boolean(r.isExpanded)} size={16} spring="snappy" />
+            <span className="font-semibold truncate" style={{ color: 'var(--agv-text-main)' }}>
+              {String(r.groupValue ?? '')}
+            </span>
+          </div>
+          <span className="text-xs shrink-0" style={{ color: 'var(--agv-text-muted)' }}>
+            ({r.count ?? 0})
+          </span>
+        </div>
+      </div>
+    );
   }
 
-  const isCpuHigh = Number(cpu) > 70;
-  const isSlaLow = Number(sla) < 98;
+  const canExpand = plan.hasExpandableDrawer || isExpanded;
 
-  // Thống kê 12 tháng chuẩn hệ thống (tái sử dụng O(1) qua WeakMap)
-  const monthStats = getOrComputeMonthStats(row);
+  const renderField = (col: ColumnDef<T>, colIndex: number) =>
+    renderResponsiveField({
+      row,
+      rowIndex,
+      colIndex,
+      col,
+      isSelected,
+      isChecked,
+      renderCell,
+    });
 
-  const slotHeight = isExpanded ? rowHeight + 150 : rowHeight;
-  const cardHeight = slotHeight - 8;
+  const renderLineValue = (line: CompiledTabletLine<T>): React.ReactNode => {
+    if (!line.joinCols || line.joinCols.length === 0) {
+      return renderField(line.col, line.colIndex);
+    }
+    const candidates = [
+      { col: line.col, colIndex: line.colIndex },
+      ...line.joinCols,
+    ].filter((item) => {
+      const raw = extractResponsiveRawValue(row, item.col, rowIndex);
+      return raw !== null && raw !== undefined && String(raw).trim() !== '';
+    });
+    if (candidates.length === 0) {
+      return '—';
+    }
+    return candidates.map((item, idx) => (
+      <React.Fragment key={item.col.key}>
+        {idx > 0 && (
+          <span className="mx-1 font-medium" style={{ color: 'var(--agv-text-muted)' }}>
+            {line.joinSeparator.trim() || '·'}
+          </span>
+        )}
+        {renderField(item.col, item.colIndex)}
+      </React.Fragment>
+    ));
+  };
+
+  const renderLabeledLine = (line: CompiledTabletLine<T>): React.ReactNode => {
+    const label = resolveCompiledLineLabel(line, row, rowIndex);
+    return (
+      <>
+        {label ? <span style={{ color: 'var(--agv-text-muted)' }}>{label}: </span> : null}
+        <span
+          className="font-semibold tabular-nums"
+          style={{
+            color:
+              line.emphasis === 'muted' ? 'var(--agv-text-muted)' : 'var(--agv-text-main)',
+          }}
+        >
+          {renderLineValue(line)}
+        </span>
+      </>
+    );
+  };
 
   return (
     <div
@@ -95,176 +178,197 @@ export const GridPhoneCard = memo(<T extends any>({
           maxHeight: `${cardHeight}px`,
           boxSizing: 'border-box',
         }}
-        className="agv-phone-card w-full rounded-xl border px-3 py-2 text-xs select-none shadow-2xs transition-colors cursor-default flex flex-col justify-between overflow-hidden"
+        className={`agv-phone-card w-full rounded-xl border p-3 text-xs ${
+          allowTextSelection ? 'select-text' : 'select-none'
+        } transition-colors cursor-default flex flex-col overflow-hidden`}
       >
-      {/* Header của Card: Checkbox + STT + Tên + Badge Status (Gỡ bỏ avatar theo yêu cầu) */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {showSelectionCol && (
-            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-              <MorphCheckbox
-                checked={isChecked}
-                onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
-                size={16}
-                spring="snappy"
-              />
-            </div>
-          )}
-          {showRowNumber && (
-            <span
-              data-cell-role="stt"
-              className="text-[10px] tabular-nums font-mono font-medium px-1 rounded shrink-0 transition-colors"
-              style={{
-                backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
-                color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
-              }}
-            >
-              {String(rowIndex + 1).padStart(2, '0')}
-            </span>
-          )}
-          <div className="min-w-0">
-            <div className="font-bold text-[13px] truncate" style={{ color: 'var(--agv-text-main)' }}>
-              {nodeTitle}
-            </div>
-            <div className="text-[10px] font-mono truncate" style={{ color: 'var(--agv-text-muted)' }}>
-              {rowId} · {region}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end shrink-0 gap-1">
-          <span
-            className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
-            style={statusBadgeStyle}
-          >
-            {status}
-          </span>
-          <span className="text-[10px]" style={{ color: 'var(--agv-text-muted)' }}>
-            {ngaygd}
-          </span>
-        </div>
-      </div>
-
-      {/* Dòng Tóm tắt Chỉ số (Key Metrics Summary) */}
-      <div
-        className="mt-1 pt-1.5 border-t flex items-center justify-between tabular-nums text-[11px]"
-        style={{ borderColor: 'var(--agv-border)' }}
-      >
-        <div className="flex items-center gap-2">
-          <span style={{ color: isCpuHigh ? 'var(--agv-warning)' : 'var(--agv-text-muted)' }}>
-            CPU: <b className="font-semibold">{Number(cpu).toFixed(1)}%</b>
-          </span>
-          <span style={{ color: 'var(--agv-border)' }}>·</span>
-          <span style={{ color: isSlaLow ? 'var(--agv-danger)' : 'var(--agv-text-muted)' }}>
-            SLA: <b className="font-semibold">{Number(sla).toFixed(2)}%</b>
-          </span>
-          <span style={{ color: 'var(--agv-border)' }}>·</span>
-          <span style={{ color: 'var(--agv-text-main)' }}>
-            AVG: <b className="font-semibold text-[var(--agv-accent)]">{formatGridNumber(formulaVal)}</b>
-          </span>
-        </div>
-
-        {/* Nút bấm mở rộng chi tiết dạng Accordion */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand?.(rowKey, rowIndex);
-          }}
-          className="p-1 rounded-md transition-colors hover:bg-[var(--agv-bg-hover)] cursor-pointer"
-          style={{ color: 'var(--agv-text-muted)' }}
-          aria-label={isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
-        >
-          <MorphChevronIcon expanded={isExpanded} size={16} spring="snappy" />
-        </button>
-      </div>
-
-      {/* Phần Mở Rộng Chi Tiết (Accordion Drawer) - Chiều cao cố định chính xác 150px (height 140px + marginTop 10px) */}
-      {isExpanded && (
-        <div
-          style={{
-            height: '140px',
-            maxHeight: '140px',
-            marginTop: '10px',
-            boxSizing: 'border-box',
-            borderColor: 'var(--agv-border)',
-          }}
-          className="pt-2 border-t flex flex-col justify-between text-[11px] overflow-hidden"
-        >
-          {/* Khối Biểu đồ 12T dạng Thẻ tài chính 2 Cột (Financial Card Layout) */}
-          <div>
-            <div className="text-[10px] uppercase font-bold tracking-wider mb-1" style={{ color: 'var(--agv-text-muted)' }}>
-              Biểu đồ biến thiên 12 tháng:
-            </div>
-            <div
-              className="p-2 rounded-xl border flex items-center gap-2.5 overflow-hidden"
-              style={{
-                backgroundColor: 'var(--agv-bg-subtle, var(--agv-bg-root))',
-                borderColor: 'var(--agv-border)',
-              }}
-            >
-              {/* Cột trái: Sóng Catmull-Rom spline uốn lượn sâu (cao 48px) */}
-              <div className="flex-1 min-w-0 h-[48px] flex items-center">
-                <TwelveMonthChartCell
-                  values={monthStats.mVals}
-                  minIdx={monthStats.minIdx}
-                  maxIdx={monthStats.maxIdx}
-                  minVal={monthStats.minVal}
-                  maxVal={monthStats.maxVal}
-                  avgVal={monthStats.avgVal}
-                  surfaceTheme={surfaceTheme}
-                  height={48}
+        {/* Hàng 1: Checkbox + STT + Định danh chính (trái) và Nhãn trạng thái (phải), cao chuẩn 28px */}
+        <div className="h-7 min-h-[28px] flex items-center justify-between gap-2 min-w-0 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {showSelectionCol && (
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <MorphCheckbox
+                  checked={isChecked}
+                  onChange={(e) => onToggleCheck?.(rowIndex, row, e)}
+                  size={16}
+                  spring="snappy"
                 />
               </div>
-
-              {/* Vạch ngăn cách dọc nhẹ giữa 2 cột */}
-              <div className="w-[1px] h-[44px] shrink-0" style={{ backgroundColor: 'var(--agv-border)' }} />
-
-              {/* Cột phải: Bảng số liệu tóm tắt xếp tầng dọc gọn gàng */}
-              <div className="w-[140px] shrink-0 flex flex-col justify-center gap-1 text-[11px] tabular-nums">
-                <div className="truncate">
-                  <span style={{ color: 'var(--agv-text-muted)' }}>Cao nhất: </span>
-                  <b className="font-semibold" style={{ color: 'var(--agv-trend-up)' }}>
-                    {monthStats.maxVal.toFixed(1)}%
-                  </b>
-                  <span className="text-[10px] ml-1 font-mono" style={{ color: 'var(--agv-text-muted)' }}>
-                    (T{String(monthStats.maxIdx + 1).padStart(2, '0')})
-                  </span>
-                </div>
-                <div className="truncate">
-                  <span style={{ color: 'var(--agv-text-muted)' }}>Thấp nhất: </span>
-                  <b className="font-semibold" style={{ color: 'var(--agv-trend-down)' }}>
-                    {monthStats.minVal.toFixed(1)}%
-                  </b>
-                  <span className="text-[10px] ml-1 font-mono" style={{ color: 'var(--agv-text-muted)' }}>
-                    (T{String(monthStats.minIdx + 1).padStart(2, '0')})
-                  </span>
-                </div>
-                <div className="truncate text-[10px]" style={{ color: 'var(--agv-text-muted)' }}>
-                  <span>Trung bình: </span>
-                  <b className="font-semibold" style={{ color: 'var(--agv-text-main)' }}>
-                    {monthStats.avgVal.toFixed(1)}%
-                  </b>
-                </div>
+            )}
+            {showRowNumber && (
+              <span
+                data-cell-role="stt"
+                className="text-xs leading-4 tabular-nums font-mono font-semibold shrink-0 transition-colors"
+                style={{
+                  color: isSelected
+                    ? 'var(--brand-gold-on-light, var(--brand-gold))'
+                    : 'var(--agv-text-muted)',
+                }}
+              >
+                {String(rowIndex + 1).padStart(2, '0')}
+              </span>
+            )}
+            {plan.title && (
+              <div
+                className="agv-phone-card-title min-w-0 truncate text-sm leading-5 font-bold"
+                style={{ color: 'var(--agv-text-main)' }}
+              >
+                {renderLineValue(plan.title)}
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t" style={{ borderColor: 'var(--agv-border)' }}>
-            <div>
-              <span className="text-[10px]" style={{ color: 'var(--agv-text-muted)' }}>Thời gian GD:</span>
-              <div className="font-mono font-semibold" style={{ color: 'var(--agv-text-main)' }}>{thoigian}</div>
+          {plan.badge && (
+            <div className="shrink-0 flex items-center text-xs" style={{ color: 'var(--agv-text-main)' }}>
+              {renderLineValue(plan.badge)}
             </div>
-            <div>
-              <span className="text-[10px]" style={{ color: 'var(--agv-text-muted)' }}>Khu vực máy chủ:</span>
-              <div className="font-semibold" style={{ color: 'var(--agv-text-main)' }}>{region}</div>
+          )}
+        </div>
+
+        {/* Đường kẻ 1 + Hàng 2: Thông tin tóm tắt + Nút đóng/mở (đối xứng 8px / 8px, cao 28px) */}
+        <div
+          className="mt-2 pt-2 border-t shrink-0"
+          style={{ borderColor: 'var(--agv-border)' }}
+        >
+          <div className="h-7 min-h-[28px] flex items-center justify-between gap-2 text-xs">
+            <div className="min-w-0 truncate">
+              {plan.summary.map((item, idx) => (
+                <React.Fragment key={item.col.key}>
+                  {idx > 0 && (
+                    <span className="mx-2" style={{ color: 'var(--agv-text-muted)' }}>
+                      ·
+                    </span>
+                  )}
+                  {renderLabeledLine(item)}
+                </React.Fragment>
+              ))}
             </div>
+
+            {canExpand && (
+              <AdvButton
+                variant="ghost"
+                size="icon-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand?.(rowKey, rowIndex);
+                }}
+                aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+              >
+                <MorphChevronIcon expanded={isExpanded} type="down-up" size={16} spring="snappy" />
+              </AdvButton>
+            )}
           </div>
         </div>
-      )}
-    </article>
+
+        {/* Đường kẻ 2 + Ngăn kéo mở rộng: Không cuộn bên trong, đồng nhất 8px với tầng trên */}
+        {isExpanded && plan.hasExpandableDrawer && (
+          <div
+            className="mt-2 pt-2 border-t flex flex-col gap-2 overflow-hidden text-xs shrink-0"
+            style={{ borderColor: 'var(--agv-border)' }}
+          >
+            {plan.chartBand && (
+              <div
+                onContextMenu={
+                  onCellContextMenu
+                    ? (e) => {
+                        e.stopPropagation();
+                        onCellContextMenu(
+                          rowIndex,
+                          row,
+                          plan.chartBand!.formulaLine?.col.key ??
+                            plan.chartBand!.chartLine.col.key,
+                          e
+                        );
+                      }
+                    : undefined
+                }
+                className="h-[52px] min-h-[52px] max-h-[52px] rounded-lg border p-2 flex items-center justify-between gap-2 shrink-0"
+                style={{
+                  backgroundColor: 'var(--agv-bg-root)',
+                  borderColor: 'var(--agv-border)',
+                }}
+              >
+                <div className="flex flex-col justify-center shrink-0 min-w-0">
+                  {plan.chartBand.formulaLine ? (
+                    <>
+                      <span
+                        className="text-xs leading-4 truncate"
+                        style={{ color: 'var(--agv-text-muted)' }}
+                      >
+                        {resolveCompiledLineLabel(plan.chartBand.formulaLine, row, rowIndex) ??
+                          plan.chartBand.formulaLine.col.title ??
+                          plan.chartBand.formulaLine.col.key}
+                      </span>
+                      <div className="truncate leading-4">
+                        {renderField(
+                          plan.chartBand.formulaLine.col,
+                          plan.chartBand.formulaLine.colIndex
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <span
+                      className="text-xs leading-4 truncate"
+                      style={{ color: 'var(--agv-text-muted)' }}
+                    >
+                      {plan.chartBand.chartLine.col.title || plan.chartBand.chartLine.col.key}
+                    </span>
+                  )}
+                </div>
+
+                <div className="w-[180px] h-8 shrink-0 flex items-center">
+                  {renderField(plan.chartBand.chartLine.col, plan.chartBand.chartLine.colIndex)}
+                </div>
+              </div>
+            )}
+
+            {plan.infoRows.length > 0 && (
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                {plan.infoRows.map((infoRow, idx) => {
+                  const isButtonRow = Boolean(infoRow.showDetailButton && plan.detailButtonLabel);
+                  return (
+                    <React.Fragment key={`info_row_${idx}`}>
+                      <div className="h-7 min-h-[28px] flex items-center min-w-0">
+                        <div className="min-w-0 truncate">
+                          {infoRow.left ? renderLabeledLine(infoRow.left) : null}
+                        </div>
+                      </div>
+                      <div
+                        className={`h-7 min-h-[28px] flex items-center justify-end ${
+                          isButtonRow
+                            ? 'whitespace-nowrap shrink-0'
+                            : 'max-w-[176px] justify-self-end min-w-0'
+                        }`}
+                      >
+                        {isButtonRow ? (
+                          <AdvButton
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onRowDetail) onRowDetail(row, rowIndex);
+                              else onSelectRow?.(rowIndex, row);
+                            }}
+                            className="whitespace-nowrap font-medium"
+                          >
+                            {plan.detailButtonLabel}
+                          </AdvButton>
+                        ) : infoRow.right ? (
+                          <div className="truncate text-right">{renderLabeledLine(infoRow.right)}</div>
+                        ) : null}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </article>
     </div>
   );
-});
+}
 
-GridPhoneCard.displayName = 'GridPhoneCard';
+export const GridPhoneCard = memo(GridPhoneCardInner) as <T = any>(
+  props: GridPhoneCardProps<T>
+) => React.ReactElement | null;

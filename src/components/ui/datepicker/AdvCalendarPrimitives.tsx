@@ -52,7 +52,7 @@ export const TimePickerBlock = memo(function TimePickerBlock({
 
   return (
     <div className="agv-time-picker-block">
-      {label && <span className="text-[11px] text-[var(--agv-text-subtle)] font-medium mr-1">{label}:</span>}
+      {label && <span className="text-xs text-[var(--agv-text-subtle)] font-medium mr-1">{label}:</span>}
       <div className="agv-time-input-wrap">
         <Clock className="h-3 w-3 text-[var(--agv-text-subtle)] mr-1" />
         <input
@@ -276,7 +276,7 @@ export const AdvDevExpressCalendarBody = memo(
               ‹
             </button>
           ) : (
-            <div className="w-[26px]" />
+            <div className="w-[28px]" />
           )}
 
           <button
@@ -299,7 +299,7 @@ export const AdvDevExpressCalendarBody = memo(
               ›
             </button>
           ) : (
-            <div className="w-[26px]" />
+            <div className="w-[28px]" />
           )}
         </div>
 

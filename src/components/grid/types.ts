@@ -1,8 +1,37 @@
 import React from 'react';
-import { SURFACE_THEMES, type GridTheme } from '../../themes/index.ts';
+import { SURFACE_THEMES, type GridTheme } from '../../themes';
+import {
+  GRID_VARIANTS,
+  resolveGridFeatures,
+  type GridVariant,
+  type GridFeatureProps,
+  type ResolvedGridFeatures,
+} from './gridFeatures';
+import type {
+  GridColumnMeta,
+  TabletFieldKey,
+  TabletLineSlot,
+  TabletGroupLines,
+  TabletColumnGroup,
+  PhoneCardConfig,
+} from './columns/columnTypes';
 
-export { SURFACE_THEMES };
+export {
+  SURFACE_THEMES,
+  GRID_VARIANTS,
+  resolveGridFeatures,
+};
 export type SurfaceTheme = GridTheme;
+export type {
+  GridVariant,
+  GridFeatureProps,
+  ResolvedGridFeatures,
+  TabletFieldKey,
+  TabletLineSlot,
+  TabletGroupLines,
+  TabletColumnGroup,
+  PhoneCardConfig,
+};
 
 /**
  * Danh mục vị trí ghim cột toàn hệ thống
@@ -46,6 +75,7 @@ export interface CellRenderParams<T = any> {
   rowIndex: number;
   isSelected: boolean;
   isChecked: boolean;
+  isResponsive?: boolean;
 }
 
 /**
@@ -180,6 +210,75 @@ export const ALIGNMENTS = {
 } as const;
 export type ColumnAlign = (typeof ALIGNMENTS)[keyof typeof ALIGNMENTS];
 
+export interface CellSpanParams<T = any> {
+  row: T;
+  rowIndex: number;
+  column: ColumnDef<T>;
+  colIndex: number;
+  getRowAt: (rowIndex: number) => T | null;
+}
+
+export interface CellSpanResult {
+  rowSpan?: number;
+  colSpan?: number;
+}
+
+export type GridSpanMethod<T = any> = (
+  params: CellSpanParams<T>
+) => CellSpanResult | readonly [rowSpan: number, colSpan: number] | undefined | null;
+
+export interface TreeRowExpandEvent<T = any> {
+  row: T;
+  rowKey: string | number;
+  expanded: boolean;
+  depth: number;
+}
+
+export interface TreeDataConfig<T = any> {
+  treeColumnKey?: string;
+  childrenField?: (keyof T & string) | (string & {});
+  getSubRows?: (row: T) => readonly T[] | undefined | null;
+  parentKeyField?: (keyof T & string) | (string & {});
+  rootParentValue?: unknown;
+  indentSize?: number;
+  defaultExpandAll?: boolean;
+  defaultExpandedDepth?: number;
+  defaultExpandedKeys?: readonly (string | number)[];
+  expandedKeys?: ReadonlySet<string | number> | readonly (string | number)[];
+  onExpandedKeysChange?: (keys: (string | number)[]) => void;
+  onRowExpand?: (event: TreeRowExpandEvent<T>) => void;
+  filterMode?: 'preserveAncestors' | 'strict';
+}
+
+export interface DetailRowContext<T = any> {
+  row: T;
+  rowKey: string | number;
+  rowIndex: number;
+  close: () => void;
+}
+
+export interface DetailExpandChangeEvent<T = any> {
+  row: T;
+  rowKey: string | number;
+  expanded: boolean;
+}
+
+export interface DetailRowConfig<T = any> {
+  renderDetail: (ctx: DetailRowContext<T>) => React.ReactNode;
+  height?: number | 'auto';
+  estimatedHeight?: number;
+  expandColumnKey?: string;
+  showExpandColumn?: boolean;
+  expandOnRowClick?: boolean;
+  accordion?: boolean;
+  unstyled?: boolean;
+  canExpand?: (row: T, rowIndex: number) => boolean;
+  defaultExpandedKeys?: readonly (string | number)[];
+  expandedKeys?: ReadonlySet<string | number> | readonly (string | number)[];
+  onExpandedKeysChange?: (keys: (string | number)[]) => void;
+  onExpandChange?: (event: DetailExpandChangeEvent<T>) => void;
+}
+
 export interface ColumnDef<T = any> {
   key: string;
   title: string;
@@ -194,8 +293,11 @@ export interface ColumnDef<T = any> {
   editorOptions?: any;
   sortable?: boolean;
   filterable?: boolean;
+  enableGlobalFilter?: boolean;
   resizable?: boolean;
   pinnable?: boolean;
+  hideable?: boolean;
+  groupable?: boolean;
   disableHeaderContextMenu?: boolean;
   disableContextMenu?: boolean;
   editable?: boolean;
@@ -207,8 +309,61 @@ export interface ColumnDef<T = any> {
   isChart?: boolean;
   isRowNumber?: boolean;
   isSelection?: boolean;
+  isDetailExpand?: boolean;
+  meta?: GridColumnMeta<T>;
+  valueGetter?: (row: T, index: number) => any;
+  colSpan?: (params: CellSpanParams<T>) => number;
+  rowSpan?: (params: CellSpanParams<T>) => number;
+  tabletLabelGetter?: (row: T, rowIndex: number) => string | undefined;
+  monthIndexGetter?: (row: T, mode: FormulaMode) => number;
+  wrapText?: boolean;
+  renderHeader?: () => React.ReactNode;
   renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
 }
+
+/**
+ * Danh mục phân loại menu ngữ cảnh chuột phải
+ */
+export const CONTEXT_MENU_TYPES = {
+  HEADER: 'header',
+  ROW: 'row',
+  BAND: 'band',
+  GROUP: 'group',
+} as const;
+export type ContextMenuType = (typeof CONTEXT_MENU_TYPES)[keyof typeof CONTEXT_MENU_TYPES];
+
+export type ContextMenuData =
+  | {
+      type: typeof CONTEXT_MENU_TYPES.HEADER;
+      x: number;
+      y: number;
+      column: ColumnDef;
+      currentPin: PinPosition;
+      hasHiddenColumns?: boolean;
+    }
+  | {
+      type: typeof CONTEXT_MENU_TYPES.BAND;
+      x: number;
+      y: number;
+      groupDef: BaseGroupDef;
+      childColumns: ColumnDef[];
+      currentPin: PinPosition;
+    }
+  | {
+      type: typeof CONTEXT_MENU_TYPES.ROW;
+      x: number;
+      y: number;
+      rowIndex: number;
+      row: any;
+      column?: ColumnDef;
+      cellValue?: any;
+    }
+  | {
+      type: typeof CONTEXT_MENU_TYPES.GROUP;
+      x: number;
+      y: number;
+      groupRow: any;
+    };
 
 export interface BaseGroupDef {
   id: string;
@@ -220,19 +375,43 @@ export interface BaseGroupDef {
   isAtomic?: boolean;
 }
 
-export interface GridScrollMetrics {
-  fps: number;
-  velocity: number;
-  startChunk: number;
-  endChunk: number;
-  mountedRowCount: number;
-  totalRows: number;
+export type GridToolbarPopupType = 'search' | 'queryBuilder' | 'multiSort' | 'columnChooser';
+
+export interface GridToolbarState {
+  activePopup: GridToolbarPopupType | null;
+  quickFilterText: string;
+  isQuickFilterActive: boolean;
+  activeQueryRuleCount: number;
+  visibleColumnCount: number;
+  totalColumnCount: number;
+  sortRuleCount: number;
+  enableQuickSearch: boolean;
+  enableQueryBuilder: boolean;
+  enableColumnChooser: boolean;
+  enableMultiSort: boolean;
+}
+
+export interface DataGridToolbarApi {
+  state: GridToolbarState;
+  openPopup: (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => void;
+  togglePopup: (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => void;
+  closePopup: () => void;
 }
 
 export interface VirtualizedGridRef {
   scrollToRow: (rowIndex: number, behavior?: ScrollBehavior) => void;
   scrollToChunk: (chunkIndex: number, behavior?: ScrollBehavior) => void;
   getScrollContainer: () => HTMLDivElement | null;
+  openPopup: (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => void;
+  togglePopup: (type: GridToolbarPopupType, anchorEl: HTMLElement | null) => void;
+  closePopup: () => void;
+  expandAllTree?: () => void;
+  collapseAllTree?: () => void;
+  expandTreeToDepth?: (depth: number) => void;
+  toggleTreeRow?: (rowKey: string | number, forceExpanded?: boolean) => void;
+  toggleDetailRow?: (rowKey: string | number, forceExpanded?: boolean) => void;
+  expandAllDetails?: () => void;
+  collapseAllDetails?: () => void;
 }
 
 export interface GroupSortConfig {
@@ -240,9 +419,10 @@ export interface GroupSortConfig {
   direction: SortDirection;
 }
 
-export interface VirtualizedGridProps<T = any> {
+export interface VirtualizedGridProps<T = any> extends GridFeatureProps {
   // Data props (support either direct array or dynamic row getter)
   data?: T[];
+  pinnedTopRowData?: T[];
   rowCount?: number;
   getRow?: (index: number) => T;
   getRowId?: (row: T, index: number) => string | number;
@@ -251,6 +431,8 @@ export interface VirtualizedGridProps<T = any> {
   // Columns & Groups
   columns: ColumnDef<T>[];
   columnGroups?: BaseGroupDef[];
+  tabletGroups?: readonly TabletColumnGroup<T>[];
+  phoneCard?: PhoneCardConfig<T>;
   columnPins?: Record<string, PinPosition>;
   defaultColumnPins?: Record<string, PinPosition>;
   onColumnPinsChange?: (pins: Record<string, PinPosition>) => void;
@@ -277,6 +459,8 @@ export interface VirtualizedGridProps<T = any> {
   // Sorting
   sortConfig?: SortConfig | null;
   onSortChange?: (sort: SortConfig | null) => void;
+  sortRules?: SortConfig[];
+  onSortRulesChange?: (rules: SortConfig[]) => void;
 
   // Selection & Checkbox
   selectedRowIndex?: number | null;
@@ -321,25 +505,47 @@ export interface VirtualizedGridProps<T = any> {
   onLayoutModeChange?: (mode: GridLayoutMode) => void;
 
   // Virtualization & Performance configs
+  /** @deprecated Cửa sổ ảo hóa nay chạy theo từng dòng; giữ lại để tương thích scrollToChunk */
   chunkSize?: number;
   rowHeight?: number;
+  /** @deprecated Dùng `overscanRows` thay thế */
   overscanChunks?: number;
+  overscanRows?: number;
+  scrollbarAlwaysOn?: boolean;
+  dynamicRowHeight?: boolean;
+  estimatedRowHeight?: number;
+  getRowHeight?: (row: T, rowIndex: number) => number;
   antiGhostMode?: boolean;
   surfaceTheme?: SurfaceTheme;
 
-  // Scroll Behaviors
-  rowSnapMode?: boolean;
-  onRowSnapModeChange?: (enabled: boolean) => void;
-  rowsPerWheelStep?: number;
-  autoScrolling?: boolean;
-  autoScrollSpeed?: number;
+  // Cross Hover, Cell Span, Tree Data & Detail View
+  spanMethod?: GridSpanMethod<T>;
+  maxRowSpanLookback?: number;
+  treeColumnKey?: string;
+  treeIndentSize?: number;
+  onToggleTreeExpand?: (rowKey: string | number, row: T, depth?: number) => void;
+  detailExpandColKey?: string;
+  isRowDetailExpanded?: (rowKey: string | number) => boolean;
+  canExpandRowDetail?: (row: T, rowIndex: number) => boolean;
+  onToggleRowDetail?: (rowKey: string | number, row: T) => void;
+  renderDetailRow?: (row: any) => React.ReactNode;
+  hasDynamicDetailRows?: boolean;
+  treeDetailActions?: {
+    expandAllTree?: () => void;
+    collapseAllTree?: () => void;
+    expandTreeToDepth?: (depth: number) => void;
+    toggleTreeRow?: (rowKey: string | number, forceExpanded?: boolean) => void;
+    toggleDetailRow?: (rowKey: string | number, forceExpanded?: boolean) => void;
+    expandAllDetails?: () => void;
+    collapseAllDetails?: () => void;
+  };
 
   // Callbacks
-  onScrollMetrics?: (metrics: GridScrollMetrics) => void;
   onToggleGroup?: (groupId: string) => void;
   onQuickFilter?: (colKey: string, value: any) => void;
   formulaMode?: FormulaMode;
   onFormulaModeChange?: (mode: FormulaMode) => void;
+  onRowDetail?: (row: T, index: number) => void;
 
   // Styling
   className?: string;
@@ -351,15 +557,13 @@ export interface VirtualizedGridProps<T = any> {
   onQuickFilterTextChange?: (text: string) => void;
   appliedQueryTree?: any;
   onApplyQueryTree?: (tree: any) => void;
-  onExportExcel?: () => void;
-  isExporting?: boolean;
+  onToolbarStateChange?: (state: GridToolbarState) => void;
 
   // Group Header Context Menu Callbacks
   onCollapseAllGroups?: () => void;
   onExpandAllGroups?: () => void;
   onUngroup?: () => void;
   onCopyGroupTable?: (groupRow: any, includeHeaders: boolean) => void;
-  onExportGroupExcel?: (groupRow: any) => void;
 
   // Smart Empty Column Handling
   emptyColKeys?: Set<string>;
@@ -367,4 +571,19 @@ export interface VirtualizedGridProps<T = any> {
   // Group Sorting (Sắp xếp nhóm theo Tổng)
   groupSortConfig?: GroupSortConfig | null;
   onToggleGroupSort?: (colKey: string) => void;
+
+  // Library Identity, Viewport States & Status Bar
+  gridId?: string;
+  loading?: boolean;
+  refreshing?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  emptyText?: string;
+  statusBar?: React.ReactNode;
+  showSummaryRow?: boolean;
+  onShowSummaryRowChange?: (show: boolean) => void;
+  showStatusBar?: boolean;
+  onShowStatusBarChange?: (show: boolean) => void;
+  /** Internal pre-resolved feature flags passed from DataGrid to avoid double resolution */
+  _resolvedFeatures?: ResolvedGridFeatures;
 }

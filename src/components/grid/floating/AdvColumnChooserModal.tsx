@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import './columnChooser.css';
 import {
   RotateCcw,
   X,
@@ -9,7 +10,12 @@ import {
 } from 'lucide-react';
 import { ColumnDef, BaseGroupDef, PinPosition, SurfaceTheme, DATA_TYPES } from '../types';
 import { AdvCheckbox } from '../AdvCheckbox';
+import { AdvOverlayScroll } from '../../ui/AdvOverlayScroll';
 import { NO_AUTOFILL_PROPS } from '../constants';
+import {
+  CONTROL_INPUT_SM_CLASS,
+} from '../../ui/controlFocus';
+import { AdvButton } from '../../ui/AdvButton';
 
 export interface AdvColumnChooserModalProps<T = any> {
   columns: ColumnDef<any>[];
@@ -21,9 +27,11 @@ export interface AdvColumnChooserModalProps<T = any> {
   onResetColumns: () => void;
   onAutoFitColumn?: (colKey: string) => void;
   onReorderColumns?: (sourceKey: string, targetKey: string) => void;
+  enableColumnHide?: boolean;
   onClose?: () => void;
   style?: React.CSSProperties;
   surfaceTheme?: SurfaceTheme;
+  embedded?: boolean;
 }
 
 export interface ColumnTreeNode {
@@ -46,9 +54,13 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
   onResetColumns,
   onAutoFitColumn,
   onReorderColumns,
+  enableColumnHide = true,
   onClose: _onClose,
   style,
+  embedded = false,
 }: AdvColumnChooserModalProps<T>) {
+  const canReorder = Boolean(onReorderColumns);
+  const canHide = enableColumnHide !== false;
   const [chooserSearch, setChooserSearch] = useState('');
   const [collapsedBands, setCollapsedBands] = useState<Record<string, boolean>>({});
   const [width, setWidth] = useState<number>(240);
@@ -358,20 +370,20 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
               : undefined,
             transition: isThisItemDragging
               ? 'none'
-              : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease',
+              : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease',
             zIndex: isThisItemDragging ? 50 : siblingTranslateY ? 10 : 1,
             position: 'relative',
             pointerEvents: isThisItemDragging ? 'none' : undefined,
           }}
-          className={`agv-chooser-item flex items-center justify-between rounded px-1.5 py-0.5 text-xs transition-colors select-none ${
+          className={`agv-chooser-item flex items-center justify-between rounded px-1.5 py-0.5 text-xs select-none ${
             isThisItemDragging
               ? 'scale-[1.01] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg opacity-95 border border-[var(--agv-accent)]'
               : !isChecked
-              ? 'opacity-60 hover:opacity-100 cursor-grab active:cursor-grabbing touch-none'
-              : 'bg-[var(--agv-bg-item-active)] hover:bg-[var(--agv-bg-item-hover)] cursor-grab active:cursor-grabbing touch-none'
+              ? `opacity-60 hover:opacity-100 ${canReorder ? 'cursor-grab active:cursor-grabbing touch-none' : 'cursor-pointer'}`
+              : `bg-[var(--agv-bg-item-active)] hover:bg-[var(--agv-bg-item-hover)] ${canReorder ? 'cursor-grab active:cursor-grabbing touch-none' : 'cursor-pointer'}`
           }`}
           onPointerDown={
-            siblingList.length > 1
+            canReorder && siblingList.length > 1
               ? (e) => {
                   if (e.button !== 0 || q) return;
                   const target = e.target as HTMLElement;
@@ -499,7 +511,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
               : undefined
           }
           onClick={() => {
-            if (treeDidDragRecentlyRef.current) return;
+            if (!canHide || treeDidDragRecentlyRef.current) return;
             if (isAtomic) {
               if (isChecked) {
                 onVisibleColKeysChange(
@@ -520,10 +532,12 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
           <div
             className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-2 py-0.5"
           >
-            <AdvCheckbox
-              checked={isChecked}
-              className="agv-chooser-checkbox"
-            />
+            {canHide && (
+              <AdvCheckbox
+                checked={isChecked}
+                className="agv-chooser-checkbox"
+              />
+            )}
 
             <span
               className={`truncate text-xs ${
@@ -572,7 +586,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
             : undefined,
           transition: isThisItemDragging
             ? 'none'
-            : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease',
+            : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease',
           zIndex: isThisItemDragging ? 50 : siblingTranslateY ? 10 : 1,
           position: 'relative',
           pointerEvents: isThisItemDragging ? 'none' : undefined,
@@ -584,13 +598,13 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
         }`}
       >
         <div
-          className={`flex min-h-[28px] select-none items-center justify-between rounded border px-2 py-0.5 transition-colors ${
+          className={`flex min-h-[28px] select-none items-center justify-between rounded border px-2 py-0.5 ${
             depth === 0
-              ? 'border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] font-bold text-[var(--agv-text-header)] hover:bg-[var(--agv-bg-item-hover)] cursor-grab active:cursor-grabbing'
-              : 'ml-1.5 border-[var(--agv-border)] bg-[var(--agv-bg-control)] font-semibold text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)] cursor-grab active:cursor-grabbing'
+              ? `border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] font-bold text-[var(--agv-text-header)] hover:bg-[var(--agv-bg-item-hover)] ${canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`
+              : `ml-1.5 border-[var(--agv-border)] bg-[var(--agv-bg-control)] font-semibold text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)] ${canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`
           }`}
           onPointerDown={
-            siblingList.length > 1
+            canReorder && siblingList.length > 1
               ? (e) => {
                   if (e.button !== 0 || q) return;
                   const target = e.target as HTMLElement;
@@ -734,7 +748,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                 if (treeDidDragRecentlyRef.current || treeDrag !== null) return;
                 toggleBandCollapse(bandId, isCollapsed);
               }}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--agv-text-subtle)] hover:text-[var(--agv-text-main)] cursor-pointer"
+              className="agv-btn agv-btn-ghost flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--agv-text-subtle)] hover:text-[var(--agv-text-main)] cursor-pointer"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -743,17 +757,19 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
               )}
             </button>
 
-            <div onPointerDown={(e) => e.stopPropagation()}>
-              <AdvCheckbox
-                checked={isAllVisible}
-                indeterminate={isSomeVisible}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleBandGroupVisibility(node);
-                }}
-                className="agv-chooser-checkbox"
-              />
-            </div>
+            {canHide && (
+              <div onPointerDown={(e) => e.stopPropagation()}>
+                <AdvCheckbox
+                  checked={isAllVisible}
+                  indeterminate={isSomeVisible}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleBandGroupVisibility(node);
+                  }}
+                  className="agv-chooser-checkbox"
+                />
+              </div>
+            )}
 
             <Layers
               className={`h-3.5 w-3.5 shrink-0 ${
@@ -767,7 +783,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
           </div>
 
           <span
-            className={`py-0.5 shrink-0 rounded-full px-1.5 text-[10px] font-semibold ${
+            className={`py-0.5 shrink-0 rounded-full px-1.5 text-xs font-semibold ${
               isAllVisible
                 ? 'bg-[var(--agv-bg-item-active)] text-[var(--agv-accent)]'
                 : visibleCount > 0
@@ -805,35 +821,41 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
     <div
       data-agv-popup="true"
       style={{
-        boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
         ...style,
-        width: `${width}px`,
+        width: embedded ? '264px' : `${width}px`,
         minWidth: '200px',
-        maxWidth: '450px',
-        maxHeight: style?.maxHeight || 'calc(100% - 80px)',
+        maxWidth: embedded ? 'calc(100vw - 48px)' : 'min(450px, calc(100% - 58px))',
+        maxHeight: style?.maxHeight || (embedded ? 'min(400px, calc(100vh - 120px))' : 'calc(100% - 80px)'),
         height: 'auto',
       }}
-      className="agv-column-chooser relative flex flex-col rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] text-[var(--agv-text-main)] p-2 text-xs select-none agv-spring-left"
+      className={
+        embedded
+          ? 'relative flex flex-col text-[var(--agv-text-main)] text-xs select-none'
+          : 'agv-column-chooser agv-popup-panel relative flex flex-col rounded-md border border-[var(--agv-border-popup)] bg-[var(--agv-bg-popup)] text-[var(--agv-text-main)] p-2 text-xs select-none agv-spring-right'
+      }
       onClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      {/* Thanh kéo điều chỉnh chiều ngang ở mép trái */}
-      <div
-        onMouseDown={(e) => handleResizeStart(e, 'left')}
-        onPointerDown={(e) => handleResizeStart(e, 'left')}
-        className="agv-chooser-resizer-left absolute -left-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
-      >
-        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
-      </div>
+      {/* Thanh kéo điều chỉnh chiều ngang (chỉ hiển thị ở chế độ popup tự đứng) */}
+      {!embedded && (
+        <>
+          <div
+            onMouseDown={(e) => handleResizeStart(e, 'left')}
+            onPointerDown={(e) => handleResizeStart(e, 'left')}
+            className="agv-chooser-resizer-left absolute -left-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
+          >
+            <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
+          </div>
 
-      {/* Thanh kéo điều chỉnh chiều ngang ở mép phải */}
-      <div
-        onMouseDown={(e) => handleResizeStart(e, 'right')}
-        onPointerDown={(e) => handleResizeStart(e, 'right')}
-        className="agv-chooser-resizer-right absolute -right-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
-      >
-        <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
-      </div>
+          <div
+            onMouseDown={(e) => handleResizeStart(e, 'right')}
+            onPointerDown={(e) => handleResizeStart(e, 'right')}
+            className="agv-chooser-resizer-right absolute -right-1.5 top-0 bottom-0 w-3 cursor-ew-resize select-none touch-none z-30 group flex items-center justify-center"
+          >
+            <div className="w-[3px] h-8 rounded-full bg-[var(--agv-border-strong)] group-hover:bg-[var(--agv-accent)] group-active:bg-[var(--agv-accent-active,var(--agv-accent))] transition-colors" />
+          </div>
+        </>
+      )}
 
       {/* Ô tìm kiếm cột nhanh & Nút phục hồi mặc định */}
       <div className="mb-2 flex items-center gap-1.5 shrink-0">
@@ -845,13 +867,13 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
             onChange={(e) => setChooserSearch(e.target.value)}
             placeholder="Tìm kiếm tên cột..."
             {...NO_AUTOFILL_PROPS}
-            className="w-full min-h-[28px] h-7 pl-7 pr-7 text-xs rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] outline-none focus:border-[var(--agv-accent)] transition-colors"
+            className={`${CONTROL_INPUT_SM_CLASS} w-full pl-7 pr-7`}
           />
           {chooserSearch && (
             <button
               type="button"
               onClick={() => setChooserSearch('')}
-              className="absolute right-1.5 text-[var(--agv-text-subtle)] hover:text-[var(--agv-text-main)] cursor-pointer"
+              className="agv-inline-clear-ghost absolute right-1.5"
             >
               <X className="h-3 w-3" />
             </button>
@@ -859,24 +881,26 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
         </div>
 
         {/* Nút phục hồi mặc định */}
-        <button
-          type="button"
+        <AdvButton
+          variant="outline"
+          size="icon-sm"
           onClick={() => {
             onResetColumns();
             setCollapsedBands({});
             setChooserSearch('');
             setWidth(240);
           }}
-          className="flex min-h-[28px] min-w-[28px] h-7 w-7 shrink-0 items-center justify-center rounded border border-[var(--agv-border-strong)] bg-[var(--agv-bg-control)] text-[var(--agv-text-muted)] transition-colors hover:border-[var(--agv-accent)] hover:bg-[var(--agv-bg-control-hover)] hover:text-[var(--agv-text-main)] cursor-pointer select-none"
+          className="text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)] select-none"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </button>
+          <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+        </AdvButton>
       </div>
 
       {/* Danh sách các cột (Hỗ trợ cả Cây phân cấp Banded Tree và Danh sách phẳng) */}
-      <div
-        className="agv-chooser-scroll overflow-y-auto overflow-x-hidden pr-0.5 flex-1 min-h-0"
-        style={{ overscrollBehavior: 'contain' }}
+      <AdvOverlayScroll
+        className="flex-1 min-h-0"
+        viewportClassName="agv-chooser-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-0 overscroll-contain"
+        contentSignature={filteredFlatColumns.length}
       >
         <div className="space-y-0.5 min-w-full">
           {hasBands ? (
@@ -914,18 +938,24 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                       : undefined,
                     transition: isDragging
                       ? 'none'
-                      : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease',
+                      : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease',
                     zIndex: isDragging ? 50 : translateY ? 10 : 1,
                     position: 'relative',
                   }}
-                  className={`agv-chooser-item flex items-center justify-between rounded px-1.5 py-0.5 select-none cursor-grab active:cursor-grabbing touch-none ${
+                  className={`agv-chooser-item flex items-center justify-between rounded px-1.5 py-0.5 select-none ${
+                    canReorder ? 'cursor-grab active:cursor-grabbing touch-none' : 'cursor-pointer'
+                  } ${
                     isDragging
                       ? 'is-dragging bg-[var(--agv-bg-control)] text-[var(--agv-text-main)] shadow-lg scale-[1.01]'
                       : isChecked
-                      ? 'is-checked bg-[var(--agv-bg-item-active)] hover:bg-[var(--agv-bg-item-hover)]'
+                      ? embedded
+                        ? 'is-checked hover:bg-[var(--agv-bg-item-hover)]'
+                        : 'is-checked bg-[var(--agv-bg-item-active)] hover:bg-[var(--agv-bg-item-hover)]'
                       : 'opacity-60 hover:opacity-100 hover:bg-[var(--agv-bg-item-hover)]'
                   }`}
-                  onPointerDown={(e) => {
+                  onPointerDown={
+                    canReorder
+                      ? (e) => {
                     if (e.button !== 0) return;
                     const target = e.target as HTMLElement;
                     if (target.closest('button') || target.closest('.agv-chooser-action-btn')) {
@@ -1026,9 +1056,11 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     window.addEventListener('pointermove', onPointerMove);
                     window.addEventListener('pointerup', onPointerUp);
                     window.addEventListener('pointercancel', onPointerUp);
-                  }}
+                  }
+                      : undefined
+                  }
                   onClick={() => {
-                    if (chooserDidDragRecentlyRef.current) return;
+                    if (!canHide || chooserDidDragRecentlyRef.current) return;
                     onVisibleColKeysChange(
                       isChecked ? visibleColKeys.filter((k) => k !== col.key) : [...visibleColKeys, col.key]
                     );
@@ -1038,10 +1070,12 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                   <div
                     className="flex min-w-0 flex-1 select-none items-center gap-1.5 py-0.5"
                   >
-                    <AdvCheckbox
-                      checked={isChecked}
-                      className="agv-chooser-checkbox"
-                    />
+                    {canHide && (
+                      <AdvCheckbox
+                        checked={isChecked}
+                        className="agv-chooser-checkbox"
+                      />
+                    )}
                     <span
                       className={`truncate text-xs ${
                         !isChecked
@@ -1053,7 +1087,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
                     </span>
                     {hasBands && columnBandPaths[col.key] && (
                       <span
-                        className="mt-0.5 block truncate pl-2 text-[10px] text-[var(--agv-text-subtle)]"
+                        className="mt-0.5 block truncate pl-2 text-xs text-[var(--agv-text-subtle)]"
                       >
                         {columnBandPaths[col.key]}
                       </span>
@@ -1064,7 +1098,7 @@ export const AdvColumnChooserModal = React.memo(function AdvColumnChooserModal<T
             })
           )}
         </div>
-      </div>
+      </AdvOverlayScroll>
     </div>
   );
 });

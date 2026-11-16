@@ -50,74 +50,123 @@ export const CODE_DICTIONARY = {
   metadata: {
     projectName: 'Gridv3 High-Performance Virtualized Chunk Grid',
     version: '3.0.0-modular',
-    lastUpdated: '2026-10-30',
+    lastUpdated: '2026-11-15',
     filesSummary: {
-      'src/App.tsx': { lines: 2104, role: 'Main Application Shell: nạp 50.000 bản ghi dữ liệu từ apiService.fetchGridData(50000), xuất Excel qua apiService.exportGridExcelApi() hỗ trợ 2 tầng Banded Headers, phân tầng dòng nhóm (Group Header) và AutoFilter có sẵn, lưu trữ bền vững cấu hình cột, surfaceTheme & rowSnapMode qua localStorage (agv_mock_grid_config_v2026), tích hợp state isDark và handler handleToggleColorScheme lưu trữ localStorage agv_color_scheme, tự động đồng bộ class dark lên thẻ gốc document.documentElement và container .agv-app-container, truyền xuống PageToolbar Segmented Control [ ☀️ Ngày | 🌙 Đêm ], debounce 150ms (saveColWidthsTimerRef) cho colWidths tránh nghẽn I/O khi kéo giãn cột 60fps, đồng bộ dynamicColumnGroups theo columnOrder và hỗ trợ kéo thả đổi vị trí cột đơn, cột con trong nhóm 2 tầng, cả nhóm Band/Atomic và tự động đồng bộ vùng ghim trong handleReorderColumns, ưu tiên phản hồi gõ tìm kiếm 0ms qua deferredSearchQuery (useDeferredValue), hỗ trợ bật/tắt Cuộn khớp dòng (rowSnapMode, mặc định true ở nấc 3d rowsPerWheelStep = 3) từ AdvGridSettingsPopup, gắn agv-app-container + getThemeClass(surfaceTheme) trên container gốc đồng bộ 100% theme cho PageToolbar & PageFooter, tính toán động tổng toán tử theo cột (columnSums) với bộ đệm uncheckedBaseGroupData O(1) 0ms khi bỏ chọn về 0 dòng và fast-path O(K) theo checkedRowIndices, hỗ trợ Shift + Click chọn/bỏ chọn dải dòng liên tiếp theo thứ tự đang hiển thị và Bỏ chọn tất cả dòng (handleClearCheckedRows), bật/tắt 1 chạm "Chỉ hiện các dòng đang chọn" qua handleToggleFilterCheckedOnly dưới PageFooter, đồng bộ màu chữ ô STT (--agv-stt-cell-text) phục vụ hiệu ứng Đầu kim Focus Kiểu A, cố định useCallback cho các handlers của PageToolbar bảo toàn 100% React.memo, quản lý React State chuẩn mảng Plain JSON, getOrComputeMonthStats gắn WeakMap cache 12 tháng (monthStatsCacheRef) trực tiếp vào baseRecord gốc (apiData[r]) dùng chung O(1) cho cả getRowVal và renderCell, selectedDisplayIndexHintRef tra cứu O(1) dòng đang chọn không cần quét tuyến tính 50.000 phần tử, truyền trực tiếp getRowVal vào evaluateQueryTreeNode (zero closure allocation), tái sử dụng trực tiếp hiddenColKeys Set, đồng bộ cập nhật col_formula theo formulaMode trong handleCellChange, chuẩn hóa 100% SURFACE_THEMES, PIN_POSITIONS, GRID_EDIT_MODES, CHECK_FILTER_STATES, DATA_TYPES, FILTER_MODES, SORT_DIRECTIONS, FORMULA_MODES, MONTH_ANALYTICS_MODES, GRID_LAYOUT_MODES (PC, Tablet, Phone, Auto) và biến màu CSS var(--agv-*), Sort pipeline Int32Array, Single-Pass Stream Grouping & Summaries Float64Array, virtualized scroll engine CHUNK = 20' },
-      'src/services/apiService.ts': { lines: 1045, role: 'RESTful API Service Layer: fetchGridData(count = 50000) trả về Promise<GridRecord[]> chứa 50.000 bản ghi Plain JSON objects, updateGridRecordApi(id, colKey, val), exportGridExcelApi(params) sinh tệp Excel .xlsx chuẩn OpenXML thuần native (zero-dependency) có nén Deflate (Method 8) giảm dung lượng 50.000 dòng từ 37.2 MB xuống còn ~1.6 MB (tiết kiệm 95% dung lượng), định dạng ngày/giờ chuẩn Excel Serial Number và numFmt giúp AutoFilter của Excel tự động nhận diện 100% Date Filters & cây phân cấp Năm/Tháng/Ngày, mặc định kẻ viền (border) toàn bộ các ô, tắt đường lưới Excel (showGridLines="0"), tô màu Header 2 tầng (Navy #0F172A & Slate #1E293B, chữ trắng in đậm), dòng nhóm Group Header nền #F1F5F9 in đậm kèm tổng sum số, bật sẵn AutoFilter của Excel trên hàng cột con, format chuẩn số #,##0 / #,##0.00 và ngày DD/MM/YYYY chống tràn ###, hỗ trợ async/await kết nối API backend thật bằng fetch("/api/v1/..."), tái xuất khẩu FORMULA_MODES, MONTH_ANALYTICS_MODES từ types.ts (100% biến màu CSS var(--agv-*)), định nghĩa STATUS_COMBO_OPTIONS, REGION_LOOKUP_DATA, REGION_LOOKUP_COLUMNS và INITIAL_COLUMNS (100% ALIGNMENTS, DATA_TYPES, EDITOR_TYPES, editorOptions), BASE_GROUPS_DEF, FilterState, REGIONS' },
-      'src/demo/airlineData.ts': { lines: 272, role: 'Định nghĩa 23 cột dữ liệu thực tế từ ExGD-24-10-2026.xlsx với 100% tiêu đề tiếng Việt chuẩn, TOTAL_AIRLINE_ROWS = 339737, chuẩn hóa 100% ALIGNMENTS và DATA_TYPES, xuất LEGACY_KEY_MAP, matchAirlineFilterValue ủy quyền trực tiếp sang matchFilterValue của gridUtils, col_stt (46px, resizable: false) và col_chk (32px, title rỗng, resizable: false)' },
-      'src/demo/PageToolbar.tsx': { lines: 354, role: 'Top command bar tinh gọn (bọc React.memo): ô tìm kiếm toàn văn 0ms, nút [ Bộ Lọc ], nút [ 🧪 Primitives ], Theme switcher (AdvComboBoxEdit) kèm nút [ Nhập CSS ], chuyển Ngày/Đêm, nút [ Test Cuộn Cao Tốc ], nút Ẩn Toolbar ▲ / Hiện Toolbar ▼ thu gọn thành Strip Bar 34px tiết kiệm diện tích tối đa, 100% theme CSS variables, zero autofill' },
-      'src/demo/AdvCustomCssModal.tsx': { lines: 148, role: 'Modal Nhập CSS Test Màu chuẩn 100% Mockup: Header tiêu đề và nút X, Textarea font mono min-h 200px với NO_AUTOFILL_PROPS, Footer 2 nút Đóng và Áp dụng (min-h 28px), click outside backdrop, phím Esc, data-agv-popup="true" khóa cuộn bảng, lưu bền vững vào localStorage agv_custom_test_css' },
-      'src/themes/customCssBridge.ts': { lines: 337, role: 'Cầu nối CSS Tùy Biến (Custom CSS Theme Bridge): phân tích cú pháp CSS thô (:root, .dark), tự động trích xuất các biến màu Shadcn/Tweakcn và ánh xạ đồng bộ 100% sang 50+ Design Tokens của Grid Engine (--agv-* bao gồm subtle, popup, panel, surface), tự động cập nhật setCustomTokens(rootTokens, darkTokens) cho cả 2 chế độ Ngày/Đêm loại bỏ triệt để màu cứng' },
-      'tailwind.config.js': { lines: 81, role: 'Cấu hình Tailwind CSS: tích hợp đầy đủ Design Tokens cho Grid Engine (--agv-*) và toàn bộ biến màu HSL chuẩn Shadcn (border, input, ring, background, foreground, primary, secondary, destructive, muted, accent, popover, card)' },
-      'src/demo/FilterModal.tsx': { lines: 281, role: 'Modal lọc nâng cao 5 tiêu chí: nạp FilterState, REGIONS từ apiService, chuẩn hóa SURFACE_THEMES và 100% biến màu CSS var(--agv-*), click outside backdrop auto-close' },
-      'src/components/grid/VirtualizedGrid.tsx': { lines: 2477, role: 'Core Virtualized Grid Engine: Tự động cung cấp các fallback mặc định giúp bảng Zero-Config, chuẩn hóa 100% SURFACE_THEMES, CENTER_DOCK_STATUSES, DENSITY_MODES, GRID_EDIT_MODES, GRID_LAYOUT_MODES (PC: 28/32px, Tablet: 68px, Phone: 104px), DATA_TYPES, PIN_POSITIONS, SORT_DIRECTIONS, FILTER_MODES, CONTEXT_MENU_TYPES, tích hợp responsive engine (GridTabletHeader, ResponsiveSortFilterModal, useGridLayoutMode), tích hợp Anchor Row Preservation neo giữ và khôi phục tức thì vị trí dòng đang đọc (anchorRowIndex) trước khi paint khi chuyển đổi qua lại giữa PC, Tablet và Phone, đồng bộ cả 2 cột hệ thống (showRowNumber và showSelectionCol) giữa PC, Tablet & Phone qua biến chung duy nhất, tích hợp nút và popup Lọc & Sắp Xếp trung tâm cho Tablet & Phone đồng bộ searchQuery và sortConfig hai chiều với PC, quản lý mở rộng thẻ Phone Card (phoneExpandedRows Map O(1), getExpandedBeforeChunk, getExpandedInChunk) điều phối GPU translate3d và effectiveChunkHeight triệt tiêu 100% lỗi chồng đè chunk, On-Demand FPS Monitor (startFpsMonitor / stopFpsMonitor chỉ đo FPS khi đang cuộn, 0% CPU khi đứng yên), gộp Unified Wheel Listener cho phép cuộn trong popup con trước khi khóa cuộn Grid và căn dòng rowSnapMode, đồng bộ effectiveColumnGroups theo thứ tự mảng columns hiện hành đảm bảo kéo thả đổi vị trí cột & nhóm Band phản hồi tức thì, đồng bộ gridSettings.rowSnapMode với prop rowSnapMode / onRowSnapModeChange qua handleUpdateGridSettings, cố định tham chiếu setColWidth / setMultipleColWidths qua colWidthsRef khi kéo giãn cột, tự động gắn cờ DOM data-agv-scrolling="true" qua isScrollingAttrSetRef trên .agv-scroll-viewport khi đang cuộn nhanh / auto-scroll để khóa tính toán :hover và tắt .agv-row-enter chống sụt FPS, in-cell editing scroll lock, dính tiêu đề nhóm trên đỉnh khi cuộn dọc (Sticky Group Header), ghim dòng cố định lên đầu bảng (Pin Row to Top) đồng bộ với AdvCriteriaSummaryPopup qua GridFilterRow, chuyển tiếp checkedRowCount & onClearCheckedRows sang ColumnContextMenu, fit STT và Chọn, truyền hasFilterRow={showFilterRow} sang GridHeader để điều phối đường kẻ 2px phân tách hệ thống & dữ liệu, cố định handleToggleQuickFilterSmart bảo toàn React.memo cho GridFloatingToolbar, phím tắt Alt + Shift + F Fullscreen toggle, CHUNK = 20' },
-      'src/components/grid/GridFloatingToolbar.tsx': { lines: 580, role: 'Thanh công cụ nổi (Right-docked Floating Toolbar): 6 nút chuẩn Toolbar3, 4 popups, chuẩn hóa 100% SURFACE_THEMES, TOOLBAR_POPUPS enum và DATA_TYPES, áp dụng Code Splitting (React.lazy + Suspense) tải động cho 2 modals lớn (AdvColumnChooserModal, AdvGridQueryBuilderModal) giảm >51KB main bundle, Toggle On/Off luân chuyển, click outside toàn màn hình tự đóng khi click ra ngoài bảng, drag handle kẹp biên trong Grid, giữ nguyên bung rộng 38px khi kéo thả, computePopupGeometry giới hạn chiều cao chống tràn viền Grid & Viewport, Alt + Shift + F toàn màn hình, Ctrl+F Quick Search, Esc đóng popups' },
+      'vite.config.ts': { lines: 19, role: 'Cấu hình Vite dev/preview server & proxy /be-crm -> BE_CRM_TARGET (mặc định https://agency-sandbox.phuongnamtravel.com), hỗ trợ rewrite đường dẫn, changeOrigin và cookieDomainRewrite' },
+      'src/styles/design-tokens.css': { lines: 295, role: 'Single Source of Truth bộ token màu, typography (Roboto đồng bộ kể cả --font-mono), nền đặc popup (--popup-background: var(--popover)), safe area (--safe-area-top/right/bottom/left), spacing & control tokens Light (:root) và Dark (.dark) đồng bộ từ D:\\Dự án\\b2b-pnt kèm ánh xạ động --agv-*' },
+      'src/App.tsx': { lines: 284, role: 'B2B-PNT Read-Only Application Shell (Lazy-Loaded Pages + LoginPanel): tách hoàn toàn khỏi barrel `./components/grid`, nạp lười `LoginPanel` & 5 trang con qua `React.lazy` + `<Suspense>`, dùng `parseHashPageKey()` hỗ trợ query trên URL hash (`#/airports?grid=...&mode=...`)' },
+      'src/services/b2bAuth.ts': { lines: 312, role: 'B2B-PNT Auth & Session Client tách khỏi `b2bApi.ts`: quản lý sessionStorage (`agv_b2b_session_v1`), token memory, `apiCall` single-flight RefreshToken khi 401, `loginAccount`, `verifyTwoFaCode`, `logoutAccount`' },
+      'src/services/b2bApi.ts': { lines: 910, role: 'B2B-PNT BE-CRM Catalog & Booking Endpoints: tái sử dụng `apiCall` từ `./b2bAuth`, chuẩn hóa phân trang (`normalizePaged`), xuất `fetchCountriesPage`, `fetchAirportsPage`, `fetchAllAirports`, `fetchPartnersPage`, `fetchBookingsPage` (không kéo Auth login logic vào chunk trang)' },
+      'src/components/b2b/LoginPanel.tsx': { lines: 189, role: 'Màn hình đăng nhập BE-CRM (Password + xác thực 2FA 6 số): tuân thủ PNT B2B design tokens (bg-card, border-control, bg-control-surface, CONTROL_HOVER_CLASS, CONTROL_FOCUS_CLASS, CTA bg-primary h-9), NO_AUTOFILL_PROPS, không tooltip' },
+      'src/components/shared/PageShell.tsx': { lines: 29, role: 'Shell bố cục chuẩn trang PNT B2B (min-h-screen bg-background text-foreground, header tiêu đề + container responsive)' },
+      'src/components/shared/ListPagePanel.tsx': { lines: 27, role: 'Panel nội dung chính chuẩn b2b-pnt (border-y bg-card text-card-foreground sm:rounded-xl sm:border sm:shadow-sm, hỗ trợ fillHeight)' },
+      'src/components/shared/StatusBadge.tsx': { lines: 45, role: 'Badge trạng thái semantic (success | danger | muted | warning | info | brand) dùng class semantic tokens PNT Light/Dark' },
+      'src/components/shared/StatusTabs.tsx': { lines: 65, role: 'Thanh tab lọc trạng thái với gạch chân Gold active (border-b-2 border-brand-gold text-brand-gold-on-light)' },
+      'src/components/ui/controlFocus.ts': { lines: 196, role: 'SSOT class & size helpers chuẩn hóa toàn bộ controls và nút 4 biến thể (`getButtonClass`/`buttonVariants`: default | outline | ghost | destructive, `ButtonSize`: sm/default/md/icon-sm/icon, chống xung đột Tailwind `h-`/`w-`/`px-`/`font-`/`text-`, `CONTROL_BUTTON_*`, `CONTROL_SURFACE_CLASS`, `CONTROL_BOX_CLASS`, `BUTTON_FOCUS_VISIBLE_CLASS="agv-focus-ring"`, `POPUP_*`)' },
+      'src/components/ui/AdvButton.tsx': { lines: 52, role: 'Component `<AdvButton>` (`Button` alias) nguồn đơn 4 biến thể (`default`, `outline`, `ghost`, `destructive`), `size` (`sm`, `default`, `md`, `icon-sm`, `icon`), `active` state (`data-active="true"`)' },
+      'src/pages/usePagedListQuery.ts': { lines: 190, role: 'Shared React hook quản lý phân trang server-side kèm LRU Page Cache 0ms (`page=1`, `pageSize=20`, `serverTotal`, `loading`, `error`, `refresh`, `apiLoadMs`, `renderStartRef`) cho các trang danh mục B2B-PNT' },
+      'src/pages/gridPageTelemetry.tsx': { lines: 168, role: 'Module đo lường hiệu năng runtime dùng chung cho các trang Grid (`captureRuntimeTelemetry`, `countGridDomNodes`, `useGridStageTelemetry`, `<GridTelemetryLine />`)' },
+      'src/pages/CountriesPage.tsx': { lines: 357, role: 'Trang tra cứu Quốc gia: GeographyDDL + bộ lọc h-9 + dòng `Đo thực tế` (`GridTelemetryLine`) + cột qua `createColumnHelper<CountryRow>()` & `defaultColDef` + `<DataGrid gridId="b2b_countries" modules={[...StandardGridModules, QueryBuilderModule, ColumnChooserModule]} data={...} getRowId={...} pagination={...} />`' },
+      'src/pages/AirportsPage.tsx': { lines: 603, role: 'Trang tra cứu Sân bay trên 2.771 dòng (`fetchAllAirports`): dùng `<DataGrid modules={BasicViewModules} />` (`mode=all|paged`), bộ lọc BE-CRM và thanh `Đo thực tế` dùng `useGridStageTelemetry` + `<GridTelemetryLine />`' },
+      'src/pages/PartnersPage.tsx': { lines: 409, role: 'Trang tra cứu Đại lý: StatusTabs Gold, bộ lọc h-9 + cột qua `createColumnHelper<PartnerListItem>()` & `defaultColDef` + `<DataGrid gridId="b2b_partners" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`' },
+      'src/pages/BookingsPage.tsx': { lines: 605, role: 'Trang tra cứu Đặt chỗ B2B: 7 tab StatusTabs, AdvDateRangePicker size="md", cột qua `createColumnHelper<BookingListItem>()` (`valueGetter`) & `defaultColDef` + `<DataGrid gridId="b2b_bookings" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`' },
+      'src/pages/UiPrimitivesPage.tsx': { lines: 144, role: 'Trang `Thử nghiệm UI` (mở xem không cần đăng nhập B2B): kiểm thử trực tiếp 3 controls Nhóm B (`AdvPopover` + `AdvSelect`, `AdvHoverCard`, `AdvTooltip`) theo theme Sáng/Tối' },
+      'src/components/grid/modules/index.ts': { lines: 156, role: 'Module hóa kiểu AG Grid React: 19 hằng số `GridModule` (tách riêng `ColumnPinningModule` Trái/Phải, `CenterDockModule` Giữa, `RowPinningModule` ghim dòng, `ResponsiveLayoutModule` PC/Tablet/Phone), 3 preset (`BasicViewModules`, `StandardGridModules`, `AllEnterpriseModules`), `toModuleIdSet`, `hasGridModule`' },
+      'src/components/grid/columns/columnTypes.ts': { lines: 136, role: 'Kiểu Column API hợp nhất AG Grid + TanStack Table v8: `ColumnHelperAccessorColumn`, `ColumnHelperGroupColumn`, `AnyGridColumnInput`, `DefaultColDef`, `PaginationConfig` (`total`/`serverTotal`), `GridColumnInput`' },
+      'src/components/grid/columns/createColumnHelper.ts': { lines: 49, role: 'Helper tạo định nghĩa cột typed kiểu TanStack v8: `createColumnHelper<TData>()` với `.accessor(...)`, `.display(...)`, `.group(...)`' },
+      'src/components/grid/columns/normalizeColumns.ts': { lines: 241, role: 'Bộ chuyển đổi `normalizeGridColumns(columns, columnDefs, defaultColDef, features)` biến `ColumnHelper*` / `GridColumnInput` / `ColumnDef` lồng `columns` sang phẳng + `BaseGroupDef[]`, tự sinh `renderHeader`, `valueGetter`, `renderCell`, `hideable`, `groupable`, `enableGlobalFilter` và tách riêng gate ghim Trái/Phải vs Giữa' },
+      'src/components/grid/columns/index.ts': { lines: 3, role: 'Barrel export `createColumnHelper`, `normalizeGridColumns` và toàn bộ types cột từ `./columns/*`' },
+      'src/components/grid/gridStorage.ts': { lines: 67, role: 'Bộ helper localStorage an toàn SSR (check typeof window !== "undefined") & sinh storage key cô lập theo `gridId` cho đa instance (`getDataGridConfigStorageKey`, `getQueryPresetsStorageKey`, `getFloatingToolbarTopKey`)' },
+      'src/components/grid/gridFeatures.ts': { lines: 340, role: 'Single source of truth quản lý Module & Feature Flags (`GRID_VARIANTS`, `GridFeatureProps`, `ResolvedGridFeatures`, `resolveGridFeatures`): ưu tiên `modules?: readonly GridModule[]` (fallback `BasicViewModules`), tách biệt `enableColumnPinning`, `enableCenterDock`, `enableRowPinning`, `enableCellEditing`, `enableResponsiveLayout` và biến thể `variant="full" | "basic"`' },
+      'src/components/grid/multiSortUtils.ts': { lines: 215, role: 'Động cơ sắp xếp phân cấp nhiều cột: `normalizeSortRules`, `toggleColumnSortRules` (nhấn thường / `Shift+Click`), `reorderSortRules` (đổi thứ tự ưu tiên) và `sortRowIndicesMulti` (thuật toán Lazy Tie-Breaker tối ưu O(N) chỉ tính tầng sau khi các tầng trước bằng nhau)' },
+      'src/components/grid/popupLockUtils.ts': { lines: 117, role: 'Pure utilities khóa cuộn & tương tác Grid khi mở Popup: `resolveEventTargetElement`, `isTargetInsidePopupSelector`, `isScrollableOverflowValue`, `canElementScrollOnAxis` (ngưỡng subpixel DPI 0.5/0.2), `canWheelScrollInsidePopup` (hỗ trợ Text node & chống scroll-chaining), `shouldBlockGridInteractionWhenPopupOpen`' },
+      'src/components/grid/AdvMultiSortPopup.tsx': { lines: 647, role: 'Popup Portal Sắp xếp phân cấp đa cột gắn neo theo nút trên Floating Toolbar (áp dụng tức thì, không nút Áp dụng): kéo thả mượt theo pointer drag + translateY (`AdvColumnChooserModal`) + FLIP settle chống giật khung, AdvSelect chọn cột, nút icon toggle MorphSortIcon + `BUTTON_FOCUS_VISIBLE_CLASS`, footer 1 hàng Thêm cột/Xóa hết (`CONTROL_BUTTON_OUTLINE_SM_CLASS`), wrapper `pointer-events-none z-[1250]` + click outside (ngoại trừ `.agv-float-toolbar-btn`) & scroll lock' },
+      'src/components/grid/DataGrid.tsx': { lines: 2689, role: 'Core Library Component (`<DataGrid<TRecord> />` & `useDataGridController`): gỡ static `gridUtils` & `MorphCheckbox`, dùng fast-path `gridSimpleFilter` + dynamic `gridFilterEngine`/`gridGroupingEngine`, uncloned `getRow`, cache `getRowKeyAt`, `GridSelectionCheckbox` & truyền `_resolvedFeatures`' },
+      'src/components/grid/GridStatusBar.tsx': { lines: 184, role: 'Thanh phân trang đáy tích hợp core Grid (`statusBar` prop): tái sử dụng `AdvSelect` (`20 / 50 / 100 / 200`), nút `<` / `>` (`AdvButton` ghost), ô nhập số trang (`CONTROL_INPUT_SM_CLASS` + `NO_AUTOFILL_PROPS`), `/ {totalPages}` và khoảng dòng `start-end / totalItems`, toàn bộ controls min-h 28px' },
+      'src/components/grid/gridCore.css': { lines: 254, role: 'CSS lõi cho `DataGrid` / `VirtualizedGrid` (`.agv-grid-root`, `.agv-cell-*`, `[data-agv-editing="true"]`, scrollbar overlay, `[data-agv-popup="true"]` overscroll, `@keyframes agv-row-enter`, `.agv-group-row`, `.agv-grid-row`, cross-hover & cell span)' },
+      'src/components/grid/floatingToolbar.css': { lines: 409, role: 'CSS tách riêng cho `GridFloatingToolbar` & popup flyout (kèm `:focus-visible` `var(--ring)` trên `.agv-float-toolbar-btn` & `:focus-within` `inset 1px var(--brand)` trên `.agv-float-search-flyout`), chỉ tải khi chunk toolbar mount' },
+      'src/components/grid/phoneCard.css': { lines: 48, role: 'CSS tách riêng cho `.agv-phone-card`, chỉ tải cùng `ResponsiveChunkRow`' },
+      'src/components/grid/filterRow.css': { lines: 24, role: 'CSS tách riêng cho `GridFilterRow` (đã gỡ outset box-shadow xung đột SSOT, giữ highlight `.agv-filter-op-btn` theo `var(--brand)`)' },
+      'src/components/grid/floating/columnChooser.css': { lines: 34, role: 'CSS tách riêng cho `AdvColumnChooserModal`' },
+      'src/components/grid/floating/queryBuilder.css': { lines: 7, role: 'CSS tách riêng cho `AdvGridQueryBuilderModal`' },
+      'src/components/grid/grid.css': { lines: 121, role: 'Stylesheet riêng cho `DataGrid`/`VirtualizedGrid`: `@import "./gridCore.css"`, backdrop fullscreen, spring left/right/zoom & column resize (đã tách CSS lõi/toolbar/responsive/modal ra file riêng)' },
+      'tailwind.config.js': { lines: 176, role: 'Cấu hình Tailwind CSS đồng bộ b2b-pnt: `darkMode: "class"`, helper `withVar`/`withCssExpr` (`color-mix` hỗ trợ opacity modifiers), đầy đủ thang màu PNT (`brand`, `primary`, `control`, `surface`, `status`, `table-header`, `--agv-*`), typography, spacing, borderRadius & zIndex' },
+      'src/components/grid/VirtualizedGrid.tsx': { lines: 2164, role: 'Core Virtualized Grid Engine: tiếp nhận `_resolvedFeatures`, tách `useGridColumnLayout` & `useGridPopupLock`, bỏ `viewportWidth` thừa, lazy `AdvChecklistFilterPopup`/`GridGroupHeaderRow`/`gridGroupingEngine`/`gridFilterEngine`/`GridResponsiveHeader`, `virtualScrollTopRef` an toàn cho `isWindowScroll`, đo 1-pass `useLayoutEffect`, CHUNK = 20' },
+      'src/components/grid/hooks/useGridColumnLayout.ts': { lines: 660, role: 'Custom Hook tách từ `VirtualizedGrid`: quản lý độ rộng/ghim/ẩn cột, `GridMiddleElement`, bỏ qua đo `columnNaturalPositions` & `ResizeObserver` khi không có cột center-pinned' },
+      'src/components/grid/hooks/useGridPopupLock.ts': { lines: 200, role: 'Custom Hook tách từ `VirtualizedGrid`: `isAnyPopupActive` zero-alloc qua `document.body.children`, khóa cuộn `wheel`/`touchmove` & chặn tương tác khi popup mở' },
+      'src/components/grid/GridSelectionCheckbox.tsx': { lines: 23, role: 'Wrapper chọn dòng nhẹ dùng cho `DataGrid` và `GridFilterRow` mà không kéo static `MorphCheckbox` vào bundle chính' },
+      'src/components/grid/GridGroupHeaderRow.tsx': { lines: 267, role: 'Component dòng tiêu đề nhóm (`React.lazy` tách khỏi `GridRow`)' },
+      'src/components/grid/gridGroupingEngine.ts': { lines: 191, role: 'Động cơ gom nhóm dòng (`buildGroupedDisplayModel`, `copyGroupTableToClipboard`, `computeStickyGroupIndexAtTop`) tách lazy khỏi `DataGrid`/`VirtualizedGrid`' },
+      'src/components/grid/colRenderMeta.ts': { lines: 186, role: 'Tạo sẵn metadata cột (`buildColRenderMetas`) chuẩn hóa sticky/align/divider dùng chung giữa `GridChunkBlock` và `GridRow`' },
+      'src/components/grid/GridFloatingToolbar.tsx': { lines: 667, role: 'Thanh công cụ nổi cạnh trái (`floatingToolbar.css`): lazy-load `AdvQuickFilterFlyout`, `AdvMultiSortPopup`, `AdvGridQueryBuilderModal`, `AdvColumnChooserModal` (kèm hover preload trên nút mở), cô lập Y theo `gridId`, `onActivePopupChange`, Ctrl+F / Alt+Shift+F' },
       'src/components/grid/floating/AdvQuickFilterFlyout.tsx': { lines: 111, role: 'Popup 1: Tìm kiếm nhanh flyout sang trái, Smart mode toggle, debounce 250ms, autoFocus, Esc đóng, chuẩn hóa luxury shadow theo phong cách nút lọc STT, đã gỡ sạch title tooltip, tích hợp NO_AUTOFILL_PROPS' },
-      'src/components/grid/floating/AdvGridQueryBuilderModal.tsx': { lines: 1521, role: 'Popup 2: Bộ lọc nâng cao cây điều kiện lồng nhau VÀ/HOẶC: chuẩn hóa 100% SURFACE_THEMES, QUERY_COMBINATORS, FILTER_OPS, FILTER_MODES, DATA_TYPES, tái sử dụng formatQueryRuleSummary từ queryUtils, tích hợp MorphChevronIcon trong QueryCustomSelect, LEVEL_PAREN_COLORS dùng 100% biến CSS var(--agv-*), tuân thủ tuyệt đối Rules of Hooks, đếm chính xác 100% matchCount trên toàn bộ 50.000 dòng, tích hợp NO_AUTOFILL_PROPS cho toàn bộ 6 ô input, tải động qua React.lazy, ẩn chữ ô toán tử (iconOnly: chỉ hiện icon SVG và MorphChevronIcon gọn gàng 44px, đã gỡ sạch title tooltip), nút SVG ListFilter mở AdvMultiFilterPopup, QueryCustomSelect hỗ trợ coords.isFlipUp, agv-spring-up/down và luxury shadow' },
-      'src/components/grid/floating/AdvColumnChooserModal.tsx': { lines: 1070, role: 'Popup 3: Tùy chọn cột tinh gọn: chuẩn hóa 100% Data-Driven, tải động qua React.lazy, chuẩn hóa bo góc rounded-md (6px), chuẩn hóa luxury shadow theo phong cách nút lọc STT, đã xóa toàn bộ title tooltip, tích hợp NO_AUTOFILL_PROPS, chống thu gọn khi đang kéo di chuyển vị trí, đồng bộ orderedRawColumns theo thứ tự dataColumns và đo tọa độ tâm thực tế measureSiblingMidpoints giúp kéo thả sắp xếp translateY mượt mà cho cả cột đơn, cột con và nhóm Band/Atomic đang mở rộng, giới hạn chiều cao nằm gọn trong Grid' },
-      'src/components/grid/AdvCheckbox.tsx': { lines: 54, role: 'Hệ thống Checkbox chuẩn AdvCheckbox: bọc MorphCheckbox với spring snappy nhanh dứt khoát (Square <-> SquareCheck <-> SquareMinus), hỗ trợ checked, indeterminate, disabled, 100% theme CSS variables, zero tooltip' },
-      'src/components/grid/floating/AdvGridSettingsPopup.tsx': { lines: 113, role: 'Popup 4: Cài đặt bảng dữ liệu tinh gọn (tái sử dụng MorphCheckbox chuẩn của hệ thống, chuẩn hóa bo góc rounded-md 6px, chuẩn hóa luxury shadow theo phong cách nút lọc STT, đã gỡ sạch title tooltip): Cột số thứ tự, Cột chọn dòng, Dòng công thức, Dòng chọn trang, Cuộn khớp dòng (rowSnapMode)' },
-      'src/components/grid/floating/queryUtils.ts': { lines: 669, role: 'Hàm lượng giá và xử lý chuỗi CMD Query Tree: chuẩn hóa 100% QUERY_COMBINATORS, FILTER_OPS enum, DATA_TYPES, QUERY_OP_DISPLAY_MAP, formatQueryRuleSummary, hỗ trợ multiValues và multiRanges, parseCmdToQueryTree, validateQueryTreeAgainstColumns, evaluateQueryTreeNode, evaluateValueCondition, generateNaturalLanguage' },
-      'src/components/grid/GridHeader.tsx': { lines: 565, role: 'Header component: linh hoạt 1 tầng (34px) hoặc 2 tầng (64px), chuẩn hóa DRY qua renderHeaderCellContent & createDragProps gom toàn bộ xử lý kéo thả cột/nhóm cho cả 5 vùng (Pinned Left, Middle Standalone, Middle Band Tier-1 Group, Middle Band Tier-2 Child, Pinned Right) với draggingColKeyRef, dọn sạch 100% import thừa, chuẩn hóa 100% PIN_POSITIONS, CENTER_DOCK_STATUSES, DATA_TYPES, FILTER_MODES, SORT_DIRECTIONS và biến màu var(--agv-accent) cho thanh kéo cột (loại bỏ hoàn toàn text & màu hardcode), nhận prop hasFilterRow để tự động chuyển viền đáy thành 1px border-b khi có hàng lọc, đã gỡ sạch 100% title tooltip, tối ưu padding px-0.5 cho STT và Chọn, xóa chữ tiêu đề cột Chọn, ẩn thanh resize handle cho STT và Chọn, vô hiệu hóa chuột phải trên cột STT và Chọn, tích hợp MorphSortIcon biến hình lò xo ArrowUp <-> ArrowDown ASC/DESC mượt mà' },
-      'src/components/grid/GridFilterRow.tsx': { lines: 1303, role: 'Inline Filter Row component: trang bị đường kẻ 2px đáy (border-b-2 border-b-[var(--agv-border-strong)]) trên cả khung container lẫn từng cell (STT, Chọn, Không lọc, Data) để phân tách rõ ràng dứt khoát giữa dòng hệ thống và khối dữ liệu, chuẩn hóa 100% SURFACE_THEMES, CENTER_DOCK_STATUSES, FILTER_OPS, CHECK_FILTER_STATES, DATA_TYPES, FILTER_MODES, PIN_POSITIONS và helper predicates, tích hợp MorphCheckbox 3 trạng thái (Square <-> SquareCheck <-> SquareMinus) cho cột chọn dòng lọc, tích hợp NO_AUTOFILL_PROPS cho toàn bộ 6 ô input, áp dụng 100% Design Tokens Tailwind (bg-agv-accent, text-agv-accent-text, text-agv-accent), hiển thị tổng Sum columnSums cho các cột number kèm đổi màu chữ sang var(--agv-accent) khi đang tính theo dòng chọn (hasCheckedRows), đã gỡ sạch 100% title tooltip, tối ưu padding px-0.5 cho ô STT và Chọn, click/tái nhấn ô STT bật/tắt AdvCriteriaSummaryPopup (gồm cả dòng đang ghim pinnedRows), nút toán tử lọc hỗ trợ Toggle On/Off luân chuyển, tích hợp agv-spring-up/down, tự động lật flip-up và luxury shadow' },
-      'src/components/grid/AdvCriteriaSummaryPopup.tsx': { lines: 606, role: 'Popup tập hợp tiêu chí tinh gọn: chuẩn hóa 100% SURFACE_THEMES, CHECK_FILTER_STATES, DATA_TYPES, EDITOR_TYPES, FILTER_MODES, SORT_DIRECTIONS, đã gỡ sạch title tooltip, Segmented Chip layout theo mockup cho 8 nhóm tiêu chí (bao gồm DÒNG ĐANG GHIM pinnedRows), tích hợp spring directional popup (agv-spring-down / agv-spring-up), chuẩn hóa toàn bộ nút xóa chip bằng Lucide Icon X, bỏ header thừa và nút đóng, tái nhấn nút STT để tắt popup, Tìm giá trị theo và Cây điều kiện bỏ tag xanh hiển thị trực tiếp giá trị/công thức, chuẩn hóa ngày DD/MM/YYYY cho toán tử between, chỉ hiện danh mục có tiêu chí, xóa từng mục riêng lẻ hoặc xóa tất cả, neo dưới ô STT dòng lọc, 100% theme CSS variables, luxury shadow, min-height 28px' },
-      'src/components/grid/AdvMultiFilterPopup.tsx': { lines: 901, role: 'Popup lọc nhiều điều kiện OR / AND (IN / NOT IN clause) khi chuột phải vào ô filter trên GridFilterRow hoặc bấm nút SVG trên QueryBuilder: chuẩn hóa 100% SURFACE_THEMES, DATA_TYPES, EDITOR_TYPES, FILTER_MODES, FILTER_OPS, Lucide Icons (X, Check), MorphChevronIcon và biến CSS var(--agv-danger), tích hợp {...NO_AUTOFILL_PROPS} cho toàn bộ 4 ô input dải số/giờ và 3 ô textarea đa dòng, đã gỡ sạch title tooltip, tính toán vị trí động neo dính sát nút bấm, onApply bảo toàn selectedValues & includeBlanks, menu toán tử Portal document.body tích hợp agv-spring-up/down và luxury shadow, logic phủ định AND loại trừ chuẩn De Morgan cho toán tử Khác (≠) và Không chứa, xóa sạch dòng đếm trung gian, khống chế max-h kéo dọc textarea (max 220px)' },
-      'src/components/grid/FilterIcons.tsx': { lines: 410, role: '15 DevExtreme SVG filter operation vector icons (stroke=currentColor), chuẩn hóa 100% DATA_TYPES và FILTER_OPS, hàm duy nhất toàn hệ thống getAllowedFilterOpsForColumn & getDefaultFilterOpForColumn đồng bộ danh sách toán tử nhạy theo hasColumnEmptyCells, getColumnFilterType, FILTER_OP_META labels & allowed operations by data type định nghĩa 100% qua FILTER_OPS' },
-      'src/components/grid/GridRow.tsx': { lines: 1029, role: 'Individual row renderer: chuẩn hóa 100% CENTER_DOCK_STATUSES, ALIGNMENTS, DATA_TYPES, EDITOR_TYPES, PIN_POSITIONS, GRID_EDIT_MODES, gắn class .agv-grid-row / .agv-group-row cùng data-row-key, data-row-idx, data-row-parity, data-row-focused, data-row-checked và data-cell-role (stt/chk/data) phục vụ hiệu ứng trượt dòng FLIP khi Sort chuẩn AG Grid, phân biệt Focus/Chọn Kiểu A và hiệu ứng rê chuột phủ màu nhẹ toàn dòng Zero-Reflow qua kế thừa biến CSS cấp dòng (--agv-row-data-bg, --agv-row-sticky-bg, --agv-group-row-bg), tích hợp hiệu ứng xuất hiện mượt mà agv-row-enter kèm stagger nhẹ theo vị trí dòng trong chunk ((rowIndex % 20) * 4ms), tích hợp CellEditor thông minh cho vùng số (chặn 100% chữ cái rác, cho phép phím tắt 1k/1tr/1b, mở rộng tự động và lưu số number), đồng bộ viền border-2 border-agv-accent và cỡ chữ 12px (text-xs) cho 100% các In-Cell Editors (CellEditor, DateCellEditor, DateRangeCellEditor, TimeCellEditor, ComboBox, LookUp) loại bỏ thụt lề p-0.5, tích hợp NO_AUTOFILL_PROPS và getGridControlRadiusClass() đồng bộ bo góc 6px, render Group Header Row với MorphChevronIcon biến hình lò xo, mở/đóng titleColSpan Toolbar3 (diff=0px), sticky cells' },
-      'src/components/ui/AdvDatePicker.tsx': { lines: 662, role: 'Single DatePicker component & Barrel entry point cho bộ DatePicker suite: đã phân rã gọn gàng thành 5 sub-modules trong src/components/ui/datepicker/ (datePickerStyles.ts, datePickerUtils.ts, AdvCalendarPrimitives.tsx, AdvDatePresetSelect.tsx, AdvDateRangePicker.tsx), chuẩn hóa SURFACE_THEMES, hỗ trợ agv-incell-datepicker, NO_AUTOFILL_PROPS, 4 Themes, min-h 28px, re-export đầy đủ 100% API đảm bảo tương thích ngược' },
-      'src/components/ui/datepicker/datePickerUtils.ts': { lines: 945, role: 'Module toán học ngày tháng, regex, format/parse (formatGridDateValue, parseDMYToDate, computePresetDateRange, normalizePresetList, getPresetLabel), buildCalendarCells, usePopupDismiss, computeCalendarCoords và computeDropdownMenuCoords, chuẩn hóa SURFACE_THEMES' },
-      'src/components/ui/datepicker/AdvCalendarPrimitives.tsx': { lines: 340, role: 'Module chứa các UI Primitives dùng chung cho lịch: TimePickerBlock (chọn giờ:phút HH:mm) và AdvDevExpressCalendarBody (ma trận lịch Ngày/Tháng/Năm phong cách DevExpress)' },
-      'src/components/ui/datepicker/AdvDatePresetSelect.tsx': { lines: 795, role: 'Module chọn mốc thời gian nhanh (AdvDatePresetSelect): chuẩn hóa SURFACE_THEMES, hỗ trợ chọn đơn/đa mốc Năm/Quý/Tháng thông minh, tự động lọc theo min/max dữ liệu' },
-      'src/components/ui/datepicker/AdvDateRangePicker.tsx': { lines: 1040, role: 'Module chọn khoảng ngày kép (AdvDateRangePicker): chuẩn hóa SURFACE_THEMES, hỗ trợ lịch đôi dualMonth, tự động đảo chiều ngày khi chọn ngược, tích hợp chọn giờ và mốc nhanh' },
-      'src/components/ui/datepicker/datePickerStyles.ts': { lines: 712, role: 'Module quản lý CSS động cho DatePicker: hàm ensureDatePickerStyles() inject keyframes và biến CSS ánh xạ trực tiếp từ LIGHT_THEME_TOKENS, DARK_THEME_TOKENS, BEZIER_ARTHOUSE_THEME_TOKENS, EINK_PAPER_THEME_TOKENS theo 4 themes, hỗ trợ agv-incell-datepicker đồng bộ viền 2px accent và cỡ chữ 12px với CellEditor (loại bỏ shadow)' },
+      'src/components/grid/floating/AdvGridQueryBuilderModal.tsx': { lines: 1541, role: 'Popup 2: Bộ lọc nâng cao cây điều kiện lồng nhau VÀ/HOẶC (`./queryBuilder.css`): lưu preset cô lập theo `gridId` qua `gridStorage.ts`, chuẩn hóa SSOT `CONTROL_BOX_CLASS`, `CONTROL_INPUT_SM_CLASS`, `CONTROL_BUTTON_OUTLINE_SM_CLASS`, `CONTROL_BUTTON_PRIMARY_SM_CLASS`, `BUTTON_FOCUS_VISIBLE_CLASS`, `QueryCustomSelect`, `NO_AUTOFILL_PROPS`, React.lazy' },
+      'src/components/grid/floating/AdvColumnChooserModal.tsx': { lines: 1093, role: 'Popup 3: Tùy chọn cột tinh gọn (`./columnChooser.css`): tuân thủ `enableColumnHide`, `onColumnPinChange`, `onReorderColumns`, SSOT `CONTROL_INPUT_SM_CLASS` & `CONTROL_BUTTON_OUTLINE_SM_CLASS`, React.lazy, bo góc rounded-md (6px), kéo thả translateY mượt mà' },
+      'src/components/grid/AdvCheckbox.tsx': { lines: 54, role: 'Hệ thống Checkbox chuẩn AdvCheckbox: bọc MorphCheckbox hiệu ứng Morph Line 3 trạng thái (unchecked / checked / indeterminate), 100% theme CSS variables, zero tooltip' },
+      'src/components/grid/floating/queryRuleCheck.ts': { lines: 45, role: 'Helpers siêu nhẹ (`isRuleActive`, `hasActiveQueryRules`, `countActiveQueryRules`) tách khỏi `queryUtils.ts` để `DataGrid`/`VirtualizedGrid`/`GridFilterRow` kiểm tra rule active mà không kéo `queryUtils` & parser vào cold bundle' },
+      'src/components/grid/floating/queryUtils.ts': { lines: 630, role: 'Hàm lượng giá và xử lý chuỗi CMD Query Tree (nạp lười qua dynamic `import()`): chuẩn hóa QUERY_COMBINATORS, FILTER_OPS, DATA_TYPES, `evaluateQueryTreeNode`, `parseCmdToQueryTree`, `validateQueryTreeAgainstColumns`' },
+      'src/components/grid/GridHeader.tsx': { lines: 642, role: 'Header component 1/2 tầng: lazy-load `LazyHeaderSortMorphIcon` & `LazyHeaderBandToggleMorphIcon` từ `./GridMorphPrimitives` (preload khi rê chuột lên cột sortable), hỗ trợ Drag & Drop, ghim cột, `useGridColumnLayout` & context menu' },
+      'src/components/grid/GridDateFilterCell.tsx': { lines: 93, role: 'Ô lọc ngày (`AdvDatePicker`) tách khỏi `GridFilterRow` để nạp lười qua `React.lazy`, giúp trang chỉ có cột text/số không kéo `AdvDatePicker` (74 kB) vào bundle bảng' },
+      'src/components/grid/GridTimeFilterInputs.tsx': { lines: 170, role: 'Ô lọc giờ `TimeFilterInput` & dải giờ `TimeRangeFilterInput` tách lazy qua `React.lazy` khỏi `GridFilterRow` (`h-full`, bỏ `minHeight: 28px` nội bộ)' },
+      'src/components/grid/GridSmartNumberInputs.tsx': { lines: 265, role: 'Ô lọc số thông minh `SmartNumberFilterInput` & dải số `NumberRangeFilterInput` tách lazy qua `React.lazy` khỏi `GridFilterRow` (`h-full`, bỏ `minHeight: 28px` nội bộ)' },
+      'src/components/grid/GridMorphPrimitives.tsx': { lines: 42, role: 'Cầu nối các biểu tượng `morphicons` (`HeaderSortMorphIcon`, `HeaderBandToggleMorphIcon`, `RowGroupChevronMorphIcon`) tách riêng để `GridHeader` & `GridRow` lazy-load khi tương tác' },
+      'src/components/grid/GridFilterRow.tsx': { lines: 908, role: 'Inline Filter Row component (`./filterRow.css`): lazy-load `GridDateFilterCell`, `GridTimeFilterInputs`, `GridSmartNumberInputs`, `AdvMultiFilterPopup`, `AdvCriteriaSummaryPopup`, dùng `CONTROL_BOX_CLASS`, `GridSelectionCheckbox` & Portal operator menu' },
+      'src/components/grid/AdvCriteriaSummaryPopup.tsx': { lines: 627, role: 'Popup tập hợp tiêu chí tinh gọn: hiển thị Segmented Chip cho 8 nhóm tiêu chí (gồm nhiều quy tắc sắp xếp `sortRules` và `pinnedRows`), xóa từng quy tắc sắp xếp riêng lẻ hoặc xóa tất cả, agv-spring-up/down, Lucide Icon X, zero tooltip, min-height 28px' },
+      'src/components/grid/AdvMultiFilterPopup.tsx': { lines: 938, role: 'Popup lọc nhiều điều kiện OR / AND (IN / NOT IN clause) khi chuột phải vào ô filter trên GridFilterRow hoặc bấm nút SVG trên QueryBuilder: chuẩn hóa 100% SSOT (`CONTROL_BUTTON_OUTLINE_SM_CLASS`, `CONTROL_BUTTON_PRIMARY_SM_CLASS`, `BUTTON_FOCUS_VISIBLE_CLASS`, `.agv-control`), `SURFACE_THEMES`, `NO_AUTOFILL_PROPS`, Lucide Icons, MorphChevronIcon & `AdvOverlayScroll`' },
+      'src/components/grid/FilterIcons.tsx': { lines: 383, role: '15 DevExtreme SVG filter operation vector icons (`stroke=currentColor`), `FILTER_OP_META`, `ALLOWED_OPS_BY_TYPE`, `getAllowedFilterOpsForColumn` (tái sử dụng predicate từ `./gridFormatUtils`, cắt đứt leak sang `AdvDatePicker`)' },
+      'src/components/grid/editors/GridInCellEditor.tsx': { lines: 495, role: 'Chunk lazy In-Cell Editor tách riêng khỏi GridRow (`CellEditor`, `DateCellEditor`, `DateRangeCellEditor`, `TimeCellEditor`, `GridInCellEditor`): áp dụng `CONTROL_SURFACE_CLASS`/`CONTROL_BOX_CLASS` + `.agv-incell-control` (`1px` border + `1px` inset ring `--brand`, vừa ô 30px)' },
+      'src/components/grid/GridRow.tsx': { lines: 405, role: 'Fast row renderer dùng `ColRenderMeta`, row-level event delegation, tải lười `LazyGridGroupHeaderRow` & `LazyGridInCellEditor`, sticky cells, `col.valueGetter`, hỗ trợ `dynamicRowHeight`' },
+      'src/components/ui/AdvDatePicker.tsx': { lines: 718, role: 'Single DatePicker component & Barrel entry point cho bộ DatePicker suite: phân rã thành 5 sub-modules trong src/components/ui/datepicker/, size="md" dùng var(--control-height) (36px), mặc định/sm 28px cho Grid Filter Row, PNT Light/Dark CSS tokens, NO_AUTOFILL_PROPS' },
+      'src/components/ui/datepicker/datePickerUtils.ts': { lines: 1014, role: 'Module toán học ngày tháng, regex (kèm REGEX_DATA_WEEK), format/parse (formatGridDateValue, parseDMYToDate, getISOWeekAndYear, getISOWeekDateRange, computePresetDateRange, normalizePresetList, getPresetLabel cho cả data_week_), buildCalendarCells, usePopupDismiss (bỏ qua scroll nội bộ popupRef), computeCalendarCoords và computeDropdownMenuCoords, chuẩn hóa SURFACE_THEMES' },
+      'src/components/ui/datepicker/AdvCalendarPrimitives.tsx': { lines: 417, role: 'Module chứa các UI Primitives dùng chung cho lịch: TimePickerBlock (chọn giờ:phút HH:mm) và AdvDevExpressCalendarBody (ma trận lịch Ngày/Tháng/Năm phong cách DevExpress), spacer w-[28px] cân xứng nút nav 28px, cỡ chữ 12px đồng nhất' },
+      'src/components/ui/datepicker/AdvDatePresetSelect.tsx': { lines: 764, role: 'Module chọn mốc thời gian nhanh (AdvDatePresetSelect): chuẩn hóa SURFACE_THEMES, size="md" vs sm/xs, Tuần đến hiện tại (chip số giảm dần về 1), Mốc theo năm, cỡ chữ 12px đồng nhất' },
+      'src/components/ui/datepicker/AdvDateRangePicker.tsx': { lines: 1070, role: 'Module chọn khoảng ngày kép (AdvDateRangePicker): chuẩn hóa SURFACE_THEMES, size="md" dùng 36px và default/sm 28px, lịch đôi dualMonth, đảo chiều ngày thông minh, chọn giờ và mốc nhanh' },
+      'src/components/ui/datepicker/datePickerStyles.ts': { lines: 764, role: 'Module quản lý CSS động cho DatePicker: đồng bộ tokens PNT B2B (`--control-border`, `--control-border-hover`, `--control-background`, `--brand`, `--surface-selected`, `--brand-gold`, `--popover`), `.agv-time-input-wrap` đồng bộ focus `inset 1px var(--brand)`, `.is-md` cao `var(--control-height)`, active preset dùng `--surface-selected` + `--brand-gold`, hover 0ms' },
       'docs/BACKEND_ARCHITECTURE_100K_USERS.md': { lines: 424, role: 'Tài liệu thiết kế kiến trúc hệ thống 100k người dùng: Cụm NestJS + Podman, BullMQ Worker xuất Excel ngầm, PostgreSQL 16 + PgBouncer, Managed Redis 1GB, Cloudflare R2 Storage (Zero Egress Fee), Frontend TAURI v2 cho Windows (Multi-Tab Keep-Alive 0ms), tích hợp MCP (Model Context Protocol) Server cho AI Agents' },
       'docs/DEEP_PAGINATION_AND_VIRTUAL_SCROLLING_TECHNIQUES.md': { lines: 219, role: 'Tài liệu kỹ thuật chuyên sâu về 2 kỹ thuật giải quyết bài toán Deep Pagination (OFFSET lớn) và Hao hụt dòng khi ảo hóa bảng dữ liệu lớn: Kỹ thuật 1 Deferred Join (quét trên B-Tree Index RAM buffer nhanh gấp 50-100 lần) và Kỹ thuật 2 Mảng ID Snapshot trong RAM Redis (Enterprise Standard: cắt lát mảng 0.01ms, triệt tiêu 100% lỗi hao hụt dòng khi nhảy cóc/xóa cứng)' },
-      'src/components/grid/hooks/useColumnResize.ts': { lines: 340, role: 'Động cơ resize siêu tốc Viewport-Culled 120fps từ bản 7: phân tách DOM nodes thành visibleTargetCells (~20-25 ô trong màn hình) và overscanTargetCells, cập nhật trực tiếp style trong lúc di chuột (giảm 85% chi phí reflow, <0.04ms/frame), đồng bộ co giãn ô tiêu đề dòng nhóm [data-group-span-keys] theo thời gian thực 1:1 cùng tay chuột, khôi phục biểu thức calc(var(--agv-col-w-*)) trên bandContainers khi nhả chuột, giữ sáng vạch chỉ báo 2px [data-resizing-active="true"] màu accent, khóa pointer-events và transition trên viewport, chỉ gọi setColWidth đồng bộ React state và localStorage đúng 1 lần duy nhất khi nhả chuột (mouseup)' },
-      'src/components/grid/hooks/useColumnAutoFit.ts': { lines: 128, role: 'Custom Hook chuyên trách vừa độ rộng tối ưu: quản lý canvas text measurement, collectColSummaryVals tính cả tổng nhóm và tổng bảng, handleAutoFitColumn, handleAutoFitAllColumns, handleAutoFitBandColumns' },
-      'src/components/grid/hooks/useInCellEditor.ts': { lines: 98, role: 'Custom Hook chuyên trách sửa ô in-cell: quản lý activeEditingCell, handleStartEditCell, handleEndEditCell, In-Cell Editing Scroll Lock và Global Event Lock' },
+      'src/components/grid/hooks/useColumnResize.ts': { lines: 86, role: 'Hook mỏng quản lý vòng đời resize cột, ủy quyền toàn bộ thao tác DOM 120fps sang dynamic import `columnResizeEngine.ts` để giữ bundle initial của `VirtualizedGrid` nhỏ gọn' },
+      'src/components/grid/hooks/columnResizeEngine.ts': { lines: 313, role: 'Động cơ resize siêu tốc Viewport-Culled 120fps tải lười khi `pointerdown`: phân tách visible/overscan cells, cập nhật trực tiếp DOM/CSS var `--agv-col-w-*`, đồng bộ group span & bandContainers, commit React state + localStorage đúng 1 lần khi `mouseup`' },
+      'src/components/grid/hooks/useColumnAutoFit.ts': { lines: 140, role: 'Custom Hook vừa độ rộng cột tối ưu: đo bề rộng qua lazy `gridAutoFitUtils.calcColAutoFitWidth`, collectColSummaryVals, handleAutoFitColumn, handleAutoFitAllColumns, handleAutoFitBandColumns' },
+      'src/components/grid/hooks/useInCellEditor.ts': { lines: 63, role: 'Custom Hook mỏng quản lý sửa ô in-cell (`activeEditingCell`, `handleStartEditCell`, `handleEndEditCell`), phối hợp khóa cuộn cùng `useGridPopupLock`' },
       'src/components/grid/hooks/useGridKeyboardNav.ts': { lines: 156, role: 'Custom Hook chuyên trách điều hướng bàn phím trên Grid (ArrowUp, ArrowDown, PageUp, PageDown, Space): cố định listener qua keyNavStateRef giúp giữ phím cuộn liên tục 60fps không re-bind event' },
-      'src/components/grid/hooks/useGridSortFlipAnimation.ts': { lines: 180, role: 'Custom Hook chuyên trách động cơ trượt dòng FLIP khi Sort chuẩn AG Grid (useLayoutEffect 300ms cubic-bezier(0.22, 1, 0.36, 1) qua prevRowIndexMapRef & computeSortRowFlipState)' },
+      'src/components/grid/hooks/useGridSortFlipAnimation.ts': { lines: 153, role: 'Custom Hook điều phối hiệu ứng trượt dòng FLIP khi Sort: giữ `prevRowIndexMapRef` & đồng bộ `sortSignature`, gọi dynamic `sortFlipEngine.ts` khi có thay đổi thứ tự' },
+      'src/components/grid/hooks/sortFlipEngine.ts': { lines: 177, role: 'Engine tính toán delta và chạy FLIP animation 300ms (`computeSortRowFlipState`, `runSortFlipAnimation`) tải lười khi người dùng thực sự sort bảng' },
       'test/run_tests.mjs': { lines: 59, role: 'Native Test Runner siêu tốc: sử dụng Vite programmatic API biên dịch TypeScript không cần external packages, thực thi unit tests qua Node.js native test runner' },
-      'src/components/ui/AdvComboBoxEdit.tsx': { lines: 371, role: 'Hộp chọn ComboBoxEdit chuẩn Animate UI (Base UI architecture): chuẩn hóa SURFACE_THEMES, nhấn vào là mở popup tức thì, loại bỏ 100% icon thừa trên ô nhập, lọc tức thì, phím mũi tên Lên/Xuống/Enter/Esc, viền active border-2 border-[var(--agv-accent)] tràn khít cell, min-h 28px, 100% theme CSS variables, zero autofill với NO_AUTOFILL_PROPS, tích hợp isFlipUp, spring-up/down và luxury shadow, popup scroll lock, chỉ mục đang chọn (isSelected) nhận nền accent chữ trắng, mục hover nhận bgItemHover' },
-      'src/components/ui/AdvSearchLookUpEdit.tsx': { lines: 781, role: 'Bảng tra cứu danh mục LookUp nhiều cột: chuẩn hóa 100% SURFACE_THEMES, ALIGNMENTS, DATA_TYPES, FILTER_OPS và tích hợp getAlignTextClass, chuẩn hóa bo góc rounded-md (6px), viền active border-2 border-[var(--agv-accent)] tràn khít cell, nhấn vào ô mở popup tức thì, loại bỏ 100% icon thừa trên ô kích hoạt, Find panel trên đầu, Filter Row từng cột, đã xóa hoàn toàn thanh footer đáy, hỗ trợ Chọn đơn & Chọn nhiều + Checkbox (multiSelect=true) tích hợp Lucide Icon Check, tích hợp isFlipUp, spring-up/down và luxury shadow, tích hợp NO_AUTOFILL_PROPS, min-h 28px' },
-      'src/components/ui/enterpriseEditorUtils.ts': { lines: 115, role: 'Tiện ích enterprise editor: chuẩn hóa SURFACE_THEMES, getPortalThemeVars (luôn trả về {} rỗng để tránh sinh Inline Style đè biến CSS của theme và chế độ Ngày/Đêm), computeEditorCoords, useClickOutside, normalizeSearchText' },
-      'src/components/ui/AdvPopover.tsx': { lines: 184, role: 'Primitive Popover chuẩn Animate UI (Base UI): chuẩn hóa SURFACE_THEMES, trigger click toggle, tính tọa độ đồng bộ trước khi mở, loại bỏ hoàn toàn lỗi bay/trượt từ góc trái trên (0,0) xuống, Portal document.body, spring animation agv-spring-down/up, flip-up thông minh, useClickOutside, data-agv-popup="true" khóa cuộn bảng, 100% theme tokens' },
-      'src/components/ui/AdvSelect.tsx': { lines: 266, role: 'Primitive Select (Dropdown chọn 1 giá trị thuần túy): chuẩn hóa SURFACE_THEMES, tách từ nền tảng Combobox, mở tức thì khi click, điều hướng phím Lên/Xuống/Enter/Esc, check icon Lucide, mục active nền var(--agv-accent) chữ trắng, min-h 28px, Portal, spring animation' },
-      'src/components/ui/AdvHoverCard.tsx': { lines: 146, role: 'Primitive Hover Card: chuẩn hóa SURFACE_THEMES, mở khi rê chuột với openDelay 150ms và closeDelay 200ms chống nhấp nháy, Portal document.body, spring animation, kẹp biên màn hình, tự đóng khi cuộn trang' },
-      'src/components/ui/AdvTooltip.tsx': { lines: 133, role: 'Primitive Tooltip chuẩn Base UI Motion: chuẩn hóa SURFACE_THEMES, Portal document.body, spring keyframes agv-tooltip-spring-up/down, SVG arrow định vị, tự động lật ngược, tự đóng khi cuộn' },
-      'src/components/ui/AdvProgress.tsx': { lines: 77, role: 'Primitive Progress Bar: hiển thị tiến độ % với transition width 300ms ease, hỗ trợ chế độ indeterminate lướt sóng vô hạn khi tải dữ liệu, 100% theme tokens' },
-      'src/components/ui/AdvPreviewLinkCard.tsx': { lines: 195, role: 'Primitive Preview Link Card: chuẩn hóa SURFACE_THEMES, thẻ xem trước liên kết web dạng card nổi khi rê chuột, hiển thị thumbnail, tiêu đề, mô tả và tên miền, mở link ngoài an toàn target="_blank"' },
-      'src/components/ui/index.ts': { lines: 55, role: 'Barrel re-export sạch sẽ toàn bộ 8 controls và primitives UI chuẩn Animate UI' },
-      'src/demo/AnimateUIPrimitivesDemoModal.tsx': { lines: 379, role: 'Showcase tương tác thử nghiệm trực tiếp 6 Primitives mới với đầy đủ dữ liệu mẫu và chuyển đổi theme, chuẩn hóa 100% biến màu CSS var(--agv-*)' },
-      'src/components/grid/GridChunkBlock.tsx': { lines: 357, role: 'Virtualized chunk container (CHUNK = 20): gắn class .agv-chunk-block và truyền rowKey xuống GridRow, GPU transform translate3d, hỗ trợ linh hoạt 3 renderer (GridRow trên PC, GridTabletRow trên Tablet, GridPhoneCard trên Phone), tiếp nhận prop showRowNumber và showSelectionCol điều phối ẩn/hiện STT & checkbox trên Tablet & Phone đồng bộ 100% với PC, tiếp nhận động topOffset, chunkHeight, phoneExpandedRows để co giãn chunk theo thẻ mở rộng, áp dụng contain: "layout paint" cho responsive mode, chuẩn hóa DATA_TYPES.SYSTEM, tracking isSelected & isChecked linh hoạt chuẩn Data-Driven qua chkCol và rowKey chống trôi khi sắp xếp, React.memo comparator kiểm tra biến thiên showRowNumber, showSelectionCol, topOffset, chunkHeight và phoneExpandedRows trong phạm vi dòng của chunk giúp bỏ qua 100% các chunk không bị ảnh hưởng, forwarding editing states & onGroupContextMenu callback, forwarding emptyColKeys' },
-      'src/components/grid/responsive/GridTabletRow.tsx': { lines: 187, role: 'Renderer dòng dữ liệu cho Tablet (768px - 1023px): Bảng gộp trường đa tầng (Condensed Multi-Field Columns Table), 4 cụm cột dọc, chiều cao 68px, bảo toàn ảo hóa CHUNK = 20, trích xuất chuẩn col_id ("Mã Dòng") và các trường dữ liệu hệ thống, đồng bộ 100% tokens màu hover/focus/checked với PC qua .agv-grid-row, STT nền accent chữ trắng khi focus, ẩn/hiện STT và MorphCheckbox theo showRowNumber/showSelectionCol đồng bộ với PC, tích hợp TwelveMonthChartCell 12T mini ở Cụm 3' },
-      'src/components/grid/responsive/GridPhoneCard.tsx': { lines: 271, role: 'Renderer thẻ dữ liệu cho Phone (< 768px): Danh sách thẻ độc lập kết hợp Accordion gập/mở có kiểm soát (controlled via VirtualizedGrid), bọc trong slot container .agv-phone-card-slot với height 104px (254px khi mở rộng), padding 4px 8px, boxSizing border-box, loại bỏ triệt để CSS Margin Collapse giúp khoảng cách giữa các thẻ luôn đồng nhất chính xác 8px cả trong và xuyên suốt giữa các ranh giới chunk (triệt tiêu 100% khoảng trắng rỗng 84px giữa Card 180 và Card 181), trích xuất chuẩn col_id ("Mã Dòng") và các trường dữ liệu hệ thống, ẩn/hiện STT pill và MorphCheckbox theo showRowNumber/showSelectionCol đồng bộ với PC, cố định chiều cao mở rộng đúng 150px (height 140px + marginTop 10px), tích hợp bố cục Thẻ tài chính 2 cột (Financial Card Layout) cho biểu đồ 12T Catmull-Rom spline uốn lượn và bảng tóm tắt cực trị dọc gọn gàng, đồng bộ 100% tokens màu hover/focus/checked với PC qua .agv-phone-card' },
-      'src/components/grid/responsive/GridTabletHeader.tsx': { lines: 65, role: 'Header tinh gọn 34px chuẩn hóa 4 siêu cột cho Tablet (Thông tin Node, Đo lường & Khu vực, Biểu đồ 12T & AVG, Trạng thái), tích hợp nút mở modal [ Lọc & Sắp Xếp ], ẩn/hiện nhãn TT theo showRowNumber/showSelectionCol, 100% theme CSS variables' },
-      'src/components/grid/responsive/ResponsiveSortFilterModal.tsx': { lines: 361, role: 'Modal lọc & sắp xếp trung tâm cho Tablet & Phone: Tái sử dụng AdvComboBoxEdit chọn cột/phạm vi, 3 nút phân đoạn tăng/giảm/không sắp xếp, zero autofill input, min-h 28px, 100% theme CSS variables, auto-close click outside & escape, scroll lock qua data-agv-popup' },
-      'src/components/grid/responsive/useGridLayoutMode.ts': { lines: 195, role: 'Custom Hook phát hiện kích thước container qua ResizeObserver và điều phối chế độ bố cục giữa PC, Tablet, Phone: tích hợp Hysteresis Buffer (+-16px) và Debounce (120ms) chống rung giật ranh giới và triệt tiêu vòng lặp do thanh cuộn Scrollbar Shift, initial mode 0ms delay' },
-      'src/components/grid/ColumnContextMenu.tsx': { lines: 1162, role: 'Enterprise Context Menu: chuẩn hóa 100% CONTEXT_MENU_TYPES, PIN_POSITIONS, SORT_DIRECTIONS, DATA_TYPES, FORMULA_MODES và biến màu CSS var(--agv-warning) (loại bỏ sạch sẽ toàn bộ hardcode text và màu cứng), áp dụng 100% Design Tokens Tailwind (bg-agv-accent, text-agv-accent-text, bg-agv-bg-root, border-agv-border, text-agv-text-main, bg-agv-bg-hover), tích hợp nút 1 chạm đổi luân phiên 3 trạng thái sắp xếp theo tháng/theo số cho cột công thức khi ở MIN/MAX, nút ghim cột/tầng, thanh mỏng mũi tên biến hình lò xo MorphChevronIcon thu gọn/mở rộng, Menu Tiêu Đề Nhóm, nút chuyển đổi luân phiên Sắp xếp nhóm theo Tổng, Smart Disable Empty Columns, Row/Cell menu hỗ trợ Ghim dòng lên đầu / Bỏ ghim dòng / Bỏ ghim tất cả dòng / Bỏ chọn tất cả dòng (N) và "Lọc theo" đưa giá trị lên ô filter với toán tử =, 100% theme tokens, click outside auto-close' },
-      'src/components/grid/gridUtils.ts': { lines: 1117, role: 'Utility engine: formatGridNumber chuẩn tài chính #,###.## (số âm bỏ trong ngoặc đơn (1.000)), parseGridNumber thông minh nhận diện số âm ngoặc đơn và chuẩn chấm hàng nghìn, getOrComputeMonthStats trích xuất và lưu đệm WeakMap (globalMonthStatsCache) thống kê 12 tháng mVals/min/max/avg dùng chung toàn hệ thống, isSelectionColumn đóng gói chuẩn hóa kiểm tra cột chọn dòng (col.isSelection || col.key === "col_chk"), computeFilteredSelectionState tính toán trạng thái chọn tối ưu chỉ quét tập checkedRowIndices (k phần tử) khi không lọc thay vì quét 50.000 dòng, toggleFilteredRowsSelection (Fast-path O(1) trả về new Set() rỗng ngay lập tức khi bỏ chọn bảng không lọc thay vì chạy 50.000 lệnh .delete()), computeSortRowFlipState tính toán độ lệch dọc FLIP deltaY cho hiệu ứng trượt dòng khi Sort chuẩn AG Grid, chuẩn hóa 100% FILTER_OPS, DATA_TYPES, FILTER_MODES, SORT_DIRECTIONS, ALIGNMENTS, FORMULA_MODES enum và helper predicates, tích hợp ALIGN_TEXT_CLASSES, getAlignTextClass, ALIGN_JUSTIFY_CLASSES, getAlignJustifyClass, matchFilterValue, splitDateRange, parseSingleDateTimestamp, parseTimeToMinutes, getGridCellValue, compareGridRows & getRowValueForSortGeneric, getColumnDateBoundsFromGetter, đo độ rộng tối ưu (auto-fit) cột tính luôn cả tổng nhóm groupSums và tổng bảng summaryValues, clipboard copier, boundary clamping' },
-      'src/components/grid/types.ts': { lines: 370, role: 'TypeScript type definitions: SURFACE_THEMES, GRID_LAYOUT_MODES (auto, pc, tablet, phone), CENTER_DOCK_STATUSES, PIN_POSITIONS, SORT_DIRECTIONS, GRID_EDIT_MODES, FORMULA_MODES, MONTH_ANALYTICS_MODES, ALIGNMENTS, DATA_TYPES, EDITOR_TYPES, FILTER_MODES, CHECK_FILTER_STATES, FILTER_OPS (danh mục hằng số chuẩn hóa toàn hệ thống loại bỏ 100% hardcode text), FilterOperation, ColumnDef, SortConfig, ColumnEditorType, ColumnDataType, ColumnAlign, PinPosition, CenterDockStatus, SortDirection, FilterMode, CheckFilterState, GroupSortConfig, ColumnFilterValue, GridEditMode, GridLayoutMode, VirtualizedGridProps (bao gồm layoutMode, onLayoutModeChange, rowSnapMode & onRowSnapModeChange)' },
-      'src/components/grid/floating/types.ts': { lines: 116, role: 'Floating toolbar type definitions: QUERY_COMBINATORS, TOOLBAR_POPUPS, DENSITY_MODES, DensityMode, QueryRule, QueryGroup, QueryTreeNode, QueryPreset, FloatingPopupType, GridSettingsState (bao gồm rowSnapMode)' },
+      'src/components/ui/AdvComboBoxEdit.tsx': { lines: 525, role: 'Hộp chọn ComboBoxEdit chuẩn PNT B2B & Animate UI: `CONTROL_BOX_CLASS`, `getControlSizeClass(size)` (`sm = 28px`, `md = 36px`), `data-agv-trigger="true"`, `useVirtualList`, `optionIndexMap` O(1), cache tìm kiếm lười `searchCacheRef` + ASCII fast-path, `scrollDropdownItemIntoView`, zero autofill' },
+      'src/components/ui/AdvSearchLookUpPopup.tsx': { lines: 450, role: 'Popup Portal danh mục `AdvSearchLookUpEdit` tách chunk lazy riêng (`React.lazy` + preload khi hover/focus): filter row dùng `CONTROL_BOX_CLASS` + `BUTTON_FOCUS_VISIBLE_CLASS`, menu toán tử, bảng `table-fixed` + `useVirtualList`, `<MorphCheckbox />`, `isKeyboardNav`' },
+      'src/components/ui/AdvSearchLookUpEdit.tsx': { lines: 717, role: 'Trigger gọn nhẹ bảng tra cứu LookUp nhiều cột chuẩn PNT B2B (`CONTROL_BOX_CLASS`, `getControlSizeClass(size)`, `data-agv-trigger="true"`, `rowByKeyMap` O(1), lọc 1 lượt + `searchCacheRef`, short-circuit `isAllFilteredSelected`, lazy-load `AdvSearchLookUpPopup`, `NO_AUTOFILL_PROPS`)' },
+      'src/components/ui/enterpriseEditorUtils.ts': { lines: 234, role: 'Tiện ích enterprise editor: getPortalThemeVars, computeEditorCoords, areEditorCoordsEqual, computeDropdownPageStep, computeNextHighlightedIndex, scrollDropdownItemIntoView (bù `scaleY`), useClickOutside (lọc scroll nội bộ), normalizeSearchText (có ASCII fast-path bỏ qua NFD/regex)' },
+      'src/components/ui/AdvPopover.tsx': { lines: 193, role: 'Primitive Popover chuẩn Animate UI (Base UI): chuẩn hóa SURFACE_THEMES, trigger click toggle, tính tọa độ đồng bộ trước khi mở & so sánh `areEditorCoordsEqual`, Portal document.body, spring animation agv-spring-down/up, flip-up thông minh, useClickOutside bỏ qua portal con (`.agv-select-portal`), data-agv-popup="true" khóa cuộn bảng, 100% theme tokens' },
+      'src/components/ui/AdvSelect.tsx': { lines: 347, role: 'Primitive Select chuẩn PNT B2B: `useVirtualList` + `AdvOverlayScroll`, `optionIndexMap` O(1), trigger `CONTROL_SURFACE_CLASS` + `getGridControlRadiusClass()` + `getControlSizeClass(size)` (`sm = 28px`, `md = 36px`), `outline-none`, `data-state="open"`, backdrop `pointer-events-none` + `useClickOutside`, `isKeyboardNav`, Portal' },
+      'src/components/ui/useVirtualList.ts': { lines: 205, role: 'Hook ảo hóa danh sách cố định chiều cao dòng (`useVirtualList`): luôn khởi tạo và thu gọn `range` theo `computeVirtualWindow` ngay cả khi `enabled=false` (đóng popup), tránh render N nghìn dòng DOM ở khung mở đầu tiên' },
+      'src/components/ui/AdvOverlayScroll.tsx': { lines: 368, role: 'Container cuộn kèm thanh cuộn nổi overlay chỉ hiện khi hover/scroll: `syncedInCommitRef` loại bỏ `requestAnimationFrame(syncMetrics)` trùng lặp sau khi đã sync đồng bộ trong `useLayoutEffect`' },
+      'src/components/ui/AdvHoverCard.tsx': { lines: 156, role: 'Primitive Hover Card: chuẩn hóa SURFACE_THEMES (mặc định LIGHT), mở khi rê chuột với openDelay 150ms và closeDelay 200ms, useLayoutEffect + areEditorCoordsEqual đo kích thước chính xác trước paint, Portal document.body, agv-spring-up/down, kẹp biên màn hình, tự đóng khi cuộn trang' },
+      'src/components/ui/AdvTooltip.tsx': { lines: 143, role: 'Primitive Tooltip chuẩn Base UI Motion: chuẩn hóa SURFACE_THEMES (mặc định LIGHT), Portal document.body, sửa lệch tọa độ bằng agv-spring-up/down + useLayoutEffect + areEditorCoordsEqual, tự động lật ngược, tự đóng khi cuộn' },
+      'src/components/ui/AdvDrawer.tsx': { lines: 598, role: 'Bộ primitives Drawer chuẩn shadcn/ui Base UI & kích thước tối đa b2b-pnt (Drawer, DrawerPortal, DrawerOverlay, DrawerContent, DrawerSwipeHandle, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody, DrawerFooter, DrawerClose): z-[10000], nền đặc var(--popup-background), Phone w-full max-w-none, Tablet md:max-w-lg (512px) md:mx-auto, max-h 90dvh kèm --safe-area-top, vuốt xuống để đóng (chặn bắt nhầm trên nút/tab/radiogroup/datepicker tương tác), chỉ gắn .agv-drawer-portal & data-agv-popup="true" khi open=true, CHILD_POPUP_SELECTOR (gồm .agv-daterange-popover) + hadChildPopupOnDownRef chống đóng nhầm Drawer khi tắt lịch con' },
+      'src/components/ui/index.ts': { lines: 90, role: 'Barrel re-export sạch sẽ toàn bộ controls, `AdvButton`/`Button`/`getButtonClass`/`buttonVariants` & `AdvDrawer` primitives' },
+      'src/components/grid/GridChunkBlock.tsx': { lines: 346, role: 'Virtualized chunk container (CHUNK = 20): gắn class .agv-chunk-block, trên PC render trực tiếp GridRow, khi ở Tablet/Phone tải lười `LazyResponsiveChunkRow` (`Suspense`), giữ GPU translate3d, `allowTextSelection`, showRowNumber/showSelectionCol, `contain: "layout paint"' },
+      'src/components/grid/responsive/ResponsiveChunkRow.tsx': { lines: 88, role: 'Chunk lazy bridge render `GridTabletRow` / `GridPhoneCard` tách khỏi `GridChunkBlock` để PC read-only không tải code responsive' },
+      'src/components/grid/responsive/responsiveColumnUtils.ts': { lines: 56, role: 'Helper data-driven cho Tablet & Phone: `isResponsiveSystemColumn`, `getResponsiveDataColumns`, `extractResponsiveRawValue`, `formatResponsiveFieldValue`, `renderResponsiveField` (trả kết quả trực tiếp từ `columns` và `renderCell`, 0% demo code)' },
+      'src/components/grid/responsive/GridTabletRow.tsx': { lines: 186, role: 'Renderer dòng dữ liệu 100% Data-Driven cho Tablet (768px - 1023px): chiều cao 68px, bảo toàn CHUNK = 20, phân bổ động các cột từ `columns` & `renderCell`, hỗ trợ `allowTextSelection` cho copy tự nhiên khi tắt context menu, đồng bộ hover/focus/checked và showRowNumber/showSelectionCol với PC' },
+      'src/components/grid/responsive/GridPhoneCard.tsx': { lines: 236, role: 'Renderer thẻ dữ liệu 100% Data-Driven cho Phone (< 768px): slot container `.agv-phone-card-slot` cao 104px (254px khi mở rộng drawer 140px + 10px), hiển thị 4 cột đầu trên mặt thẻ & toàn bộ cột phụ trong drawer qua `columns` và `renderCell`, hỗ trợ `allowTextSelection`, triệt tiêu margin collapse ranh giới chunk' },
+      'src/components/grid/responsive/GridTabletHeader.tsx': { lines: 73, role: 'Header tinh gọn 34px 100% Data-Driven cho Tablet sinh nhãn nhóm cột từ `columns`, ẩn nút sort/filter khi `onOpenSortFilter` undefined, hỗ trợ nhãn động `sortFilterLabel`, ẩn/hiện nhãn TT theo showRowNumber/showSelectionCol, 100% theme CSS variables' },
+      'src/components/grid/responsive/ResponsiveSortFilterModal.tsx': { lines: 1441, role: 'Drawer Lọc & Sắp xếp cạnh dưới (`bottom-0`) tối ưu Mobile chia 2 phân đoạn (`Tìm kiếm & Lọc` | `Sắp xếp`): đồng bộ 100% toán tử PC theo dạng cột (`text`, `number`, `date`, `time`) qua thanh icon DevExtreme 1 hàng chia đều (`FilterOpIcon`, 0 cuộn ngang, 0 dropdown toán tử con, 0 tooltip `title=`) + chế độ `Một giá trị` / `Nhiều giá trị` (tái sử dụng `SmartNumberFilterInput`, `NumberRangeFilterInput`, `AdvDatePicker`, `AdvDateRangePicker`, `TimeFilterInput`, `TimeRangeFilterInput`, đa khoảng `multiRanges` & De Morgan `multiValues`) + Chip chọn phạm vi (`min-h-[36px]`, giữ `MobileColDraft` độc lập theo từng cột); Tab `Sắp xếp` có `Chiều sắp xếp` + danh sách dọc cột `min-h-[40px]`' },
+      'src/components/grid/responsive/useGridLayoutMode.ts': { lines: 202, role: 'Custom Hook điều phối chế độ PC / Tablet / Phone: nhận `enabled = false` để bypass hoàn toàn `ResizeObserver` khi tắt `ResponsiveLayoutModule` (trả về "pc"), còn khi bật dùng Hysteresis (+-16px) & Debounce (120ms)' },
+      'src/components/grid/ColumnContextMenu.tsx': { lines: 1190, role: 'Enterprise Context Menu (Header / Band / Row / Group Header): tái sử dụng `CONTEXT_MENU_TYPES` từ `./types`, tách biệt `enableColumnPinning` (Trái/Phải) và `enableCenterDock` (Giữa) qua helper `renderPinButtons`, tôn trọng `groupable !== false` & `hideable !== false`, orphan dividers, xuat default cho React.lazy' },
+      'src/components/grid/gridFormatUtils.ts': { lines: 252, role: 'Pure formatting & predicate utilities siêu nhẹ (0 dependency UI): `formatDisplayDate`, `formatGridDateValue` (cắt leak khỏi `AdvDatePicker`), `getSttColWidth`, `parseGridNumber`, `formatGridNumber`, `ALIGN_*_CLASSES`, `isNoInputFilterOp`/`isBetweenFilterOp`/`isNegativeFilterOp`/`isSelectionColumn`/`getColumnFilterType`/`getDefaultFilterOpForColumn`' },
+      'src/components/grid/gridUtils.ts': { lines: 941, role: 'Utility engine cho `DataGrid` (re-export `./gridFormatUtils` giữ tương thích ngược): đo Canvas Auto-Fit (Roboto >= 12px), clipboard, tọa độ context menu, lọc `matchFilterValue`, `compareGridRows`, `computeFilteredSelectionState`, `toggleFilteredRowsSelection`, `computeSortRowFlipState`' },
+      'src/components/grid/types.ts': { lines: 429, role: 'TypeScript type definitions: SURFACE_THEMES, GRID_LAYOUT_MODES, CENTER_DOCK_STATUSES, PIN_POSITIONS, SORT_DIRECTIONS, GRID_EDIT_MODES, DATA_TYPES, FILTER_OPS, FORMULA_MODES, MONTH_ANALYTICS_MODES, `CONTEXT_MENU_TYPES`/`ContextMenuType`/`ContextMenuData`, `ColumnDef` (`valueGetter`, `renderHeader`, `hideable`, `groupable`, `enableGlobalFilter`, `meta`), `pinnedTopRowData` & `VirtualizedGridProps`' },
+      'src/components/grid/floating/types.ts': { lines: 137, role: 'Floating toolbar type definitions: QUERY_COMBINATORS, TOOLBAR_POPUPS, DENSITY_MODES, GridSettingsState, GridFloatingToolbarProps (bổ sung feature flags, `persistState`, `onActivePopupChange` & 5 `allow*Setting` flags)' },
       'src/components/grid/AdvChecklistFilterPopup.tsx': { lines: 602, role: 'Popup lọc danh sách giá trị phân biệt (Checklist): chuẩn hóa SURFACE_THEMES, FILTER_MODES.MULTI, DATA_TYPES, đã gỡ sạch title tooltip, tích hợp NO_AUTOFILL_PROPS, tích hợp Lucide Icons (Search, X, FilterX), ưu tiên props.getDistinctValues chỉ hiển thị các giá trị từ các dòng thỏa mãn các bộ lọc đang active (AND logic chuẩn), bỏ qua _isGroupRow trong extractVal, nút SVG FilterX xóa các mục đã chọn ở góc phải ô tìm kiếm, tuân thủ Rules of Hooks, nhận matchFilterValue, tự động lọc danh sách giá trị theo điều kiện của RowFilter đang active (AND logic), bảo toàn độc lập không ghi đè RowFilter, 0ms phản hồi với distinctValuesCacheRef, ảo hóa 20 items' },
-      'src/components/grid/constants.ts': { lines: 80, role: 'Grid constants & helpers: DEFAULT_CHUNK_SIZE = 20, DEFAULT_ROW_HEIGHT = 32, NO_AUTOFILL_PROPS (bộ 9 cờ chặn triệt để autofill của trình duyệt, 1Password, Bitwarden), GRID_CONTROL_RADIUS_CLASS & getGridControlRadiusClass() (hàm đồng bộ bo góc duy nhất cho toàn bộ Controls & Editors), POPUP_SELECTORS dùng chung cho In-Cell Editing và Popup Scroll Lock, getPinnedDividerClass, getRightPinnedDividerClass, getThemeClasses (kế thừa biến CSS cấp dòng --agv-row-data-bg & --agv-row-sticky-bg)' },
-      'src/components/ui/MorphIcons.tsx': { lines: 199, role: 'Universal Morphicons adapter suite: tích hợp MorphCheckbox biến hình 3 trạng thái (Square <-> SquareCheck <-> SquareMinus) spring snappy nhanh dứt khoát, MorphActionIcon, MorphSortIcon (ArrowUp <-> ArrowDown), MorphChevronIcon, 100% Lucide Icons, zero tooltip' },
-      'src/demo/PageFooter.tsx': { lines: 130, role: 'Bottom status bar (bọc React.memo): chuẩn hóa SORT_DIRECTIONS, hiển thị bộ đếm nhóm/dòng, trạng thái ghim cột, sắp xếp, nút 1 chạm Đã chọn: X dòng (min-h 28px, active nền var(--agv-accent) chữ trắng) để bật/tắt lọc chỉ hiện các dòng đang chọn và số Chunks đang vẽ' },
-      'src/components/grid/smartNumberUtils.ts': { lines: 240, role: 'Bộ công cụ số thông minh: formatNumberWithCommas, parseSmartNumericRange, expandAllShortcuts, handleNumericKeyDown chặn chữ cái rác, đồng bộ 100% chuẩn phân cách hàng nghìn dấu chấm và thập phân dấu phẩy Việt Nam' },
-      'src/demo/TwelveMonthChartCell.tsx': { lines: 382, role: 'Biểu đồ Sparkline 12 tháng: Sóng Catmull-Rom spline, tích hợp ResizeObserver tự đo pixel container (measuredWidth) khớp 1:1 chống méo mó chấm tròn cực trị, hỗ trợ height?: number co giãn linh hoạt (PC: 24px, Tablet: 22px, Phone: 50px), cache DOMRect qua svgRectRef và chặn re-render thừa qua hoveredIdxRef khi rê chuột trong cùng tháng, tích hợp Animate UI Tooltip (Base UI + Motion style) qua Portal đồng bộ 100% biến màu theme (var(--agv-bg-popup), var(--agv-border-popup), getThemeClass & getPortalThemeVars) với Spring Physics keyframes agv-tooltip-spring-up/down, lướt trượt mượt mà (smooth sliding glide 120ms) khi di chuyển giữa các tháng, tự động đổi màu số liệu theo đốm cực đại (var(--agv-trend-up)) và cực tiểu (var(--agv-trend-down)) với viền var(--agv-bg-surface) trên đường line, SVG tooltip arrow, tự động lật ngược nếu gần mép trên (y < 65), kẹp biên an toàn, định dạng số formatGridNumber, tự đóng khi cuộn' },
-      'src/themes/': { lines: 579, role: 'Design Tokens: SURFACE_THEMES, 4 themes (light, dark, bezierArthouse đã tinh chỉnh bgRowAlt/bgSelected/border, eink), khai báo đầy đủ --agv-bg-row-hover, --agv-bg-selected-hover, --agv-bg-focused, --agv-bg-focused-hover, --agv-bg-checked-focused, --agv-bg-checked-focused-hover, --agv-bg-panel, --agv-bg-surface, --agv-bg-subtle, --agv-bg-card, --agv-border-subtle, --agv-pinned-shadow, --agv-accent-soft, --agv-weekend, --agv-info trong common.ts, scrollbar tokens, generateThemeCssVariables helper, 100% biến màu CSS var(--agv-*)' },
-      'src/index.css': { lines: 840, role: 'Global styles, font hệ thống chuẩn Montserrat (--font-sans), font đơn cách .agv-cell-code (JetBrains Mono, letter-spacing 0.08em, font-weight 600, uppercase), synchronized scrollbar, tích hợp Spring Directional Popups keyframes (down, up, left, zoom), Animate UI Tooltip keyframes agv-tooltip-spring-up/down, Subtle Virtualized Row Entry Animation (.agv-row-enter triệt tiêu giật cuộn), quy tắc tạm mở contain: layout style trên .agv-chunk-block khi chạy FLIP Sort Animation (.agv-scroll-viewport[data-agv-sorting="true"]), [draggable="true"] (-webkit-user-drag: element), cơ chế phân biệt dòng Focus / Chọn Kiểu A kết hợp Zero-Reflow Row Hover cấp dòng (.agv-grid-row / .agv-group-row), ma trận tokens cho .agv-phone-card đồng bộ 100% màu hover/focus/checked giữa PC, Tablet và Phone' },
-      'AGENTS.md': { lines: 26, role: 'Ponytail Senior Dev Guidelines, Recent Edits & Dictionary First & 14 Core Rules (bao gồm Strict Mockup Fidelity & Popup Scroll Lock)' }
+      'src/components/grid/constants.ts': { lines: 82, role: 'Grid constants & helpers: DEFAULT_CHUNK_SIZE = 20, DEFAULT_ROW_HEIGHT = 32, NO_AUTOFILL_PROPS (bộ 9 cờ chặn triệt để autofill), GRID_CONTROL_RADIUS_CLASS & getGridControlRadiusClass(), POPUP_SELECTORS (gồm .agv-multi-sort-popup, .agv-drawer-portal), getPinnedDividerClass (border-r-2 border-r-border), getRightPinnedDividerClass (border-l-2 border-l-border), getThemeClasses' },
+      'src/components/ui/MorphCheckbox.tsx': { lines: 132, role: 'Control checkbox Morph Line 3 trạng thái thuần SVG CSS-keyframe (`unchecked` / `checked` / `indeterminate`, `viewBox="0 0 13 10"`, hitbox >= 28px), 0 dependency vào `morphicons`/`lucide`' },
+      'src/components/ui/MorphIcons.tsx': { lines: 104, role: 'Universal Morphicons suite (`MorphIcon`, `MorphActionIcon`, `MorphSortIcon`, `MorphChevronIcon` + 6 Lucide icon dùng cho morph; re-export `MorphCheckbox` từ `./MorphCheckbox`), cắt giảm từ 25 icon Lucide xuống 6 icon' },
+      'src/components/grid/smartNumberUtils.ts': { lines: 232, role: 'Bộ công cụ số thông minh theo quy ước chuẩn (k x1000, m/tr x1000000, b/ty x1000000000): formatNumberWithCommas, parseSmartNumericRange, expandAllShortcuts, formatSmartInputText (không tự thêm " - " gây đổi toán tử), handleNumericKeyDown, đồng bộ dấu chấm hàng nghìn và dấu phẩy thập phân Việt Nam' },
+      'src/components/grid/TwelveMonthChartCell.tsx': { lines: 427, role: 'Biểu đồ Sparkline 12 tháng + FORMULA_CYCLE/FORMULA_META (di trú vào grid module & re-export qua `src/components/grid/index.ts`): Sóng Catmull-Rom spline, ResizeObserver, Portal Tooltip (agv-tooltip-spring-up/down, boxShadow: var(--popup-shadow)), đổi màu theo cực trị, tự đóng khi cuộn' },
+      'src/components/grid/index.ts': { lines: 60, role: 'Barrel export chính thư viện Grid (`DataGrid`, `VirtualizedGrid`, `modules/*`, `columns/*`, `gridCellSpanEngine`, `gridTreeDataEngine`, `queryUtils`, types, constants, dùng `export type` cho các UI chunk lazy để giữ code-splitting sạch)' },
+      'src/themes/': { lines: 281, role: 'PNT B2B Theme Registry (2 chế độ Light & Dark): SURFACE_THEMES = { LIGHT, DARK }, common.ts (128 dòng), light.ts (54 dòng), dark.ts (54 dòng), index.ts (45 dòng), đồng bộ giá trị hex PNT Light/Dark và nối vào `src/styles/design-tokens.css` qua var(--agv-*)' },
+      'src/index.css': { lines: 530, role: 'Entry CSS app host: `@import "./styles/design-tokens.css";`, `@tailwind base/components/utilities;`, `.agv-btn*` (`default`/`outline`/`ghost`/`destructive` trong `@layer components`), `.agv-control`, `.agv-popup-*`, `.agv-overlay-scroll-*`, MorphCheckbox, cùng khối unlayered cuối file quản lý hover/focus/open/active/disabled/inline-clear (`.agv-inline-clear-ghost`/`.agv-inline-clear-destructive`) & `.agv-incell-control`' },
+      'AGENTS.md': { lines: 37, role: 'Ponytail Senior Dev Guidelines, Recent Edits & Dictionary First & Core Rules (gồm Strict Mockup Fidelity, Popup Scroll Lock & Chuẩn Nút 4 Biến Thể `default | outline | ghost | destructive`)' }
     }
   },
 
@@ -151,18 +200,16 @@ export const CODE_DICTIONARY = {
       symptom: '1) Khi đang sửa ô (in-cell editing) hoặc mở DatePicker, Dropdown ComboBoxEdit, SearchLookUpEdit, lăn chuột/vuốt touchpad khiến Grid bị cuộn ngang hoặc dọc làm lệch vị trí ô đang sửa. 2) Hoặc sau khi đóng popup/kết thúc sửa, Grid vẫn bị khóa cứng không cuộn được.',
       keywords: ['lệch popup', 'trôi menu', 'cuộn khi mở dropdown', 'popup scroll lock', 'cuộn nền', 'khóa cuộn', 'POPUP_SELECTORS', 'popup tắt rồi', 'không cuộn được', 'kẹt cuộn', 'khi đang sửa', 'cuộn ngang hoặc dọc', 'data-agv-editing'],
       location: {
-        file: 'src/components/grid/VirtualizedGrid.tsx',
-        startLine: 31,
-        endLine: 46,
-        anchorFunction: 'isAnyPopupActive, handleWheelLock, handleScroll, lockedScrollPosRef'
+        file: 'src/components/grid/VirtualizedGrid.tsx & popupLockUtils.ts',
+        startLine: 78,
+        endLine: 1320,
+        anchorFunction: 'isAnyPopupActive, canWheelScrollInsidePopup, handleLockedWheel, handleScroll, agv-grid-popup-shield'
       },
-      rootCause: '1) Thiếu chặn wheel và chốt tọa độ scroll khi popup đang mở hoặc cell đang sửa. 2) Khi đang sửa ô in-cell, scrollbar vẫn có thể bị kéo, wheel/trackpad horizontal swipe chưa bị chặn toàn cục capture phase, hoặc focus() input làm browser tự ý scrollIntoView. 3) POPUP_SELECTORS chứa class tĩnh của container bao ngoài khiến isAnyPopupActive() vĩnh viễn bằng true.',
+      rootCause: '1) Cache 64ms hoặc thiếu capture-phase wheel/touchmove lock khiến popup không có thanh cuộn (AdvMultiSortPopup, ColumnContextMenu) truyền scroll-chaining xuống Grid/window. 2) Dùng selector wildcard `[data-agv-popup="true"] * { overscroll-behavior: contain }` chặn scroll-chaining qua các ô `<td>.truncate`/`<span>.truncate` (`overflow: hidden`) khiến chỉ cuộn được khi trỏ trực tiếp vào thanh cuộn. 3) Portal backdrop hoặc lớp shield cho phép tương tác xuyên xuống ô và header.',
       solution: [
-        '1. Khi đang sửa ô (activeEditingCell): Áp dụng thuộc tính [data-agv-editing="true"] trên viewport (overflow: hidden !important; touch-action: none; overscroll-behavior: none), khóa cố định tọa độ cuộn cả ngang lẫn dọc qua lockedScrollPosRef.',
-        '2. Bắt sự kiện wheel & touchmove toàn cục ở capture phase trên window: chặn toàn bộ hành vi cuộn nền, chỉ cho phép cuộn nội dung bên trong danh sách dropdown của editor.',
-        '3. Tất cả các editor in-cell (CellEditor, TimeCellEditor, AdvComboBoxEdit, AdvSearchLookUpEdit, AdvDatePicker) kích hoạt focus({ preventScroll: true }) và chặn các phím cuộn trang (ArrowUp, ArrowDown, PageUp, PageDown) khi đang gõ.',
-        '4. Khai báo danh sách POPUP_SELECTORS CHỈ CHỨA các phần tử popup/portal động sinh ra khi mở, tuyệt đối không đưa class tĩnh vào bộ chọn.',
-        '5. Khi kết thúc sửa (Enter, Esc, Tab, Blur, Click outside), activeEditingCell trở về null, khôi phục nguyên vẹn 100% tọa độ scroll và quyền cuộn tự nhiên cho Grid.'
+        '1. Dùng popupLockUtils.ts (`canWheelScrollInsidePopup`, `shouldBlockGridInteractionWhenPopupOpen`) ở cả `VirtualizedGrid` lẫn `useInCellEditor`; chỉ gắn `overscroll-behavior: contain` trên `[data-agv-popup="true"]` và vùng cuộn thực sự (`.overflow-auto`, `.overflow-y-auto`, `.overflow-x-auto`, `.agv-chooser-scroll`), TUYỆT ĐỐI không gắn wildcard `[data-agv-popup="true"] *`.',
+        '2. Đồng bộ `isPopupLockActive` (kết hợp state nội bộ, `GridFloatingToolbar.onActivePopupChange` và `MutationObserver` trên `document.body`), khóa `wheel`/`touchmove` capture trên `window` và chốt `popupLockedScrollPosRef` trong `handleScroll`.',
+        '3. Render lớp phủ `.agv-grid-popup-shield` trong `containerRef` khi mở popup (nhường zIndex cho `.agv-floating-toolbar` khi mở toolbar popup, bỏ qua khi đang `activeEditingCell`), chuyển backdrop portal `AdvMultiSortPopup`/`AdvSelect` sang `pointer-events-auto` và chuyển click-outside của `ColumnContextMenu` sang capture phase.'
       ],
       ruleReference: 'Quy tắc "Có popup là Grid không được cuộn (Popup Scroll Lock)" trong AGENTS.md'
     },
@@ -227,37 +274,37 @@ export const CODE_DICTIONARY = {
     {
       code: 'ERR_THEME_HARDCODED_COLOR',
       title: 'Lỗi lộ màu cứng không theo theme (Hardcoded Color Token Violation)',
-      symptom: 'Khi chuyển sang theme Bezier Art House hoặc E-Ink, một số nút bấm, viền header hoặc ô trong bảng vẫn giữ màu xanh `bg-slate-900`, `text-indigo-500` hoặc trắng bệch `bg-white`.',
+      symptom: 'Khi chuyển sang chế độ Tối (.dark) của PNT B2B, một số nút bấm, viền header hoặc ô trong bảng vẫn giữ màu trắng sáng hoặc class màu cứng.',
       keywords: ['màu cứng', 'hardcode', 'sai màu theme', 'daylight', 'bg-slate', 'text-indigo', 'lỗi màu'],
       location: {
-        file: 'src/components/grid/constants.ts & GridHeader.tsx & App.tsx',
+        file: 'src/styles/design-tokens.css & src/components/grid/constants.ts & src/App.tsx',
         startLine: 10,
         endLine: 85,
-        anchorFunction: 'getThemeClasses, renderCell, INITIAL_COLUMNS'
+        anchorFunction: 'getThemeClasses, design-tokens.css, CONTROL_FOCUS_CLASS'
       },
-      rootCause: 'Tồn tại class Tailwind tĩnh như `bg-slate-900`, `border-slate-800` hoặc điều kiện `theme === "daylight"` cũ chưa được chuyển đổi 100% sang biến CSS `var(--agv-*)`.',
+      rootCause: 'Tồn tại class Tailwind tĩnh như `bg-slate-900`, `border-slate-800` hoặc màu hex cứng thay vì dùng biến `design-tokens.css` / class Tailwind semantic (`bg-card`, `border-control`, `bg-primary`, `bg-surface-selected`, `--agv-*`).',
       solution: [
-        '1. Tuyệt đối không dùng class màu Tailwind tĩnh. Thay bằng `bg-[var(--agv-bg-root)]`, `border-[var(--agv-border)]`, `text-[var(--agv-text-main)]`.',
-        '2. Mọi màu trong constants.ts phải ánh xạ trực tiếp sang các biến CSS chung.',
-        '3. Các theme mới (như E-Ink) phải được khai báo đầy đủ các tokens: root, header, row, selected, accent, border, scrollThumb.'
+        '1. Dùng class Tailwind semantic của `b2b-pnt` (`bg-background`, `bg-card`, `bg-control-surface`, `border-control`, `text-foreground`) hoặc biến `var(--agv-*)` được ánh xạ động trong `src/styles/design-tokens.css`.',
+        '2. Dùng `CONTROL_FOCUS_CLASS` / `CONTROL_HOVER_CLASS` / `CONTROL_POPUP_OPEN_CLASS` từ `controlFocus.ts` cho hover & focus control; reserved Gold (`--brand-gold`) cho gạch chân tab active và vạch trái dòng/mục đang chọn (`--surface-selected`), Teal (`--primary`) chỉ cho CTA và focus ring.',
+        '3. Mọi portal tự kế thừa `:root` / `.dark` từ `design-tokens.css`, không cần bơm `<style>` thủ công.'
       ],
       ruleReference: 'Quy tắc "Tuân thủ triệt để chủ đề chung (Theme Consistency)"'
     },
     {
       code: 'ERR_POPUP_CLICK_OUTSIDE',
       title: 'Lỗi menu ngữ cảnh hoặc popup không tự đóng khi bấm ra ngoài (hoặc đóng nhầm khi click vào portal con)',
-      symptom: '1) Chuột phải mở ColumnContextMenu hoặc mở FilterModal, sau đó click ra vị trí khác trên trang nhưng popup vẫn treo nguyên trên màn hình. 2) Hoặc trong AdvMultiFilterPopup, khi bấm chọn ngày lịch con thì popup tự tắt do nhận diện nhầm portal của lịch là bấm ra ngoài.',
-      keywords: ['không tự đóng', 'treo popup', 'click ngoài', 'context menu', 'click outside', 'FilterModal', 'chọn ngày tự tắt', 'AdvMultiFilterPopup'],
+      symptom: '1) Chuột phải mở ColumnContextMenu hoặc mở AdvPopover, sau đó click ra vị trí khác trên trang nhưng popup vẫn treo nguyên trên màn hình. 2) Hoặc trong AdvMultiFilterPopup / AdvPopover, khi bấm chọn portal con bên trong thì popup tự tắt do nhận diện nhầm portal con là bấm ra ngoài.',
+      keywords: ['không tự đóng', 'treo popup', 'click ngoài', 'context menu', 'click outside', 'AdvPopover', 'chọn ngày tự tắt', 'AdvMultiFilterPopup'],
       location: {
-        file: 'src/components/grid/ColumnContextMenu.tsx, src/demo/FilterModal.tsx & src/components/grid/AdvMultiFilterPopup.tsx',
+        file: 'src/components/grid/ColumnContextMenu.tsx, src/components/ui/AdvPopover.tsx & src/components/grid/AdvMultiFilterPopup.tsx',
         startLine: 25,
-        endLine: 175,
-        anchorFunction: 'useEffect click outside listener'
+        endLine: 193,
+        anchorFunction: 'useEffect / useClickOutside listener'
       },
-      rootCause: 'Thiếu `useEffect` đăng ký sự kiện mousedown/click toàn cục trên `document`; hoặc khi popup cha chứa controls mở portal ra document.body (như AdvDatePicker), listener của popup cha không loại trừ các class selector của portal con (.agv-calendar-popover, .agv-preset-dropdown-menu...) dẫn đến nhận diện nhầm là nhấp ngoài.',
+      rootCause: 'Thiếu `useEffect` đăng ký sự kiện mousedown/click toàn cục trên `document`; hoặc khi popup cha chứa controls mở portal ra document.body (như AdvDatePicker, AdvSelect), listener của popup cha không loại trừ các class selector của portal con (.agv-calendar-popover, .agv-select-portal, .agv-preset-dropdown-menu...) dẫn đến nhận diện nhầm là nhấp ngoài.',
       solution: [
-        '1. Trong component popup, luôn đăng ký listener: `const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); }; document.addEventListener("mousedown", handleClick);`.',
-        '2. Nếu popup chứa controls có portal ngoài (AdvDatePicker, Presets), BẮT BUỘC kiểm tra loại trừ: `if (target.closest?.(".agv-calendar-popover, .agv-daterange-popover, .agv-preset-dropdown-menu, .agv-portal-dropdown, .agv-custom-select-dropdown")) return;`.',
+        '1. Trong component popup, luôn đăng ký listener hoặc dùng `useClickOutside` hỗ trợ `ignoreSelector` cho portal con.',
+        '2. Nếu popup chứa controls có portal ngoài (AdvDatePicker, AdvSelect, Presets), BẮT BUỘC kiểm tra loại trừ: `if (target.closest?.(".agv-select-portal, .agv-calendar-popover, .agv-daterange-popover, .agv-preset-dropdown-menu, .agv-portal-dropdown, .agv-custom-select-dropdown")) return;`.',
         '3. Nhớ return hàm cleanup `document.removeEventListener("mousedown", handleClick)` khi component unmount.',
         '4. Trong GridRow/GridHeader, hạn chế dùng `stopPropagation` không cần thiết để sự kiện click outside hoạt động mượt mà.'
       ],
@@ -266,11 +313,11 @@ export const CODE_DICTIONARY = {
     {
       code: 'ERR_INPUT_AUTOFILL_LEAK',
       title: 'Lỗi hiển thị gợi ý thông tin của trình duyệt (Browser Autofill Popup)',
-      symptom: 'Khi click vào ô tìm kiếm trên thanh toolbar hoặc ô filter, trình duyệt tự động xổ danh sách gợi ý địa chỉ, số điện thoại, mật khẩu làm che khuất giao diện bảng.',
+      symptom: 'Khi click vào ô tìm kiếm trên trang danh mục hoặc ô filter, trình duyệt tự động xổ danh sách gợi ý địa chỉ, số điện thoại, mật khẩu làm che khuất giao diện bảng.',
       keywords: ['autofill', 'autocomplete', 'gợi ý trình duyệt', 'gợi ý tìm kiếm', 'che khuất'],
       location: {
-        file: 'src/demo/PageToolbar.tsx & src/demo/FilterModal.tsx',
-        startLine: 260,
+        file: 'src/pages/CountriesPage.tsx & src/components/grid/GridFilterRow.tsx',
+        startLine: 240,
         endLine: 340,
         anchorFunction: 'input search render'
       },
@@ -366,11 +413,18 @@ export const CODE_DICTIONARY = {
       keyLines: 'GridHeader.tsx:65-210'
     },
     {
-      term: 'Column Pinning & Center Docking',
-      vietnameseName: 'Ghim cột Trái / Phải / Dock Trung tâm',
-      description: 'Cơ chế cố định vị trí các cột quan trọng (STT, Chọn, Mã Dòng, Thao Tác) khi bảng cuộn ngang. Sử dụng CSS `position: sticky` kết hợp mảng `leftOffsets` và `rightOffsets` được tính toán tự động dựa trên độ rộng thực tế của các cột ghim.',
-      keyFiles: 'src/components/grid/VirtualizedGrid.tsx & GridRow.tsx & GridHeader.tsx',
-      keyLines: 'VirtualizedGrid.tsx:140-195, GridRow.tsx:90-135'
+      term: 'Modular Grid Architecture & Column Helper (AG Grid + TanStack Table v8)',
+      vietnameseName: 'Kiến trúc Grid Module hóa (Opt-in) & API Cột Chuẩn Hóa',
+      description: 'Tách biệt chế độ xem cơ bản (`BasicViewModules`: `RowNumberModule` + `PaginationModule`) khỏi 23 module tính năng (`ColumnPinningModule`, `CenterDockModule`, `RowPinningModule`, `SortingModule`, `FilteringModule`, `CellEditingModule`, `ResponsiveLayoutModule`, `CrossHoverModule`, `CellSpanModule`, `TreeDataModule`, `RowDetailModule`...) với 3 preset (`BasicViewModules`, `StandardGridModules`, `AllEnterpriseModules`). Kết hợp API cột `createColumnHelper<T>()` + `defaultColDef` + `normalizeGridColumns`, tách UI nặng qua `React.lazy` + `<Suspense>` và barrel `export type`.',
+      keyFiles: 'src/components/grid/modules/index.ts & src/components/grid/columns/ & src/components/grid/gridFeatures.ts',
+      keyLines: 'modules/index.ts:34-181, createColumnHelper.ts:27-49, normalizeColumns.ts:183-264, gridFeatures.ts:120-375'
+    },
+    {
+      term: 'Column Pinning, Center Docking & Row Pinning',
+      vietnameseName: 'Ghim cột Trái/Phải, Dock Giữa & Ghim dòng (3 Module Độc Lập)',
+      description: 'Tách thành 3 module độc lập: `ColumnPinningModule` (ghim cột Trái/Phải qua CSS `position: sticky` & `leftOffsets`/`rightOffsets`), `CenterDockModule` (giữ cột tại trung tâm viewport) và `RowPinningModule` (ghim dòng top qua `pinnedTopRowData` hoặc context menu). Không bật khi dùng bảng PC xem thuần.',
+      keyFiles: 'src/components/grid/modules/index.ts & VirtualizedGrid.tsx & ColumnContextMenu.tsx & GridRow.tsx',
+      keyLines: 'modules/index.ts:37-42, ColumnContextMenu.tsx:183-260, GridHeader.tsx:29-420'
     },
     {
       term: 'Context Menu Architecture & Canvas Auto-Fit Engine',
@@ -387,11 +441,11 @@ export const CODE_DICTIONARY = {
       keyLines: 'MorphIcons.tsx:35-62'
     },
     {
-      term: 'Theme CSS Variables Engine (var(--agv-*))',
-      vietnameseName: 'Bộ biến giao diện CSS động',
-      description: 'Hệ sinh thái biến CSS động quản lý toàn bộ màu sắc, viền, thanh cuộn, nền bảng của 4 giao diện chuẩn: Light, Dark, Bezier Art House và E-Ink. Đảm bảo 100% components không bị hardcode màu.',
-      keyFiles: 'src/themes/ & src/components/grid/constants.ts',
-      keyLines: 'src/themes/common.ts:1-264, constants.ts:12-35'
+      term: 'Theme CSS Variables Engine (PNT B2B Design Tokens + var(--agv-*))',
+      vietnameseName: 'Bộ biến giao diện PNT Light/Dark đồng bộ D:\\Dự án\\b2b-pnt',
+      description: 'Single source of truth tại `src/styles/design-tokens.css` khai báo đầy đủ token Light (`:root`) và Dark (`.dark`) của `b2b-pnt` (`--background`, `--card`, `--primary`, `--brand-gold`, `--surface-selected`, `--table-header`, `--control-border`...) kèm ánh xạ trực tiếp sang toàn bộ `--agv-*`.',
+      keyFiles: 'src/styles/design-tokens.css & src/themes/common.ts & src/components/grid/constants.ts',
+      keyLines: 'src/styles/design-tokens.css:1-274, src/themes/common.ts:1-128, constants.ts:1-81'
     },
     {
       term: 'Atomic Band Mechanism (isAtomic: true)',
@@ -410,9 +464,9 @@ export const CODE_DICTIONARY = {
     {
       term: 'Grid Interaction Modes (Xem, Sửa 1 click, Sửa 2 click)',
       vietnameseName: '3 hình thức tương tác ô: Xem, Sửa (1 click), Sửa (2 click)',
-      description: 'Hỗ trợ 3 chế độ tương tác ô trên toàn bảng. Chế độ Xem (chỉ đọc); Chế độ Sửa (1 click) kích hoạt ngay in-cell editor khi click vào ô; Chế độ Sửa (2 click) nhấp đúp để sửa, click đơn để chọn dòng. Cột Biểu Đồ col_chart và Công Thức col_formula được bảo vệ an toàn (chỉ đọc). Khi sửa đổi các tháng, sóng Catmull-Rom sparkline và công thức tự động tính toán lại và co giãn tức thì.',
-      keyFiles: 'src/components/grid/GridRow.tsx & VirtualizedGrid.tsx & PageToolbar.tsx & apiService.ts',
-      keyLines: 'GridRow.tsx:50-145, VirtualizedGrid.tsx:520-565, PageToolbar.tsx:260-295, apiService.ts:206-302'
+      description: 'Hỗ trợ 3 chế độ tương tác ô trên toàn bảng. Chế độ Xem (chỉ đọc); Chế độ Sửa (1 click) kích hoạt ngay in-cell editor khi click vào ô; Chế độ Sửa (2 click) nhấp đúp để sửa, click đơn để chọn dòng. Cột Biểu Đồ col_chart và Công Thức (`FORMULA_CYCLE`/`FORMULA_META`) được bảo vệ an toàn (chỉ đọc). Khi sửa đổi các tháng, sóng Catmull-Rom sparkline và công thức tự động tính toán lại và co giãn tức thì.',
+      keyFiles: 'src/components/grid/GridRow.tsx & VirtualizedGrid.tsx & TwelveMonthChartCell.tsx',
+      keyLines: 'GridRow.tsx:50-145, VirtualizedGrid.tsx:520-565, TwelveMonthChartCell.tsx:1-60'
     },
     {
       term: 'Deferred Join (Late Row Lookup)',
@@ -434,243 +488,300 @@ export const CODE_DICTIONARY = {
   // PHẦN C: TỪ ĐIỂN HÀM, COMPONENT & STATE (FUNCTIONS & CONTROLS REGISTRY)
   // ============================================================================
   functions: [
-    // --- src/components/grid/gridUtils.ts ---
-    { name: 'measureTextWidth', file: 'src/components/grid/gridUtils.ts', line: 10, desc: 'Đo chiều rộng pixel thực tế của chuỗi văn bản bằng thẻ HTML5 Canvas 2D ẩn với font Montserrat' },
-    { name: 'getSttColWidth', file: 'src/components/grid/gridUtils.ts', line: 22, desc: 'Tự động tính toán độ rộng tối ưu cho cột STT dựa trên số chữ số của tổng số dòng' },
-    { name: 'calcColAutoFitWidth', file: 'src/components/grid/gridUtils.ts', line: 33, desc: 'Tính độ rộng tối ưu (auto-fit) cho cột bằng cách lấy mẫu dòng dữ liệu kết hợp summaryValues tổng nhóm & tổng bảng format toLocaleString vi-VN font Montserrat, kẹp giữa minWidth và maxLimit (400px)' },
-    { name: 'computeContextMenuCoords', file: 'src/components/grid/gridUtils.ts', line: 89, desc: 'Giới hạn tọa độ mở context menu chống tràn mép phải và mép dưới viewport' },
-    { name: 'copyTextToClipboard', file: 'src/components/grid/gridUtils.ts', line: 126, desc: 'Cơ chế sao chép văn bản vào clipboard an toàn 2 tầng: navigator.clipboard + textarea fallback' },
-    { name: 'parseGridNumber', file: 'src/components/grid/gridUtils.ts', line: 174, desc: 'Chuyển đổi mọi giá trị chuỗi hoặc số thành kiểu number chuẩn xác, tự động nhận diện cả chuẩn VN (1.234,56), quốc tế (1,234.56) và số âm ngoặc đơn (1.000)' },
-    { name: 'formatGridNumber', file: 'src/components/grid/gridUtils.ts', line: 222, desc: 'Định dạng số chuẩn kế toán/tài chính #,###.##: chấm (.) hàng nghìn, phẩy (,) thập phân, số âm đặt trong ngoặc đơn (1.000)' },
-    { name: 'isSelectionColumn', file: 'src/components/grid/gridUtils.ts', line: 856, desc: 'Predicate kiểm tra cột chọn dòng: đóng gói tập trung điều kiện col.isSelection hoặc col.key === "col_chk"' },
-    { name: 'computeFilteredSelectionState', file: 'src/components/grid/gridUtils.ts', line: 876, desc: 'Tính toán trạng thái chọn dòng tối ưu: khi không lọc (activeRowIndices === null) chỉ duyệt qua tập checkedRowIndices (k phần tử) thay vì quét 50.000 dòng' },
-    { name: 'toggleFilteredRowsSelection', file: 'src/components/grid/gridUtils.ts', line: 931, desc: 'Đảo/bật/tắt chọn hàng loạt: Fast-path O(1) khi bỏ chọn toàn bộ trên bảng không lọc trả về ngay new Set() rỗng thay vì gọi 50.000 lệnh .delete()' },
-    { name: 'computeSortRowFlipState', file: 'src/components/grid/gridUtils.ts', line: 989, desc: 'Tính toán trạng thái trượt FLIP khi Sort chuẩn AG Grid: trượt deltaY chính xác cho các dòng hoán đổi trong viewport, phân tầng vận tốc dòng từ xa và khóa biên trên' },
+    // --- src/components/grid/gridFormatUtils.ts, gridUtils.ts & lazy engines ---
+    { name: 'formatDisplayDate', file: 'src/components/grid/gridFormatUtils.ts', line: 19, desc: 'Chuẩn hóa ngày hiển thị DD/MM/YYYY độc lập khỏi AdvDatePicker' },
+    { name: 'formatGridDateValue', file: 'src/components/grid/gridFormatUtils.ts', line: 65, desc: 'Format ngày chuẩn DD/MM/YYYY (hoặc DD/MM/YYYY HH:mm), loại bỏ giây thừa :ss (tách khỏi datePickerUtils để cắt transitive leak)' },
+    { name: 'measureTextWidth', file: 'src/components/grid/gridAutoFitUtils.ts', line: 16, desc: 'Đo chiều rộng pixel thực tế của chuỗi văn bản bằng thẻ HTML5 Canvas 2D ẩn với font Roboto >= 12px (tách lazy khỏi gridUtils)' },
+    { name: 'getSttColWidth', file: 'src/components/grid/gridFormatUtils.ts', line: 92, desc: 'Tự động tính toán độ rộng tối ưu cho cột STT dựa trên số chữ số của tổng số dòng' },
+    { name: 'calcColAutoFitWidth', file: 'src/components/grid/gridAutoFitUtils.ts', line: 31, desc: 'Tính độ rộng tối ưu (auto-fit) cho cột bằng cách lấy mẫu dòng dữ liệu kết hợp summaryValues tổng nhóm & tổng bảng format toLocaleString vi-VN font Roboto >= 12px, kẹp giữa minWidth và maxLimit (380px)' },
+    { name: 'computeContextMenuCoords', file: 'src/components/grid/gridClipboardUtils.ts', line: 4, desc: 'Giới hạn tọa độ mở context menu chống tràn mép phải và mép dưới viewport (tách lazy)' },
+    { name: 'copyTextToClipboard', file: 'src/components/grid/gridClipboardUtils.ts', line: 43, desc: 'Cơ chế sao chép văn bản vào clipboard an toàn 2 tầng: navigator.clipboard + textarea fallback (tách lazy)' },
+    { name: 'parseGridNumber', file: 'src/components/grid/gridFormatUtils.ts', line: 105, desc: 'Chuyển đổi mọi giá trị chuỗi hoặc số thành kiểu number chuẩn xác, tự động nhận diện cả chuẩn VN (1.234,56), quốc tế (1,234.56) và số âm ngoặc đơn (1.000)' },
+    { name: 'formatGridNumber', file: 'src/components/grid/gridFormatUtils.ts', line: 161, desc: 'Định dạng số chuẩn kế toán/tài chính #,###.##: chấm (.) hàng nghìn, phẩy (,) thập phân, số âm đặt trong ngoặc đơn (1.000)' },
+    { name: 'isSelectionColumn', file: 'src/components/grid/gridFormatUtils.ts', line: 222, desc: 'Predicate kiểm tra cột chọn dòng: đóng gói tập trung điều kiện col.isSelection hoặc col.key === "col_chk"' },
+    { name: 'computeFilteredSelectionState', file: 'src/components/grid/gridSelectionUtils.ts', line: 16, desc: 'Tính toán trạng thái chọn dòng tối ưu: khi không lọc (activeRowIndices === null) chỉ duyệt qua tập checkedRowIndices (tách lazy)' },
+    { name: 'toggleFilteredRowsSelection', file: 'src/components/grid/gridSelectionUtils.ts', line: 68, desc: 'Đảo/bật/tắt chọn hàng loạt: Fast-path O(1) khi bỏ chọn toàn bộ trên bảng không lọc trả về ngay new Set() rỗng (tách lazy)' },
+    { name: 'computeSortRowFlipState', file: 'src/components/grid/hooks/sortFlipEngine.ts', line: 18, desc: 'Tính toán trạng thái trượt FLIP khi Sort chuẩn AG Grid: trượt deltaY chính xác cho các dòng hoán đổi trong viewport (tách lazy)' },
+    { name: 'runSortFlipAnimation', file: 'src/components/grid/hooks/sortFlipEngine.ts', line: 74, desc: 'Thực thi hiệu ứng GPU translate3d + cubic-bezier 300ms cho các dòng trượt FLIP sau khi sort' },
 
     // --- src/components/grid/GridHeader.tsx ---
-    { name: 'renderHeaderCellContent', file: 'src/components/grid/GridHeader.tsx', line: 179, desc: 'Helper chuẩn hóa DRY cho nội dung ô header (tiêu đề, icon sort, nút checklist filter, thanh resize) gom 4 khối JSX lặp lại ở 4 vùng: Pinned Left, Middle Standalone, Middle Band Child, Pinned Right' },
+    { name: 'GridHeader', file: 'src/components/grid/GridHeader.tsx', line: 42, desc: 'Component thanh tiêu đề 1 hoặc 2 tầng hỗ trợ renderHeader(), nhóm cột, ghim vị trí, lazy sort morph icon và context menu' },
+    { name: 'middleElements', file: 'src/components/grid/hooks/useGridColumnLayout.ts', line: 505, desc: 'Cấu trúc gom cột/nhóm vùng giữa (`GridMiddleElement[]`) tính sẵn cho Header & ColumnLayout' },
+    { name: 'renderHeaderCellContent', file: 'src/components/grid/GridHeader.tsx', line: 204, desc: 'Helper chuẩn hóa DRY cho nội dung ô header (hỗ trợ `col.renderHeader()`, icon sort `LazyHeaderSortMorphIcon`, nút checklist filter, thanh resize)' },
 
     // --- src/components/grid/smartNumberUtils.ts ---
-    { name: 'expandAllShortcuts', file: 'src/components/grid/smartNumberUtils.ts', line: 18, desc: 'Mở rộng tất cả các ký tự phím tắt đơn vị số (1k->1000, 1tr->1000000, 1t/1b->1000000000) thành chuỗi số nguyên thực tế' },
-    { name: 'formatNumberWithCommas', file: 'src/components/grid/smartNumberUtils.ts', line: 43, desc: 'Định dạng số hiển thị chuẩn Việt Nam với formatGridNumber' },
-    { name: 'cleanNumericInput', file: 'src/components/grid/smartNumberUtils.ts', line: 54, desc: 'Làm sạch chuỗi nhập số, mở rộng phím tắt ghi gọn' },
-    { name: 'parseSmartNumericRange', file: 'src/components/grid/smartNumberUtils.ts', line: 77, desc: 'Phân tích khoảng số thông minh từ các cú pháp .., /, -, ~ hỗ trợ phím tắt ghi gọn' },
-    { name: 'formatSmartNumericInput', file: 'src/components/grid/smartNumberUtils.ts', line: 169, desc: 'Tự động định dạng chuỗi nhập số hoặc dải số với phím tắt ghi gọn' },
-    { name: 'handleNumericKeyDown', file: 'src/components/grid/smartNumberUtils.ts', line: 217, desc: 'Chặn ký tự chữ cái rác khi gõ vào ô số, chỉ cho phép số, dấu phân cách, ngoặc đơn âm và phím tắt ghi gọn (k, tr, m, b, t, ty, tỷ)' },
+    { name: 'expandAllShortcuts', file: 'src/components/grid/smartNumberUtils.ts', line: 18, desc: 'Mở rộng các phím tắt đơn vị số theo quy ước chuẩn (k x1000, m/tr x1000000, b/ty x1000000000), dùng parseGridNumber để hỗ trợ cả 1000k lẫn 1,5tr / 1tr5' },
+    { name: 'formatNumberWithCommas', file: 'src/components/grid/smartNumberUtils.ts', line: 44, desc: 'Định dạng số hiển thị chuẩn Việt Nam với formatGridNumber (giữ nguyên chuỗi còn chữ cái phím tắt dở dang như 1t để gõ tiếp 1tr/1ty)' },
+    { name: 'cleanNumericInput', file: 'src/components/grid/smartNumberUtils.ts', line: 56, desc: 'Làm sạch chuỗi nhập số, mở rộng phím tắt ghi gọn' },
+    { name: 'parseSmartNumericRange', file: 'src/components/grid/smartNumberUtils.ts', line: 79, desc: 'Phân tích khoảng số thông minh từ các cú pháp .., /, -, ~ hỗ trợ phím tắt ghi gọn' },
+    { name: 'formatSmartInputText', file: 'src/components/grid/smartNumberUtils.ts', line: 162, desc: 'Định dạng chuỗi nhập số/dải số giữ nguyên dấu thập phân đang gõ (1, / 1.) và không tự chèn " - " sau 1k/1m/1tr/1b/1ty' },
+    { name: 'handleNumericKeyDown', file: 'src/components/grid/smartNumberUtils.ts', line: 210, desc: 'Chặn ký tự chữ cái rác khi gõ vào ô số, chỉ cho phép số, dấu phân cách, ngoặc đơn âm và phím tắt ghi gọn (k, m, tr, b, ty)' },
 
-    // --- src/components/grid/VirtualizedGrid.tsx ---
-    { name: 'VirtualizedGrid', file: 'src/components/grid/VirtualizedGrid.tsx', line: 59, desc: 'Component bảng ảo hóa hiệu năng cao chính cho 50,000 dòng dữ liệu' },
-    { name: 'setColWidth', file: 'src/components/grid/VirtualizedGrid.tsx', line: 223, desc: 'Cập nhật độ rộng của một cột đơn lẻ qua functional state update' },
-    { name: 'setMultipleColWidths', file: 'src/components/grid/VirtualizedGrid.tsx', line: 235, desc: 'Cập nhật độ rộng hàng loạt cột trong 1 lần render duy nhất (Batch Width Update)' },
-    { name: 'effectiveColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 334, desc: 'Danh sách cột hiệu dụng sau khi đã lọc bỏ các cột thuộc hiddenColKeys' },
-    { name: 'handleMouseDownResize', file: 'src/components/grid/VirtualizedGrid.tsx', line: 837, desc: 'Bắt đầu thao tác kéo thả thay đổi độ rộng cột (Column Resizing)' },
-    { name: 'handleAutoFitColumn', file: 'src/components/grid/VirtualizedGrid.tsx', line: 733, desc: 'Tự động vừa độ rộng cho một cột dựa trên canvas text measurement' },
-    { name: 'handleAutoFitAllColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 744, desc: 'Tự động vừa độ rộng cho toàn bộ các cột đang hiển thị trong bảng (Batch Auto-Fit)' },
-    { name: 'handleAutoFitBandColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 753, desc: 'Tự động vừa độ rộng cho tất cả các cột thuộc nhóm tầng 1 (Batch Band Auto-Fit)' },
-    { name: 'handleSetPin', file: 'src/components/grid/VirtualizedGrid.tsx', line: 781, desc: 'Thay đổi vị trí ghim của cột (left, middle, right)' },
-    { name: 'handleSetBandPin', file: 'src/components/grid/VirtualizedGrid.tsx', line: 789, desc: 'Thay đổi vị trí ghim của toàn bộ nhóm cột tầng 1' },
-    { name: 'handleHideColumn', file: 'src/components/grid/VirtualizedGrid.tsx', line: 761, desc: 'Thêm cột vào danh sách ẩn hiddenColKeys' },
-    { name: 'handleHideAllEmptyColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 766, desc: 'Ẩn toàn bộ 16 cột rỗng trong dataset vào danh sách hiddenColKeys và lưu LocalStorage' },
-    { name: 'handleShowAllHiddenColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 775, desc: 'Khôi phục toàn bộ các cột đã bị ẩn' },
-    { name: 'handleHideBand', file: 'src/components/grid/VirtualizedGrid.tsx', line: 484, desc: 'Ẩn toàn bộ các cột thuộc nhóm tầng 1' },
-    { name: 'handleScrollToTop', file: 'src/components/grid/VirtualizedGrid.tsx', line: 499, desc: 'Cuộn tức thì lên dòng đầu tiên của bảng' },
-    { name: 'handleScrollToBottom', file: 'src/components/grid/VirtualizedGrid.tsx', line: 507, desc: 'Cuộn tức thì xuống dòng cuối cùng của bảng' },
-    { name: 'handleColumnContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 885, desc: 'Mở menu chuột phải trên tiêu đề cột con hoặc cột độc lập' },
-    { name: 'handleBandContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 904, desc: 'Mở menu chuột phải trên tiêu đề nhóm tầng 1 (Band Menu)' },
-    { name: 'handleCellContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 923, desc: 'Mở menu chuột phải trên cell của dòng dữ liệu (Row/Cell Menu)' },
-    { name: 'handleGroupContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 951, desc: 'Mở menu ngữ cảnh chuột phải trên dòng tiêu đề nhóm (Group Header Row Menu)' },
-    { name: 'handleKeyDown', file: 'src/components/grid/VirtualizedGrid.tsx', line: 666, desc: 'Điều hướng phím mũi tên Lên/Xuống/PageUp/PageDown giữa các dòng' },
-    { name: 'toggleFullscreen', file: 'src/components/grid/VirtualizedGrid.tsx', line: 376, desc: 'Bật/tắt chế độ toàn màn hình Grid (phóng to 100vw x 100vh hoặc thu nhỏ về ban đầu), kích hoạt bằng nút Floating Toolbar hoặc phím tắt Alt + Shift + F' },
-    { name: 'handleFilterByValue', file: 'src/components/grid/VirtualizedGrid.tsx', line: 1121, desc: 'Hàm chuẩn hóa lọc theo giá trị cell: gọi createEqualsFilter(val) và chuyển trực tiếp lên dòng filter của cột' },
-    { name: 'useColumnResize', file: 'src/components/grid/hooks/useColumnResize.ts', line: 10, desc: 'Custom hook kéo dãn độ rộng cột qua biến CSS: quản lý resizingRef, bắt đầu kéo mousedown, di chuyển mousemove cập nhật DOM biến CSS, thả chuột mouseup khôi phục calc(var(--agv-col-w-*)) trên bandContainers và đồng bộ React state' },
-    { name: 'useColumnAutoFit', file: 'src/components/grid/hooks/useColumnAutoFit.ts', line: 16, desc: 'Custom hook vừa độ rộng tối ưu: đo chữ canvas calcColAutoFitWidth, bảo toàn tổng nhóm và tổng bảng, vừa cột đơn, toàn bộ cột hoặc nhóm tầng' },
-    { name: 'useInCellEditor', file: 'src/components/grid/hooks/useInCellEditor.ts', line: 11, desc: 'Custom hook chỉnh sửa ô in-cell: quản lý ô activeEditingCell, lockedScrollPosRef bảo vệ cuộn, chặn 100% cuộn ngoài popup khi đang sửa' },
+    // --- src/components/grid/VirtualizedGrid.tsx & Hooks ---
+    { name: 'VirtualizedGrid', file: 'src/components/grid/VirtualizedGrid.tsx', line: 2161, desc: 'Component bảng ảo hóa hiệu năng cao theo module opt-in & Lazy UI chunks (`VirtualizedGridComponent` dòng 87)' },
+    { name: 'setColWidth', file: 'src/components/grid/hooks/useGridColumnLayout.ts', line: 94, desc: 'Cập nhật độ rộng của một cột đơn lẻ qua functional state update (tách sang `useGridColumnLayout`)' },
+    { name: 'setMultipleColWidths', file: 'src/components/grid/hooks/useGridColumnLayout.ts', line: 115, desc: 'Cập nhật độ rộng hàng loạt cột trong 1 lần render duy nhất (Batch Width Update)' },
+    { name: 'effectiveColumns', file: 'src/components/grid/hooks/useGridColumnLayout.ts', line: 205, desc: 'Danh sách cột hiệu dụng sau khi đã lọc bỏ các cột thuộc hiddenColKeys' },
+    { name: 'useGridColumnLayout', file: 'src/components/grid/hooks/useGridColumnLayout.ts', line: 41, desc: 'Custom hook quản lý bố cục cột/ghim/band/ẩn cột; bỏ qua ResizeObserver đo vị trí tự nhiên khi không có cột center-pinned' },
+    { name: 'isAnyPopupActive', file: 'src/components/grid/hooks/useGridPopupLock.ts', line: 10, desc: 'Kiểm tra nhanh zero-allocation trên `document.body.children` xem có popup/modal nào đang mở không' },
+    { name: 'useGridPopupLock', file: 'src/components/grid/hooks/useGridPopupLock.ts', line: 25, desc: 'Custom hook khóa cuộn & chặn tương tác Grid khi popup/context menu/editor đang mở' },
+    { name: 'handleMouseDownResize', file: 'src/components/grid/VirtualizedGrid.tsx', line: 563, desc: 'Bắt đầu thao tác kéo thả thay đổi độ rộng cột (từ useColumnResize)' },
+    { name: 'handleAutoFitColumn', file: 'src/components/grid/VirtualizedGrid.tsx', line: 570, desc: 'Tự động vừa độ rộng cho một cột dựa trên canvas text measurement (từ useColumnAutoFit)' },
+    { name: 'handleAutoFitAllColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 570, desc: 'Tự động vừa độ rộng cho toàn bộ các cột đang hiển thị trong bảng (từ useColumnAutoFit)' },
+    { name: 'handleAutoFitBandColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 570, desc: 'Tự động vừa độ rộng cho tất cả các cột thuộc nhóm tầng 1 (từ useColumnAutoFit)' },
+    { name: 'handleSetPin', file: 'src/components/grid/VirtualizedGrid.tsx', line: 585, desc: 'Thay đổi vị trí ghim của cột (left, middle, right) — tách biệt `enableColumnPinning` vs `enableCenterDock`' },
+    { name: 'handleSetBandPin', file: 'src/components/grid/VirtualizedGrid.tsx', line: 593, desc: 'Thay đổi vị trí ghim của toàn bộ nhóm cột tầng 1 — tách biệt `enableColumnPinning` vs `enableCenterDock`' },
+    { name: 'handleHideColumn', file: 'src/components/grid/VirtualizedGrid.tsx', line: 604, desc: 'Thêm cột vào danh sách ẩn hiddenColKeys' },
+    { name: 'handleHideAllEmptyColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 612, desc: 'Ẩn toàn bộ cột rỗng vào danh sách hiddenColKeys và lưu LocalStorage' },
+    { name: 'handleShowAllHiddenColumns', file: 'src/components/grid/VirtualizedGrid.tsx', line: 622, desc: 'Khôi phục toàn bộ các cột đã bị ẩn' },
+    { name: 'handleHideBand', file: 'src/components/grid/VirtualizedGrid.tsx', line: 627, desc: 'Ẩn toàn bộ các cột thuộc nhóm tầng 1' },
+    { name: 'handleScrollToTop', file: 'src/components/grid/VirtualizedGrid.tsx', line: 777, desc: 'Cuộn tức thì lên dòng đầu tiên của bảng' },
+    { name: 'handleScrollToBottom', file: 'src/components/grid/VirtualizedGrid.tsx', line: 785, desc: 'Cuộn tức thì xuống dòng cuối cùng của bảng' },
+    { name: 'handleColumnContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 879, desc: 'Mở menu chuột phải trên tiêu đề cột con hoặc cột độc lập' },
+    { name: 'handleBandContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 903, desc: 'Mở menu chuột phải trên tiêu đề nhóm tầng 1 (Band Menu)' },
+    { name: 'handleCellContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 928, desc: 'Mở menu chuột phải trên cell của dòng dữ liệu (Row/Cell Menu)' },
+    { name: 'handleFilterByValue', file: 'src/components/grid/VirtualizedGrid.tsx', line: 973, desc: 'Hàm chuẩn hóa lọc theo giá trị cell: gọi createEqualsFilter(val) và chuyển trực tiếp lên dòng filter của cột' },
+    { name: 'handleGroupContextMenu', file: 'src/components/grid/VirtualizedGrid.tsx', line: 986, desc: 'Mở menu ngữ cảnh chuột phải trên dòng tiêu đề nhóm (Group Header Row Menu)' },
+    { name: 'handleKeyDown', file: 'src/components/grid/VirtualizedGrid.tsx', line: 486, desc: 'Điều hướng phím trên Grid' },
+    { name: 'toggleFullscreen', file: 'src/components/grid/VirtualizedGrid.tsx', line: 475, desc: 'Bật/tắt chế độ toàn màn hình Grid (Alt + Shift + F khi bật FullscreenModule)' },
+    { name: 'useColumnResize', file: 'src/components/grid/hooks/useColumnResize.ts', line: 22, desc: 'Hook mỏng kéo dãn độ rộng cột qua dynamic import `columnResizeEngine.ts`' },
+    { name: 'startColumnResizeSession', file: 'src/components/grid/hooks/columnResizeEngine.ts', line: 13, desc: 'Engine DOM 120fps Viewport-Culled cập nhật trực tiếp biến CSS `--agv-col-w-*` & đồng bộ state khi mouseup' },
+    { name: 'useColumnAutoFit', file: 'src/components/grid/hooks/useColumnAutoFit.ts', line: 35, desc: 'Custom hook vừa độ rộng tối ưu: đo chữ canvas lazy `calcColAutoFitWidth`, bảo toàn tổng nhóm và tổng bảng' },
+    { name: 'useInCellEditor', file: 'src/components/grid/hooks/useInCellEditor.ts', line: 10, desc: 'Custom hook mỏng chỉnh sửa ô in-cell (`activeEditingCell`, `handleStartEditCell`, `handleEndEditCell`)' },
     { name: 'useGridKeyboardNav', file: 'src/components/grid/hooks/useGridKeyboardNav.ts', line: 22, desc: 'Custom hook điều hướng bàn phím trên Grid (ArrowUp, ArrowDown, PageUp, PageDown, Space) giữ cố định listener qua keyNavStateRef' },
-    { name: 'useGridSortFlipAnimation', file: 'src/components/grid/hooks/useGridSortFlipAnimation.ts', line: 17, desc: 'Custom hook hiệu ứng trượt dòng FLIP 300ms GPU khi Sort chuẩn AG Grid' },
-    { name: 'getOrComputeMonthStats', file: 'src/components/grid/gridUtils.ts', line: 1060, desc: 'Hàm tính toán và lưu đệm WeakMap (globalMonthStatsCache) thống kê 12 tháng gắn trực tiếp theo baseRecord gốc, dùng chung O(1) cho cả PC, Tablet, Phone mà không cấp phát mảng lặp lại' },
-    { name: 'ensureDatePickerStyles', file: 'src/components/ui/datepicker/datePickerStyles.ts', line: 3, desc: 'Hàm inject style keyframes và biến CSS cho DatePicker suite, thoát sớm O(1) nếu thẻ style đã tồn tại' },
+    { name: 'useGridSortFlipAnimation', file: 'src/components/grid/hooks/useGridSortFlipAnimation.ts', line: 30, desc: 'Custom hook điều phối hiệu ứng trượt dòng FLIP khi Sort (gọi lazy `sortFlipEngine.ts`)' },
+    { name: 'ensureDatePickerStyles', file: 'src/components/ui/datepicker/datePickerStyles.ts', line: 3, desc: 'Hàm inject style keyframes và biến CSS cho DatePicker suite, đối chiếu và cập nhật style.textContent khi cssText thay đổi (HMR-safe) và tự gọi ngay khi nạp module' },
     { name: 'GridTabletRow', file: 'src/components/grid/responsive/GridTabletRow.tsx', line: 20, desc: 'Component render dòng cho Tablet: Bảng gộp trường đa tầng 4 cụm cột, trích xuất chuẩn col_id ("Mã Dòng"), ẩn/hiện STT và Checkbox theo showRowNumber/showSelectionCol đồng bộ với PC, 68px, tích hợp TwelveMonthChartCell mini 22px, STT nền accent chữ trắng khi focus' },
     { name: 'GridPhoneCard', file: 'src/components/grid/responsive/GridPhoneCard.tsx', line: 23, desc: 'Component render thẻ card cho Phone: Thẻ độc lập chuẩn kích thước 96px slot 104px (246px khi mở rộng) bọc trong .agv-phone-card-slot triệt tiêu hoàn toàn margin collapse và khoảng hở 84px giữa các chunk, khoảng cách đều 8px, ẩn/hiện STT và Checkbox theo showRowNumber/showSelectionCol đồng bộ với PC, cố định mở rộng 150px, tích hợp TwelveMonthChartCell 48px Catmull-Rom spline' },
+    { name: 'ResponsiveChunkRow', file: 'src/components/grid/responsive/ResponsiveChunkRow.tsx', line: 26, desc: 'Chunk lazy bridge render GridTabletRow / GridPhoneCard tách khỏi GridChunkBlock' },
     { name: 'GridTabletHeader', file: 'src/components/grid/responsive/GridTabletHeader.tsx', line: 8, desc: 'Thanh tiêu đề 4 siêu cột chuẩn hóa cho Tablet (34px), tích hợp nút mở modal Lọc & Sắp Xếp, ẩn/hiện nhãn TT theo showRowNumber/showSelectionCol, 100% theme CSS variables' },
-    { name: 'ResponsiveSortFilterModal', file: 'src/components/grid/responsive/ResponsiveSortFilterModal.tsx', line: 23, desc: 'Modal lọc & sắp xếp trung tâm cho Tablet & Phone: Tái sử dụng AdvComboBoxEdit chọn cột/phạm vi, 3 nút phân đoạn tăng/giảm/không sắp xếp, zero autofill, min-h 28px, 100% theme CSS variables, auto-close click outside' },
-    { name: 'useGridLayoutMode', file: 'src/components/grid/responsive/useGridLayoutMode.ts', line: 78, desc: 'Hook phát hiện kích thước container qua ResizeObserver và điều phối chế độ bố cục giữa PC, Tablet, Phone tích hợp Hysteresis Buffer +-16px và Debounce 120ms chống giật ranh giới' },
+    { name: 'GridResponsiveHeader', file: 'src/components/grid/responsive/GridResponsiveHeader.tsx', line: 5, desc: 'Header responsive hợp nhất cho Tablet/Phone: nút lọc & sắp xếp chuẩn theme CSS variables' },
+    { name: 'ResponsiveSortFilterModal', file: 'src/components/grid/responsive/ResponsiveSortFilterModal.tsx', line: 148, desc: 'Drawer Lọc & Sắp xếp cạnh dưới (`bottom-0`) tối ưu Mobile chia 2 phân đoạn (`Tìm kiếm & Lọc` | `Sắp xếp`): đồng bộ 100% toán tử PC theo dạng cột (`text`, `number`, `date`, `time`) bằng thanh icon DevExtreme 1 hàng chia đều (`FilterOpIcon`, 0 cuộn ngang, 0 dropdown toán tử con, 0 tooltip `title=`), chuyển `Một giá trị` / `Nhiều giá trị` (tái sử dụng `SmartNumberFilterInput`, `NumberRangeFilterInput`, `AdvDatePicker`, `AdvDateRangePicker`, `TimeFilterInput`, `TimeRangeFilterInput`, `multiRanges` & De Morgan `multiValues`), Chip chọn phạm vi (`min-h-[36px]`), danh sách dọc các cột `min-h-[40px]`, footer `h-11 md:h-9`' },
+    { name: 'useGridLayoutMode', file: 'src/components/grid/responsive/useGridLayoutMode.ts', line: 17, desc: 'Hook mỏng điều phối chế độ PC / Tablet / Phone: trả về `pc` ngay khi `enabled = false`, khi bật nạp lười `responsiveLayoutEngine.ts`' },
+    { name: 'GRID_BREAKPOINTS', file: 'src/components/grid/responsive/responsiveLayoutEngine.ts', line: 3, desc: 'Ngưỡng kích thước màn hình Phone/Tablet/PC của Grid' },
+    { name: 'resolveActiveModeWithHysteresis', file: 'src/components/grid/responsive/responsiveLayoutEngine.ts', line: 10, desc: 'Tính chế độ layout PC/Tablet/Phone kèm vùng đệm Hysteresis +-16px chống nhấp nháy ranh giới' },
     // --- Hằng Số Chuẩn Hóa Toàn Hệ Thống (Standard Enum-like Constants & Types) ---
-    { name: 'PIN_POSITIONS', file: 'src/components/grid/types.ts', line: 9, desc: 'Hằng số danh mục vị trí ghim cột (NONE, LEFT, RIGHT, CENTER), loại bỏ hoàn toàn hardcode text' },
-    { name: 'SORT_DIRECTIONS', file: 'src/components/grid/types.ts', line: 22, desc: 'Hằng số danh mục chiều sắp xếp dữ liệu (ASC, DESC), đồng bộ MorphSortIcon và sort pipeline' },
-    { name: 'GRID_EDIT_MODES', file: 'src/components/grid/types.ts', line: 45, desc: 'Hằng số danh mục chế độ sửa ô trên lưới (VIEW, SINGLE_CLICK, DOUBLE_CLICK)' },
-    { name: 'FORMULA_MODES', file: 'src/components/grid/types.ts', line: 55, desc: 'Hằng số danh mục phép tính công thức cột tháng (AVG, SUM, MIN, MAX)' },
-    { name: 'MONTH_ANALYTICS_MODES', file: 'src/components/grid/types.ts', line: 66, desc: 'Hằng số danh mục chế độ hiển thị phân tích 12 tháng (THIRTEEN_COLS: 13cols, TWO_COLS: 2cols)' },
-    { name: 'FILTER_OPS', file: 'src/components/grid/types.ts', line: 77, desc: 'Hằng số danh mục toán tử lọc toàn hệ thống (FILTER_OPS.<OP>), loại bỏ 100% hardcode chuỗi text' },
-    { name: 'FILTER_MODES', file: 'src/components/grid/types.ts', line: 100, desc: 'Hằng số danh mục chế độ lọc dữ liệu (SIMPLE, CHECKLIST, MULTI) của cột' },
-    { name: 'CHECK_FILTER_STATES', file: 'src/components/grid/types.ts', line: 110, desc: 'Hằng số danh mục trạng thái lọc của cột Checkbox (ALL, CHECKED, UNCHECKED)' },
-    { name: 'EDITOR_TYPES', file: 'src/components/grid/types.ts', line: 130, desc: 'Hằng số danh mục kiểu control sửa ô (TEXT, NUMBER, DATE, DATERANGE, TIME, COMBOBOX, LOOKUP)' },
-    { name: 'DATA_TYPES', file: 'src/components/grid/types.ts', line: 144, desc: 'Hằng số danh mục kiểu dữ liệu cột chuẩn toàn hệ thống (TEXT, NUMBER, DATE, TIME, SYSTEM)' },
-    { name: 'ALIGNMENTS', file: 'src/components/grid/types.ts', line: 156, desc: 'Hằng số danh mục canh lề hiển thị của ô (LEFT, CENTER, RIGHT)' },
-    { name: 'Design Tokens (agv)', file: 'tailwind.config.js', line: 14, desc: 'Bảng màu Design Tokens hệ thống ánh xạ 100% biến CSS var(--agv-...) vào Tailwind (agv-accent, agv-accent-text, agv-border, agv-bg-root, agv-text-main)' },
+    { name: 'PIN_POSITIONS', file: 'src/components/grid/types.ts', line: 23, desc: 'Hằng số danh mục vị trí ghim cột (NONE, LEFT, RIGHT, CENTER), loại bỏ hoàn toàn hardcode text' },
+    { name: 'SORT_DIRECTIONS', file: 'src/components/grid/types.ts', line: 44, desc: 'Hằng số danh mục chiều sắp xếp dữ liệu (ASC, DESC), đồng bộ MorphSortIcon và sort pipeline' },
+    { name: 'GRID_EDIT_MODES', file: 'src/components/grid/types.ts', line: 67, desc: 'Hằng số danh mục chế độ sửa ô trên lưới (VIEW, SINGLE_CLICK, DOUBLE_CLICK)' },
+    { name: 'FORMULA_MODES', file: 'src/components/grid/types.ts', line: 89, desc: 'Hằng số danh mục phép tính công thức cột tháng (AVG, SUM, MIN, MAX)' },
+    { name: 'MONTH_ANALYTICS_MODES', file: 'src/components/grid/types.ts', line: 100, desc: 'Hằng số danh mục chế độ hiển thị phân tích 12 tháng (THIRTEEN_COLS: 13cols, TWO_COLS: 2cols)' },
+    { name: 'FILTER_OPS', file: 'src/components/grid/types.ts', line: 110, desc: 'Hằng số danh mục toán tử lọc toàn hệ thống (FILTER_OPS.<OP>), loại bỏ 100% hardcode chuỗi text' },
+    { name: 'FILTER_MODES', file: 'src/components/grid/types.ts', line: 133, desc: 'Hằng số danh mục chế độ lọc dữ liệu (SIMPLE, CHECKLIST, MULTI) của cột' },
+    { name: 'CHECK_FILTER_STATES', file: 'src/components/grid/types.ts', line: 143, desc: 'Hằng số danh mục trạng thái lọc của cột Checkbox (ALL, CHECKED, UNCHECKED)' },
+    { name: 'EDITOR_TYPES', file: 'src/components/grid/types.ts', line: 163, desc: 'Hằng số danh mục kiểu control sửa ô (TEXT, NUMBER, DATE, DATERANGE, TIME, COMBOBOX, LOOKUP)' },
+    { name: 'DATA_TYPES', file: 'src/components/grid/types.ts', line: 177, desc: 'Hằng số danh mục kiểu dữ liệu cột chuẩn toàn hệ thống (TEXT, NUMBER, DATE, TIME, SYSTEM)' },
+    { name: 'ALIGNMENTS', file: 'src/components/grid/types.ts', line: 189, desc: 'Hằng số danh mục canh lề hiển thị của ô (LEFT, CENTER, RIGHT)' },
+    { name: 'CONTEXT_MENU_TYPES', file: 'src/components/grid/types.ts', line: 235, desc: 'Hằng số danh mục phân loại menu ngữ cảnh chuột phải (HEADER, ROW, BAND, GROUP) dùng chung giữa types & ColumnContextMenu' },
+    { name: 'Design Tokens (PNT + agv)', file: 'tailwind.config.js', line: 12, desc: 'Bảng màu & Design Tokens đồng bộ D:\\Dự án\\b2b-pnt (`brand`, `primary`, `control`, `surface`, `status`, `table-header`, `--agv-*`) với helper `color-mix` hỗ trợ opacity modifier trên Tailwind v3' },
+    { name: 'CONTROL_SURFACE_CLASS / CONTROL_BOX_CLASS', file: 'src/components/ui/controlFocus.ts', line: 24, desc: 'Hợp đồng nguồn đơn CSS classes cho toàn hệ thống (`agv-control`, `agv-control-box`, `getControlSizeClass`, `CONTROL_INPUT_SM/MD_CLASS`, `CONTROL_BUTTON_*`, `BUTTON_FOCUS_VISIBLE_CLASS="agv-focus-ring"`); phần hover/focus/open/invalid/button unlayered nằm ở cuối `src/index.css`' },
+    { name: 'AdvButton / Button & getButtonClass (4-Variant Button Standard)', file: 'src/components/ui/AdvButton.tsx', line: 22, desc: 'Component `<AdvButton>` (`Button` alias, dòng 22 & 51) và helper `getButtonClass` / `buttonVariants` (`src/components/ui/controlFocus.ts` dòng 68 & 131): chuẩn hóa toàn bộ nút hành động hệ thống chỉ quanh 4 biến thể `default` | `outline` | `ghost` | `destructive` với `size` (`sm`, `default`, `md`, `icon-sm`, `icon`) và `active` (`data-active="true"`)' },
+    { name: 'PageShell', file: 'src/components/shared/PageShell.tsx', line: 11, desc: 'Khung trang nền `--background` & header chuẩn b2b-pnt' },
+    { name: 'ListPagePanel', file: 'src/components/shared/ListPagePanel.tsx', line: 11, desc: 'Panel chính nền `--card` (`border-y bg-card sm:rounded-xl sm:border sm:shadow-sm`) bọc bảng & thanh lọc' },
+    { name: 'StatusBadge', file: 'src/components/shared/StatusBadge.tsx', line: 31, desc: 'Badge trạng thái semantic (success | danger | muted | warning | info | brand)' },
+    { name: 'StatusTabs', file: 'src/components/shared/StatusTabs.tsx', line: 22, desc: 'Thanh tab lọc với đường gạch chân Gold active (`border-b-2 border-brand-gold text-brand-gold-on-light`)' },
     { name: 'QUERY_COMBINATORS', file: 'src/components/grid/floating/types.ts', line: 17, desc: 'Hằng số danh mục toán tử kết hợp cây điều kiện (AND, OR) trong Query Builder' },
     { name: 'TOOLBAR_POPUPS', file: 'src/components/grid/floating/types.ts', line: 42, desc: 'Hằng số định danh popup thanh công cụ nổi (SEARCH, QUERY_BUILDER, COLUMN_CHOOSER, SETTINGS)' },
-    { name: 'CONTEXT_MENU_TYPES', file: 'src/components/grid/ColumnContextMenu.tsx', line: 23, desc: 'Hằng số danh mục phân loại menu ngữ cảnh chuột phải (HEADER, ROW, BAND, GROUP)' },
-    { name: 'ALIGN_TEXT_CLASSES', file: 'src/components/grid/gridUtils.ts', line: 257, desc: 'Bản đồ lớp CSS căn chỉnh văn bản Tailwind (text-left, text-center, text-right) từ ALIGNMENTS' },
-    { name: 'getAlignTextClass', file: 'src/components/grid/gridUtils.ts', line: 263, desc: 'Hàm helper trả về class CSS text-align chuẩn từ ColumnAlign, mặc định text-left' },
-    { name: 'ALIGN_JUSTIFY_CLASSES', file: 'src/components/grid/gridUtils.ts', line: 270, desc: 'Bản đồ lớp CSS căn chỉnh Flexbox Tailwind (justify-start, justify-center, justify-end) từ ALIGNMENTS' },
-    { name: 'getAlignJustifyClass', file: 'src/components/grid/gridUtils.ts', line: 276, desc: 'Hàm helper trả về class CSS justify chuẩn từ ColumnAlign, mặc định justify-start' },
-    { name: 'isNoInputFilterOp', file: 'src/components/grid/gridUtils.ts', line: 341, desc: 'Hàm helper kiểm tra toán tử không cần giá trị nhập liệu (is_empty, is_not_empty, is_positive, is_negative)' },
-    { name: 'isBetweenFilterOp', file: 'src/components/grid/gridUtils.ts', line: 354, desc: 'Hàm helper kiểm tra toán tử nằm trong khoảng (between)' },
-    { name: 'isNegativeFilterOp', file: 'src/components/grid/gridUtils.ts', line: 361, desc: 'Hàm helper kiểm tra toán tử phủ định (not_equals, not_contains)' },
-    { name: 'createColumnFilter', file: 'src/components/grid/gridUtils.ts', line: 368, desc: 'Hàm tiện ích chuẩn hóa khởi tạo ColumnFilterValue với toán tử (mặc định FILTER_OPS.EQUALS) và giá trị string' },
-    { name: 'createEqualsFilter', file: 'src/components/grid/gridUtils.ts', line: 378, desc: 'Hàm factory tiện ích tạo cấu hình lọc theo giá trị bằng (=) chuẩn hóa' },
-    { name: 'handleScroll', file: 'src/components/grid/VirtualizedGrid.tsx', line: 791, desc: 'Xử lý cuộn dọc và cuộn ngang, cập nhật virtualScrollTop và chunk buffer' },
+    { name: 'ALIGN_TEXT_CLASSES', file: 'src/components/grid/gridFormatUtils.ts', line: 184, desc: 'Bản đồ lớp CSS căn chỉnh văn bản Tailwind (text-left, text-center, text-right) từ ALIGNMENTS' },
+    { name: 'getAlignTextClass', file: 'src/components/grid/gridFormatUtils.ts', line: 190, desc: 'Hàm helper trả về class CSS text-align chuẩn từ ColumnAlign, mặc định text-left' },
+    { name: 'ALIGN_JUSTIFY_CLASSES', file: 'src/components/grid/gridFormatUtils.ts', line: 194, desc: 'Bản đồ lớp CSS căn chỉnh Flexbox Tailwind (justify-start, justify-center, justify-end) từ ALIGNMENTS' },
+    { name: 'getAlignJustifyClass', file: 'src/components/grid/gridFormatUtils.ts', line: 200, desc: 'Hàm helper trả về class CSS justify chuẩn từ ColumnAlign, mặc định justify-start' },
+    { name: 'isNoInputFilterOp', file: 'src/components/grid/gridFormatUtils.ts', line: 204, desc: 'Hàm helper kiểm tra toán tử không cần giá trị nhập liệu (is_empty, is_not_empty, is_positive, is_negative)' },
+    { name: 'isBetweenFilterOp', file: 'src/components/grid/gridFormatUtils.ts', line: 214, desc: 'Hàm helper kiểm tra toán tử nằm trong khoảng (between)' },
+    { name: 'isNegativeFilterOp', file: 'src/components/grid/gridFormatUtils.ts', line: 218, desc: 'Hàm helper kiểm tra toán tử phủ định (not_equals, not_contains)' },
+    { name: 'createColumnFilter', file: 'src/components/grid/gridFormatUtils.ts', line: 272, desc: 'Hàm tiện ích chuẩn hóa khởi tạo ColumnFilterValue với toán tử (mặc định FILTER_OPS.EQUALS) và giá trị string' },
+    { name: 'createEqualsFilter', file: 'src/components/grid/gridFormatUtils.ts', line: 282, desc: 'Hàm factory tiện ích tạo cấu hình lọc theo giá trị bằng (=) chuẩn hóa' },
+    { name: 'handleScroll', file: 'src/components/grid/VirtualizedGrid.tsx', line: 1283, desc: 'Xử lý cuộn dọc và cuộn ngang, cập nhật virtualScrollTop và chunk buffer (`visibleChunksMap` dòng 1378, `useImperativeHandle` dòng 1474)' },
 
     // --- src/components/grid/GridHeader.tsx ---
-    { name: 'GridHeader', file: 'src/components/grid/GridHeader.tsx', line: 57, desc: 'Component thanh tiêu đề 2 tầng (64px) hỗ trợ nhóm cột, ghim vị trí và context menu' },
-    { name: 'renderPinnedLeftHeaders', file: 'src/components/grid/GridHeader.tsx', line: 77, desc: 'Vẽ các cột ghim trái span trọn 64px độc lập' },
-    { name: 'renderMiddleHeaders', file: 'src/components/grid/GridHeader.tsx', line: 125, desc: 'Vẽ khu vực tiêu đề nhóm tầng 1 (onBandContextMenu) và cột con tầng 2 cuộn tự do' },
-    { name: 'renderPinnedRightHeaders', file: 'src/components/grid/GridHeader.tsx', line: 260, desc: 'Vẽ các cột ghim phải cố định' },
+    { name: 'GridHeader', file: 'src/components/grid/GridHeader.tsx', line: 42, desc: 'Component thanh tiêu đề 1 hoặc 2 tầng hỗ trợ renderHeader(), nhóm cột (`middleElements`), ghim vị trí, lazy sort morph icon và context menu' },
+    { name: 'GridHeader_renderHeaderCellContent', file: 'src/components/grid/GridHeader.tsx', line: 204, desc: 'Render nội dung ô tiêu đề cho cả 4 vùng ghim Trái / Giữa (`middleElements` dòng 114) / Phải với `LazyHeaderSortMorphIcon`' },
 
-    // --- src/components/grid/GridFilterRow.tsx & FilterIcons.tsx ---
+    // --- src/components/grid/GridFilterRow.tsx, lazy Filter Inputs & FilterIcons.tsx ---
     { name: 'AdvChecklistFilterPopup',
       file: 'src/components/grid/AdvChecklistFilterPopup.tsx',
       line: 165,
       desc: 'Popup lọc danh sách giá trị phân biệt: Tối ưu 0ms phản hồi với distinctValuesCacheRef, ảo hóa 20 items, tìm kiếm không dấu'
     },
     {
-      name: 'GridFilterRow', file: 'src/components/grid/GridFilterRow.tsx', line: 260, desc: 'Dòng lọc trực tiếp sticky: ô STT click hoặc tái nhấn mở/tắt toggle AdvCriteriaSummaryPopup tập hợp 7 tiêu chí (Nhóm theo, Lọc theo, Đang chọn, Tìm giá trị theo, Sắp xếp dòng theo, Sắp xếp nhóm theo, Cây điều kiện), ô Chọn bỏ viền ngoài hiển thị checkbox thuần 3 trạng thái, ô lọc cột rỗng để trống hoàn toàn (không chữ không icon), nút toán tử hover đổi màu chữ chủ đạo tắt màu hover bg, tích hợp TimeRangeFilterInput, TimeFilterInput, AdvDatePicker, chuột phải mở AdvMultiFilterPopup' },
+      name: 'GridFilterRow', file: 'src/components/grid/GridFilterRow.tsx', line: 67, desc: 'Dòng lọc trực tiếp sticky (`./filterRow.css`): lazy-load `GridDateFilterCell`, `GridTimeFilterInputs`, `GridSmartNumberInputs`, `AdvMultiFilterPopup`, `AdvCriteriaSummaryPopup`, dùng `GridSelectionCheckbox` & Portal operator menu' },
+    { name: 'GridSelectionCheckbox', file: 'src/components/grid/GridSelectionCheckbox.tsx', line: 8, desc: 'Checkbox chọn dòng siêu nhẹ tách `MorphCheckbox` khỏi cold bundle của `DataGrid` và `GridFilterRow`' },
+    { name: 'GridDateFilterCell', file: 'src/components/grid/GridDateFilterCell.tsx', line: 16, desc: 'Ô lọc ngày (`AdvDatePicker`) tách khỏi `GridFilterRow` để lazy-load chỉ khi bảng có cột DATE' },
+    { name: 'NumberRangeFilterInput', file: 'src/components/grid/GridSmartNumberInputs.tsx', line: 55, desc: 'Ô lọc khoảng số [Từ .. Đến] hỗ trợ phím tắt `k`/`m`/`tr`/`b`/`ty`, tách `React.lazy` khỏi `GridFilterRow`' },
+    { name: 'SmartNumberFilterInput', file: 'src/components/grid/GridSmartNumberInputs.tsx', line: 165, desc: 'Ô lọc số thông minh (tự format hàng nghìn, shortcut k/m/tr), tách `React.lazy` khỏi `GridFilterRow`' },
     { name: 'AdvCriteriaSummaryPopup', file: 'src/components/grid/AdvCriteriaSummaryPopup.tsx', line: 30, desc: 'Popup tập hợp tiêu chí tinh gọn (Segmented Chip layout, bỏ header thừa và nút đóng, tái nhấn nút để tắt, Tìm giá trị theo và Cây điều kiện không dùng tag xanh, chỉ hiện danh mục có tiêu chí, xóa từng mục riêng lẻ hoặc xóa tất cả, neo dưới ô STT dòng lọc, 100% theme CSS variables, min-height 28px)' },
     { name: 'AdvMultiFilterPopup', file: 'src/components/grid/AdvMultiFilterPopup.tsx', line: 26, desc: 'Popup lọc nhiều điều kiện OR / AND (IN / NOT IN clause) khi chuột phải vào ô filter: Menu toán tử đưa ra ngoài Portal body tránh cắt mép, logic loại trừ phủ định AND De Morgan cho toán tử Khác (≠) và Không chứa, xóa dòng đếm trung gian tránh trùng lặp text với footer, khống chế max-h kéo dọc textarea (max 220px) và popup viewport safety, Richtextbox nhận diện đa từ khóa cho text, 2 tab dán số & nhiều khoảng số cho number, date tự động theo toán tử, min-h 28px, zero autofill, data-agv-popup="true" scroll lock' },
-    { name: 'TimeRangeFilterInput', file: 'src/components/grid/GridFilterRow.tsx', line: 92, desc: 'Bộ lọc dải giờ phút [Từ HH:mm — Đến HH:mm]: 2 ô nhập chuẩn hóa thời gian, separator gạch ngang, nút x xóa nhanh, zero autofill, min-h 28px' },
-    { name: 'TimeFilterInput', file: 'src/components/grid/GridFilterRow.tsx', line: 190, desc: 'Bộ lọc giờ phút đơn lẻ (HH:mm) cho các toán tử =, !=, >=, <=, có chứa: Tự động format HH:mm khi blur, zero autofill, min-h 28px' },
-    { name: 'FilterOpIcon', file: 'src/components/grid/FilterIcons.tsx', line: 332, desc: 'Component render biểu tượng toán tử lọc SVG chuẩn DevExtreme với stroke=currentColor tự động theo theme và focus' },
-    { name: 'getAllowedFilterOpsForColumn', file: 'src/components/grid/FilterIcons.tsx', line: 387, desc: 'Hàm DUY NHẤT toàn hệ thống trả về danh sách toán tử lọc chuẩn cho 1 cột, đồng bộ 100% giữa GridFilterRow và AdvGridQueryBuilderModal, tự lọc bỏ is_empty & is_not_empty khi cột không có ô trống' },
-    { name: 'getDefaultFilterOpForColumn', file: 'src/components/grid/FilterIcons.tsx', line: 407, desc: 'Hàm DUY NHẤT toàn hệ thống trả về toán tử mặc định cho 1 cột, đồng bộ 100% giữa GridFilterRow và AdvGridQueryBuilderModal' },
+    { name: 'TimeRangeFilterInput', file: 'src/components/grid/GridTimeFilterInputs.tsx', line: 10, desc: 'Bộ lọc dải giờ phút [Từ HH:mm — Đến HH:mm] tách lazy khỏi GridFilterRow: 2 ô nhập chuẩn hóa thời gian, zero autofill, min-h 28px' },
+    { name: 'TimeFilterInput', file: 'src/components/grid/GridTimeFilterInputs.tsx', line: 108, desc: 'Bộ lọc giờ phút đơn lẻ (HH:mm) tách lazy khỏi GridFilterRow cho =, !=, >=, <=, có chứa: Tự động format HH:mm khi blur, zero autofill, min-h 28px' },
+    { name: 'FilterOpIcon', file: 'src/components/grid/FilterIcons.tsx', line: 351, desc: 'Component render biểu tượng toán tử lọc SVG chuẩn DevExtreme với stroke=currentColor tự động theo theme và focus' },
+    { name: 'getAllowedFilterOpsForColumn', file: 'src/components/grid/FilterIcons.tsx', line: 368, desc: 'Hàm DUY NHẤT toàn hệ thống trả về danh sách toán tử lọc chuẩn cho 1 cột, đồng bộ 100% giữa GridFilterRow và AdvGridQueryBuilderModal, tự lọc bỏ is_empty & is_not_empty khi cột không có ô trống' },
+    { name: 'getDefaultFilterOpForColumn', file: 'src/components/grid/gridFormatUtils.ts', line: 246, desc: 'Hàm trả về toán tử mặc định cho 1 cột (tách sang `gridFormatUtils.ts` & re-export từ `FilterIcons.tsx`)' },
 
-    // --- src/components/grid/GridRow.tsx ---
-    { name: 'GridRow', file: 'src/components/grid/GridRow.tsx', line: 440, desc: 'Component dòng dữ liệu đơn lẻ (Grid Row) với sticky cells, đồng bộ highlight check/select/hover toàn dòng, onCellContextMenu' },
-    { name: 'CellEditor', file: 'src/components/grid/GridRow.tsx', line: 109, desc: 'Component input chỉnh sửa ô in-cell dạng text/số: Tự động focus, bôi đen toàn bộ văn bản khi mở, Enter/Tab lưu, Escape hủy, vô hiệu hóa 100% autofill' },
-    { name: 'DateCellEditor', file: 'src/components/grid/GridRow.tsx', line: 202, desc: 'Component chỉnh sửa ô ngày in-cell: Tích hợp AdvDatePicker với showPreset={false} (ẩn mốc nhanh), kết nối min/max dữ liệu cột' },
-    { name: 'DateRangeCellEditor', file: 'src/components/grid/GridRow.tsx', line: 234, desc: 'Component chỉnh sửa ô dải ngày in-cell: Tích hợp AdvDateRangePicker với showPreset={false} (ẩn mốc nhanh), kết nối min/max dữ liệu cột' },
-    { name: 'TimeCellEditor', file: 'src/components/grid/GridRow.tsx', line: 291, desc: 'Component chỉnh sửa ô giờ in-cell (HH:mm): Nhập 2 số giờ tự nhảy phút, phím mũi tên tăng giảm, Enter/Click outside lưu, Esc hủy, zero autofill, min-h 28px' },
-    { name: 'isCellEditable', file: 'src/components/grid/GridRow.tsx', line: 93, desc: 'Hàm bảo vệ an toàn kiểm tra ô có thể chỉnh sửa không: Chặn tuyệt đối các cột hệ thống STT, Chọn, Biểu Đồ 12 Tháng col_chart và Công Thức col_formula' },
+    // --- src/components/grid/GridRow.tsx, colRenderMeta.ts & editors/GridInCellEditor.tsx ---
+    { name: 'buildColRenderMetas', file: 'src/components/grid/colRenderMeta.ts', line: 40, desc: 'Tạo sẵn metadata cột (`stickySide`, `stickyOffset`, `dividerClass`, `alignTextClass`) chuẩn hóa giữa `GridChunkBlock` và `GridRow`' },
+    { name: 'GridRow', file: 'src/components/grid/GridRow.tsx', line: 73, desc: 'Fast row renderer dùng `ColRenderMeta`, row-level event delegation, sticky cells, `col.valueGetter`, tải lười `LazyGridGroupHeaderRow` & `LazyGridInCellEditor` qua `<Suspense>` (`GridRowProps` dòng 24)' },
+    { name: 'CellEditor', file: 'src/components/grid/editors/GridInCellEditor.tsx', line: 15, desc: 'Component input chỉnh sửa ô in-cell dạng text/số: Tự động focus, bôi đen toàn bộ văn bản khi mở, Enter/Tab lưu, Escape hủy, zero autofill' },
+    { name: 'DateCellEditor', file: 'src/components/grid/editors/GridInCellEditor.tsx', line: 108, desc: 'Component chỉnh sửa ô ngày in-cell: Tích hợp AdvDatePicker với showPreset={false} (ẩn mốc nhanh), kết nối min/max dữ liệu cột' },
+    { name: 'DateRangeCellEditor', file: 'src/components/grid/editors/GridInCellEditor.tsx', line: 140, desc: 'Component chỉnh sửa ô dải ngày in-cell: Tích hợp AdvDateRangePicker với showPreset={false} (ẩn mốc nhanh), kết nối min/max dữ liệu cột' },
+    { name: 'TimeCellEditor', file: 'src/components/grid/editors/GridInCellEditor.tsx', line: 197, desc: 'Component chỉnh sửa ô giờ in-cell (HH:mm): Nhập 2 số giờ tự nhảy phút, phím mũi tên tăng giảm, Enter/Click outside lưu, Esc hủy, zero autofill, min-h 28px' },
+    { name: 'GridInCellEditor', file: 'src/components/grid/editors/GridInCellEditor.tsx', line: 355, desc: 'Router chọn editor in-cell (Date/DateRange/Time/ComboBox/LookUp/Text) tách chunk lazy khỏi GridRow' },
 
     // --- src/components/ui/AdvDatePicker.tsx & src/components/ui/datepicker/* ---
-    { name: 'AdvDatePicker', file: 'src/components/ui/AdvDatePicker.tsx', line: 105, desc: 'Component chọn ngày/giờ đơn chuẩn DevExpress: Tích hợp chọn nhanh mốc trên đỉnh, footer giờ không còn chữ thời gian thừa, đồng bộ triệt để 4 Theme hệ thống [Light, Dark, Bezier Art House, E-Ink], portal data-theme sync, min-h 28px' },
-    { name: 'AdvDateRangePicker', file: 'src/components/ui/datepicker/AdvDateRangePicker.tsx', line: 54, desc: 'Component chọn dải ngày kép (Từ ngày - Đến ngày) với mốc trên đỉnh popover, dualMonth false/true, click mở theo start/end, swap ngày thông minh, tự động commit khi đóng, đồng bộ 4 Theme, portal data-theme sync, min-h 28px' },
-    { name: 'AdvDatePresetSelect', file: 'src/components/ui/datepicker/AdvDatePresetSelect.tsx', line: 44, desc: 'Component dropdown mốc nhanh (Hôm nay, Hôm qua, Tuần này, Tháng này, Quý này, Năm nay...): tự động loại trừ và ẩn triệt để các mốc Quý, Tháng, Ngày nằm ngoài phạm vi min/max dữ liệu như lịch' },
+    { name: 'AdvDatePicker', file: 'src/components/ui/AdvDatePicker.tsx', line: 114, desc: 'Component chọn ngày/giờ đơn chuẩn PNT B2B & DevExpress: size="md" dùng var(--control-height) (36px), mặc định/sm 28px cho ô lọc, tích hợp mốc nhanh, đồng bộ PNT Light/Dark CSS tokens, min-h 28px' },
+    { name: 'AdvDateRangePicker', file: 'src/components/ui/datepicker/AdvDateRangePicker.tsx', line: 54, desc: 'Component chọn dải ngày kép (Từ ngày - Đến ngày): size="md" cao 36px cho filter bar, default/sm 28px cho in-cell/grid filter, lịch đôi, swap ngày thông minh, đồng bộ PNT Light/Dark, min-h 28px' },
+    { name: 'AdvDatePresetSelect', file: 'src/components/ui/datepicker/AdvDatePresetSelect.tsx', line: 48, desc: 'Component dropdown mốc nhanh: Tuần đến hiện tại (46->1) + Mốc theo năm, size="md" vs sm/xs, active dùng `--surface-selected` + vạch Gold (`--brand-gold`)' },
     { name: 'AdvDevExpressCalendarBody', file: 'src/components/ui/datepicker/AdvCalendarPrimitives.tsx', line: 104, desc: 'Component ma trận lịch Ngày/Tháng/Năm phong cách DevExpress hỗ trợ điều hướng thập kỷ, tháng và ngày' },
     { name: 'TimePickerBlock', file: 'src/components/ui/datepicker/AdvCalendarPrimitives.tsx', line: 19, desc: 'Component khối nhập giờ:phút (HH:mm) tích hợp NO_AUTOFILL_PROPS dùng chung cho lịch đơn và lịch kép' },
-    { name: 'formatGridDateValue', file: 'src/components/ui/datepicker/datePickerUtils.ts', line: 207, desc: 'Hàm chuẩn hóa và format ngày/tháng/năm sang DD/MM/YYYY (hoặc DD/MM/YYYY HH:mm khi includeTime=true), loại bỏ giây thừa :ss, đồng bộ triệt để giữa dữ liệu và date controls' },
+    { name: 'formatGridDateValue', file: 'src/components/ui/datepicker/datePickerUtils.ts', line: 207, desc: 'Bản gốc định dạng ngày trong datePickerUtils (Grid ưu tiên dùng `gridFormatUtils.ts` để không kéo AdvDatePicker)' },
+    { name: 'getISOWeekAndYear', file: 'src/components/ui/datepicker/datePickerUtils.ts', line: 462, desc: 'Hàm xác định số tuần ISO (1-53) và năm ISO tương ứng với một Date' },
+    { name: 'getISOWeekDateRange', file: 'src/components/ui/datepicker/datePickerUtils.ts', line: 477, desc: 'Hàm tính khoảng ngày Thứ 2 -> Chủ nhật (YYYY-MM-DD) cho tuần ISO trong năm ISO' },
 
     // --- src/components/grid/GridFloatingToolbar.tsx & floating suite ---
-    { name: 'GridFloatingToolbar', file: 'src/components/grid/GridFloatingToolbar.tsx', line: 35, desc: 'Thanh công cụ nổi (Right-docked Floating Toolbar): gồm tay nắm kéo drag handle, đúng 6 nút menu, 4 popup, clamp kẹp biên trong Grid' },
+    { name: 'GridFloatingToolbar', file: 'src/components/grid/GridFloatingToolbar.tsx', line: 36, desc: 'Thanh công cụ nổi cạnh trái (`floatingToolbar.css`): lazy-load `AdvQuickFilterFlyout`, `AdvMultiSortPopup`, `AdvGridQueryBuilderModal`, `AdvColumnChooserModal` kèm hover preload, clamp kẹp biên trong Grid' },
     { name: 'AdvQuickFilterFlyout', file: 'src/components/grid/floating/AdvQuickFilterFlyout.tsx', line: 15, desc: 'Popup 1: Ô tìm kiếm nhanh dạng flyout sang trái với nút bật/tắt Smart search, debounce 250ms, autoFocus, Esc đóng' },
-    { name: 'AdvGridQueryBuilderModal', file: 'src/components/grid/floating/AdvGridQueryBuilderModal.tsx', line: 273, desc: 'Popup 2: Bộ lọc nâng cao cây điều kiện lồng nhau VÀ/HOẶC: ẩn chữ ô toán tử (iconOnly: chỉ hiện icon SVG và ▾ gọn gàng 44px, tooltip hover, popup chọn hiển thị đủ nhãn), nút SVG ListFilter (không chữ, chuẩn 1 dòng không rớt dòng) mở AdvMultiFilterPopup (thẻ chip tóm tắt tinh gọn 1 dòng kèm nút x, dán hàng loạt từ Excel), tô màu nền phần tử con khi rê chuột vào cặp ngoặc ( ), nút VÀ/HOẶC dùng màu nhóm đang nằm (levelColor), bỏ hiệu ứng hover riêng lẻ, nạp mẫu bằng lệnh CMD với kiểm tra tính hợp lệ (validate cú pháp & tên cột thực tế trên bảng), nút Sao chép CMD thu nhỏ thành icon góc phải bên dưới tránh chiếm chỗ hiển thị, bỏ chữ Giải nghĩa để tối ưu 100% vùng hiển thị, chip điều kiện tinh gọn, khóa nút Nạp/Áp dụng khi câu lệnh không hợp lệ, sửa lỗi đếm trực tiếp matchCount ảo hóa, click giải nghĩa nhảy vào ô sửa, bỏ nút [!] ở nhóm 1, nút [!] ở nhóm con mặc định đóng, nút Hủy clear sạch điều kiện, giới hạn kích thước popup chống tràn viền Grid & Viewport' },
-    { name: 'QueryCustomSelect', file: 'src/components/grid/floating/AdvGridQueryBuilderModal.tsx', line: 79, desc: 'Component Dropdown tùy chỉnh cho Query Builder: hỗ trợ iconOnly ẩn chữ hiển thị icon SVG gọn gàng, dropitem chuẩn theme (min-h 28px, hover/active nền màu chữ trắng, checkmark ✓), hỗ trợ showSearch bật/tắt ô tìm kiếm, tự đóng click outside' },
-    { name: 'AdvColumnChooserModal', file: 'src/components/grid/floating/AdvColumnChooserModal.tsx', line: 25, desc: 'Popup 3: Tùy chọn cột ẩn/hiện, ghim cột (Trái/Giữa/Phải), tìm kiếm tên cột, kéo thả đổi thứ tự, phục hồi mặc định' },
-    { name: 'AdvGridSettingsPopup', file: 'src/components/grid/floating/AdvGridSettingsPopup.tsx', line: 12, desc: 'Popup 4: Cài đặt bảng dữ liệu tinh gọn: Cột số thứ tự, Cột chọn dòng, Dòng công thức, Dòng chọn trang, Cuộn khớp dòng (rowSnapMode)' },
-    { name: 'evaluateQueryTreeNode', file: 'src/components/grid/floating/queryUtils.ts', line: 183, desc: 'Hàm lượng giá cây điều kiện lồng nhau cho 300,000 dòng dữ liệu siêu tốc: hỗ trợ chuẩn hóa ngày DD/MM/YYYY, giờ HH:mm, số và văn bản' },
-    { name: 'parseCmdToQueryTree', file: 'src/components/grid/floating/queryUtils.ts', line: 313, desc: 'Bộ phân tích cú pháp chuỗi lệnh CMD tự nhiên thành Cây điều kiện QueryGroup, hỗ trợ ngoặc đơn lồng nhau, toán tử so sánh, giấu 100% tên trường backend' },
-    { name: 'validateQueryTreeAgainstColumns', file: 'src/components/grid/floating/queryUtils.ts', line: 282, desc: 'Kiểm tra tính hợp lệ của cây điều kiện so với danh sách cột thực tế của bảng dữ liệu' },
+    { name: 'AdvGridQueryBuilderModal', file: 'src/components/grid/floating/AdvGridQueryBuilderModal.tsx', line: 273, desc: 'Popup 2: Bộ lọc nâng cao cây điều kiện lồng nhau VÀ/HOẶC (`queryBuilder.css`), ẩn chữ ô toán tử (iconOnly), AdvMultiFilterPopup, nạp mẫu CMD' },
+    { name: 'QueryCustomSelect', file: 'src/components/grid/floating/AdvGridQueryBuilderModal.tsx', line: 79, desc: 'Component Dropdown tùy chỉnh cho Query Builder: hỗ trợ iconOnly ẩn chữ hiển thị icon SVG gọn gàng, dropitem hover 0ms chuẩn theme (min-h 28px, hover/active nền màu chữ trắng, checkmark ✓), hỗ trợ showSearch bật/tắt ô tìm kiếm, tự đóng click outside' },
+    { name: 'AdvColumnChooserModal', file: 'src/components/grid/floating/AdvColumnChooserModal.tsx', line: 25, desc: 'Popup 3: Tùy chọn cột ẩn/hiện (`columnChooser.css`), ghim cột, tìm kiếm tên cột, kéo thả đổi thứ tự, phục hồi mặc định' },
+    { name: 'hasActiveQueryRules', file: 'src/components/grid/floating/queryRuleCheck.ts', line: 27, desc: 'Helper siêu nhẹ kiểm tra QueryGroup có rule active mà không kéo `queryUtils.ts` vào cold bundle' },
+    { name: 'evaluateQueryTreeNode', file: 'src/components/grid/floating/queryUtils.ts', line: 149, desc: 'Hàm lượng giá cây điều kiện lồng nhau cho 300,000 dòng dữ liệu siêu tốc (nạp lười via dynamic import trong `DataGrid.tsx`)' },
+    { name: 'parseCmdToQueryTree', file: 'src/components/grid/floating/queryUtils.ts', line: 323, desc: 'Bộ phân tích cú pháp chuỗi lệnh CMD tự nhiên thành Cây điều kiện QueryGroup, hỗ trợ ngoặc đơn lồng nhau, toán tử so sánh, giấu 100% tên trường backend' },
+    { name: 'validateQueryTreeAgainstColumns', file: 'src/components/grid/floating/queryUtils.ts', line: 292, desc: 'Kiểm tra tính hợp lệ của cây điều kiện so với danh sách cột thực tế của bảng dữ liệu' },
 
-    // --- src/components/ui/AdvComboBoxEdit.tsx & AdvSearchLookUpEdit.tsx ---
-    { name: 'AdvComboBoxEdit', file: 'src/components/ui/AdvComboBoxEdit.tsx', line: 40, desc: 'Hộp chọn kết hợp vừa gõ tự do vừa chọn Dropdown chuẩn Animate UI: nhấn vào mở popup tức thì (không icon thừa), lọc tức thì, phím mũi tên Lên/Xuống/Enter/Esc, min-h 28px, 100% theme CSS variables, zero autofill' },
-    { name: 'AdvSearchLookUpEdit', file: 'src/components/ui/AdvSearchLookUpEdit.tsx', line: 73, desc: 'Bảng tra cứu danh mục LookUp nhiều cột: nhấn vào mở popup tức thì, loại bỏ 100% icon thừa trên ô nhập, Find panel trên đầu, Filter Row từng cột, đã xóa sạch thanh footer đáy, hỗ trợ Chọn đơn & Chọn nhiều, min-h 28px' },
+    // --- src/components/ui/AdvComboBoxEdit.tsx, AdvSearchLookUpEdit.tsx, useVirtualList.ts & AdvOverlayScroll.tsx ---
+    { name: 'AdvComboBoxEdit', file: 'src/components/ui/AdvComboBoxEdit.tsx', line: 55, desc: 'Hộp chọn ComboBoxEdit chuẩn PNT B2B & Animate UI: `useVirtualList` giữ cửa sổ ảo gọn kể cả khi đóng, `optionIndexMap` O(1), cache tìm kiếm lười `searchCacheRef`, gõ tìm realtime cả `allowCustomInput={false|true}`, `size="md"` `h-9`, Gold 2px, `isKeyboardNav`, min-h 28px, zero autofill' },
+    { name: 'AdvSearchLookUpEdit', file: 'src/components/ui/AdvSearchLookUpEdit.tsx', line: 105, desc: 'Trigger gọn nhẹ bảng tra cứu LookUp nhiều cột chuẩn PNT B2B (`h-9`, `rowByKeyMap` O(1), lọc 1 lượt + `searchCacheRef`, short-circuit `isAllFilteredSelected`, lazy-load `AdvSearchLookUpPopup`, NO_AUTOFILL_PROPS)' },
+    { name: 'useVirtualList', file: 'src/components/ui/useVirtualList.ts', line: 55, desc: 'Hook ảo hóa cửa sổ dọc cố định chiều cao dòng cho Select/ComboBox/LookUp: luôn giới hạn `range` theo `computeVirtualWindow` ngay cả khi `enabled=false`' },
+    { name: 'AdvOverlayScroll', file: 'src/components/ui/AdvOverlayScroll.tsx', line: 34, desc: 'Vùng cuộn thanh cuộn nổi hiện khi hover/scroll: có `syncedInCommitRef` tránh `scheduleSync()` rAF trùng lặp trong cùng commit' },
+    { name: 'AdvSearchLookUpPopup', file: 'src/components/ui/AdvSearchLookUpPopup.tsx', line: 62, desc: 'Popup Portal LookUp tách chunk lazy khỏi `AdvSearchLookUpEdit`: `pinnedOpenKeys`, `<MorphCheckbox />`, Filter Row, hover 0ms, `isKeyboardNav`, `table-fixed`' },
+    { name: 'Drawer (AdvDrawer)', file: 'src/components/ui/AdvDrawer.tsx', line: 60, desc: 'Bộ primitives Bottom Sheet Drawer chuẩn shadcn/ui Base UI & b2b-pnt: Phone full-width, Tablet md:max-w-lg (512px), max-h 90dvh, DrawerSwipeHandle 48x6 vuốt đóng, z-[10000], nền đặc var(--popup-background), mở khóa cuộn Grid tức thì khi đóng' },
 
     // --- src/components/grid/GridChunkBlock.tsx ---
-    { name: 'GridChunkBlock', file: 'src/components/grid/GridChunkBlock.tsx', line: 56, desc: 'Khối chứa 20 dòng ảo hóa với GPU transform translate3d, hỗ trợ dynamic topOffset & chunkHeight theo phoneExpandedRows chống đè chunk trên Phone, chuyển tiếp state chỉnh sửa ô và forwarding onCellContextMenu' },
+    { name: 'GridChunkBlock', file: 'src/components/grid/GridChunkBlock.tsx', line: 63, desc: 'Khối chứa 20 dòng ảo hóa GPU translate3d (`GridChunkBlockProps` dòng 20): render GridRow trên PC, tải lười LazyResponsiveChunkRow khi responsive mode, bảo toàn editing & onGroupContextMenu' },
 
     // --- src/components/grid/ColumnContextMenu.tsx ---
-    { name: 'ColumnContextMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 50, desc: 'Menu ngữ cảnh chuột phải 4 phạm vi: header, band, row/cell, group header với 100% theme tokens, chuẩn hóa toàn bộ 5 khối menu sang rounded-md (6px)' },
-    { name: 'renderHeaderMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 120, desc: 'Giao diện menu cho cột: Ghim trái/giữa/phải, Vừa nội dung, Ẩn/Hiện cột, Nhóm theo cột' },
-    { name: 'renderBandMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 250, desc: 'Giao diện menu cho nhóm tầng 1: Ghim nhóm, Vừa nội dung nhóm, Ẩn nhóm' },
-    { name: 'renderRowMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 370, desc: 'Giao diện menu cho dòng: Sao chép ô, Lọc nhanh giá trị, Sao chép dòng kèm tiêu đề, Cuộn lên/xuống' },
-    { name: 'renderGroupMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 585, desc: 'Giao diện menu cho dòng tiêu đề nhóm: Thu gọn tất cả, Mở rộng tất cả, Hủy nhóm, Sao chép bảng, Sao chép bảng kèm tên cột, Xuất Excel bảng' },
+    { name: 'ColumnContextMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 77, desc: 'Menu ngữ cảnh chuột phải 4 phạm vi (HEADER 225, BAND 659, GROUP 783, ROW): tái sử dụng `CONTEXT_MENU_TYPES` từ `./types`, export default cho React.lazy' },
+    { name: 'renderPinButtons', file: 'src/components/grid/ColumnContextMenu.tsx', line: 183, desc: 'Helper dùng chung cho Header & Band menu: tách biệt nút Ghim trái/phải (`enableColumnPinning`) và Ghim giữa (`enableCenterDock`)' },
+    { name: 'renderHeaderMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 225, desc: 'Nhánh menu HEADER: Ghim trái/phải vs Giữa độc lập, Vừa nội dung, Ẩn/Hiện cột (`hideable`), Nhóm theo cột (`groupable`)' },
+    { name: 'renderBandMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 659, desc: 'Nhánh menu BAND tầng 1: Ghim nhóm (theo cờ Trái/Phải vs Giữa), Vừa nội dung nhóm, Ẩn nhóm' },
+    { name: 'renderGroupMenu', file: 'src/components/grid/ColumnContextMenu.tsx', line: 783, desc: 'Nhánh menu GROUP & ROW: Thu gọn/Mở rộng/Hủy nhóm, Sao chép ô/dòng/bảng, Lọc nhanh giá trị, Cuộn lên/xuống' },
 
-    // --- src/components/ui/MorphIcons.tsx ---
-    { name: 'MorphCheckbox', file: 'src/components/ui/MorphIcons.tsx', line: 48, desc: 'Control checkbox biến hình nhanh dứt khoát giữa Square <-> SquareCheck <-> SquareMinus với spring snappy' },
-    { name: 'AdvCheckbox', file: 'src/components/grid/AdvCheckbox.tsx', line: 23, desc: 'Component Checkbox chuẩn toàn hệ thống kế thừa MorphCheckbox (Square <-> SquareCheck <-> SquareMinus), hỗ trợ indeterminate, spring snappy, 100% theme CSS variables' },
-    { name: 'MorphIcon', file: 'src/components/ui/MorphIcons.tsx', line: 25, desc: 'Wrapper cho thư viện morphicons, vẽ SVG path động với zero layout shift' },
-    { name: 'MorphActionIcon', file: 'src/components/ui/MorphIcons.tsx', line: 68, desc: 'Nút icon biến hình theo trạng thái active/inactive' },
-    { name: 'MorphSortIcon', file: 'src/components/ui/MorphIcons.tsx', line: 89, desc: 'Icon sắp xếp header biến hình lò xo ArrowUp <-> ArrowDown snappy' },
-    { name: 'MorphChevronIcon', file: 'src/components/ui/MorphIcons.tsx', line: 110, desc: 'Icon đóng mở nhóm dòng biến hình lò xo ChevronRight <-> ChevronDown bouncy' },
+    // --- src/components/ui/MorphCheckbox.tsx & MorphIcons.tsx ---
+    { name: 'MorphCheckbox', file: 'src/components/ui/MorphCheckbox.tsx', line: 33, desc: 'Control checkbox Morph Line thuần SVG CSS-keyframe (`viewBox="0 0 13 10"`, 3 trạng thái, hitbox >= 28px), 0 dependency `morphicons`/`lucide`' },
+    { name: 'AdvCheckbox', file: 'src/components/grid/AdvCheckbox.tsx', line: 23, desc: 'Component Checkbox chuẩn toàn hệ thống kế thừa MorphCheckbox Morph Line, hỗ trợ indeterminate, disabled, 100% theme CSS variables' },
+    { name: 'MorphIcon', file: 'src/components/ui/MorphIcons.tsx', line: 14, desc: 'Re-export wrapper cho thư viện morphicons (`MorphIcons.tsx` giữ 6 icon Lucide; `GridHeader`/`GridRow` lazy-load qua `GridMorphPrimitives.tsx`)' },
+    { name: 'HeaderSortMorphIcon', file: 'src/components/grid/GridMorphPrimitives.tsx', line: 16, desc: 'Bridge lazy cho `MorphSortIcon` dùng ở `GridHeader`' },
+    { name: 'RowGroupChevronMorphIcon', file: 'src/components/grid/GridMorphPrimitives.tsx', line: 40, desc: 'Bridge lazy cho `MorphChevronIcon` dùng ở `GridRow`' },
+    { name: 'MorphActionIcon', file: 'src/components/ui/MorphIcons.tsx', line: 24, desc: 'Nút icon biến hình theo trạng thái active/inactive' },
+    { name: 'MorphSortIcon', file: 'src/components/ui/MorphIcons.tsx', line: 47, desc: 'Icon sắp xếp header biến hình lò xo ArrowUp <-> ArrowDown snappy' },
+    { name: 'MorphChevronIcon', file: 'src/components/ui/MorphIcons.tsx', line: 71, desc: 'Icon đóng mở nhóm dòng biến hình lò xo ChevronRight <-> ChevronDown bouncy' },
 
     // --- src/components/ui/ (Animate UI Primitives Suite) ---
-    { name: 'AdvPopover', file: 'src/components/ui/AdvPopover.tsx', line: 24, desc: 'Primitive Popover chuẩn Animate UI (Base UI): trigger click toggle, tính tọa độ đồng bộ trước khi mở, loại bỏ hoàn toàn lỗi bay/trượt từ góc trái trên (0,0) xuống, Portal document.body, spring animation agv-spring-down/up, flip-up thông minh, useClickOutside, data-agv-popup="true" khóa cuộn bảng, 100% theme tokens' },
-    { name: 'AdvSelect', file: 'src/components/ui/AdvSelect.tsx', line: 40, desc: 'Primitive Select (Dropdown chọn 1 giá trị thuần túy): mở tức thì khi click, điều hướng phím Lên/Xuống/Enter/Esc, check icon Lucide, mục active nền var(--agv-accent) chữ trắng, min-h 28px, Portal, spring animation' },
-    { name: 'AdvHoverCard', file: 'src/components/ui/AdvHoverCard.tsx', line: 20, desc: 'Primitive Hover Card: mở khi rê chuột với openDelay 150ms và closeDelay 200ms chống nhấp nháy, Portal document.body, spring animation, kẹp biên màn hình, tự đóng khi cuộn trang' },
-    { name: 'AdvPreviewLinkCard', file: 'src/components/ui/AdvPreviewLinkCard.tsx', line: 17, desc: 'Primitive Preview Link Card: thẻ xem trước liên kết web dạng card nổi khi rê chuột, hiển thị thumbnail, tiêu đề, mô tả và tên miền, mở link ngoài an toàn target="_blank"' },
-    { name: 'AdvTooltip', file: 'src/components/ui/AdvTooltip.tsx', line: 18, desc: 'Primitive Tooltip chuẩn Base UI Motion: Portal document.body, spring keyframes agv-tooltip-spring-up/down, SVG arrow định vị, tự động lật ngược, tự đóng khi cuộn' },
-    { name: 'AdvProgress', file: 'src/components/ui/AdvProgress.tsx', line: 12, desc: 'Primitive Progress Bar: hiển thị tiến độ % với transition width 300ms ease, hỗ trợ chế độ indeterminate lướt sóng vô hạn khi tải dữ liệu, 100% theme tokens' },
+    { name: 'AdvPopover', file: 'src/components/ui/AdvPopover.tsx', line: 26, desc: 'Primitive Popover chuẩn Animate UI (Base UI): trigger click toggle, tính tọa độ đồng bộ với areEditorCoordsEqual chống setCoords thừa khi scroll, Portal document.body, spring animation agv-spring-down/up, flip-up thông minh, useClickOutside bỏ qua portal con (`.agv-select-portal`), data-agv-popup="true" khóa cuộn bảng, 100% theme tokens' },
+    { name: 'AdvSelect', file: 'src/components/ui/AdvSelect.tsx', line: 48, desc: 'Primitive Select chuẩn PNT B2B: `useVirtualList` (~14 DOM rows ngay khi mở) + `AdvOverlayScroll`, `optionIndexMap` O(1), trigger `border-control bg-control-surface` + `CONTROL_HOVER_CLASS` + `CONTROL_FOCUS_CLASS`/`CONTROL_POPUP_OPEN_CLASS` (`h-9`), backdrop `pointer-events-none` + `useClickOutside`, hover 0ms, Gold 2px, `isKeyboardNav`, min-h 28px, Portal' },
+    { name: 'areEditorCoordsEqual', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 63, desc: 'So sánh 2 object tọa độ popup {top, bottom, left, width, placement} để skip setCoords dư thừa khi scroll nội bộ hoặc chưa đổi vị trí' },
+    { name: 'computeDropdownPageStep', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 82, desc: 'Tính số dòng nhảy cho phím PageUp/PageDown theo chiều cao vùng cuộn dropdown (trừ sticky header nếu có)' },
+    { name: 'computeNextHighlightedIndex', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 101, desc: 'Tính index highlight kế tiếp chuẩn hóa cho ArrowDown/ArrowUp/PageDown/PageUp/Home/End (bỏ qua wrap ở PageDown/PageUp)' },
+    { name: 'scrollDropdownItemIntoView', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 136, desc: 'Cuộn container dropdown vừa đủ đưa item active vào khung nhìn (`topInsetPx` & `bottomInsetPx`), dùng `clientTop`/`clientHeight` và tự bù tỷ lệ `scaleY` của animation `.agv-spring-*` để không cắt mép dưới' },
+    { name: 'useClickOutside', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 165, desc: 'Hook đóng popup khi click ngoài & cập nhật tọa độ khi scroll/resize ngoài popup (bỏ qua scroll nội bộ popupRef/secondaryPopupRef & hỗ trợ `ignoreSelector` cho portal con, giữ callback qua ref ổn định listener)' },
+    { name: 'normalizeSearchText', file: 'src/components/ui/enterpriseEditorUtils.ts', line: 226, desc: 'Chuẩn hóa chuỗi tìm kiếm tiếng Việt không dấu, có ASCII fast-path (`/[^\\x00-\\x7F]/`) bỏ qua NFD & regex khi chuỗi thuần ASCII' },
+    { name: 'AdvHoverCard', file: 'src/components/ui/AdvHoverCard.tsx', line: 20, desc: 'Primitive Hover Card: mở khi rê chuột với openDelay 150ms và closeDelay 200ms chống nhấp nháy, useLayoutEffect + areEditorCoordsEqual đo kích thước trước paint, Portal document.body, agv-spring-up/down, kẹp biên màn hình, tự đóng khi cuộn trang' },
+    { name: 'AdvTooltip', file: 'src/components/ui/AdvTooltip.tsx', line: 18, desc: 'Primitive Tooltip chuẩn Base UI Motion: Portal document.body, sửa lệch tọa độ bằng agv-spring-up/down + useLayoutEffect + areEditorCoordsEqual, tự động lật ngược, tự đóng khi cuộn' },
 
-    // --- src/demo/FilterModal.tsx ---
-    { name: 'FilterModal', file: 'src/demo/FilterModal.tsx', line: 30, desc: 'Hộp thoại lọc nâng cao 5 tiêu chí với click outside auto-close' },
+    // --- src/components/grid/gridStorage.ts & responsiveColumnUtils.ts ---
+    { name: 'readGridStorageJson', file: 'src/components/grid/gridStorage.ts', line: 25, desc: 'Đọc JSON từ localStorage an toàn SSR (trả fallback nếu không có window/localStorage)' },
+    { name: 'writeGridStorageJson', file: 'src/components/grid/gridStorage.ts', line: 36, desc: 'Ghi JSON vào localStorage an toàn SSR cô lập theo key gridId' },
+    { name: 'getResponsiveDataColumns', file: 'src/components/grid/responsive/responsiveColumnUtils.ts', line: 16, desc: 'Lọc danh sách cột dữ liệu thuần (bỏ STT, Checkbox, DATA_TYPES.SYSTEM) dùng chung cho GridTabletHeader, GridTabletRow, GridPhoneCard' },
+    { name: 'GridStatusBar', file: 'src/components/grid/GridStatusBar.tsx', line: 21, desc: 'Thanh phân trang đáy core Grid: AdvSelect chọn số dòng/trang (20/50/100/200), nút Trước/Sau (`ChevronLeft`/`ChevronRight`), ô nhập số trang (`NO_AUTOFILL_PROPS`), `/ {totalPages}` và khoảng dòng `start-end / totalItems`' },
 
-    // --- src/demo/PageToolbar.tsx ---
-    { name: 'PageToolbar', file: 'src/demo/PageToolbar.tsx', line: 88, desc: 'Top command bar tinh gọn (React.memo): ô tìm kiếm toàn văn 0ms, Bộ Lọc, Primitives, Theme ComboBox (AdvComboBoxEdit), nút [ Nhập CSS ], chuyển Ngày/Đêm, Test Cuộn Cao Tốc, Ẩn/Hiện Toolbar' },
-    { name: 'AdvCustomCssModal', file: 'src/demo/AdvCustomCssModal.tsx', line: 13, desc: 'Modal nhập code CSS tùy biến để test màu trực tiếp trên Grid: Textarea font mono, phím Esc, click outside, khóa cuộn bảng data-agv-popup="true", lưu localStorage' },
-    { name: 'parseUserCustomCss', file: 'src/themes/customCssBridge.ts', line: 165, desc: 'Phân tích chuỗi CSS thô của người dùng, trích xuất danh sách biến CSS từ các khối :root và .dark' },
-    { name: 'generateCustomThemeCssBlock', file: 'src/themes/customCssBridge.ts', line: 195, desc: 'Sinh khối CSS cho selector .agv-theme-custom từ các biến trích xuất được, tự động ánh xạ sang 32 Design Tokens --agv-* của Grid Engine' },
-    { name: 'handleApplyCustomCss', file: 'src/App.tsx', line: 146, desc: 'Callback nhận mã CSS tùy biến từ AdvCustomCssModal, phân tích và sinh khối CSS ghi đè, lưu localStorage và chuyển theme sang custom' },
+    // --- src/components/grid/gridSimpleFilter.ts, gridFilterEngine.ts & gridGroupingEngine.ts ---
+    { name: 'needsFullFilterEngine', file: 'src/components/grid/gridSimpleFilter.ts', line: 9, desc: 'Kiểm tra nhanh bộ lọc cột đang active có cần nạp lười `gridFilterEngine.ts` (range/multi/date/time/number) hay chạy fast-path đồng bộ' },
+    { name: 'matchSimpleFilterSync', file: 'src/components/grid/gridSimpleFilter.ts', line: 38, desc: 'Động cơ lọc text/equals đồng bộ siêu nhẹ trên main thread giúp `DataGrid` không phải tải `gridFilterEngine` khi khởi tạo' },
+    { name: 'matchFilterValue', file: 'src/components/grid/gridFilterEngine.ts', line: 83, desc: 'Động cơ lọc nâng cao tải lười (date, time, number, multiValues De Morgan, multiRanges) tách khỏi `DataGrid` initial bundle' },
+    { name: 'buildGroupedDisplayModel', file: 'src/components/grid/gridGroupingEngine.ts', line: 68, desc: 'Xây dựng cấu trúc hiển thị dòng nhóm + tổng nhóm (tải lười chỉ khi `RowGroupingModule` được kích hoạt)' },
+    { name: 'copyGroupTableToClipboard', file: 'src/components/grid/gridGroupingEngine.ts', line: 127, desc: 'Sao chép bảng tóm tắt nhóm vào clipboard (tách lazy cùng `gridGroupingEngine.ts`)' },
+    { name: 'computeStickyGroupIndexAtTop', file: 'src/components/grid/gridGroupingEngine.ts', line: 157, desc: 'Tính chỉ số tiêu đề nhóm đang ghim đỉnh khi cuộn dọc' },
 
-    // --- src/services/apiService.ts ---
-    { name: 'fetchGridData', file: 'src/services/apiService.ts', line: 206, desc: 'Tầng API Service gọi dữ liệu bất đồng bộ trả về Promise<GridRecord[]> chứa 50.000 bản ghi Plain JSON objects, có hướng dẫn đổi sang URL backend thật' },
-    { name: 'updateGridRecordApi', file: 'src/services/apiService.ts', line: 287, desc: 'Cập nhật một ô dữ liệu qua API backend (PATCH / PUT)' },
-    { name: 'createXlsxZip', file: 'src/services/apiService.ts', line: 404, desc: 'Động cơ đóng gói file ZIP .xlsx chuẩn OpenXML tích hợp nén Deflate (Method 8) bằng Web Streams API CompressionStream, giảm dung lượng 50.000 dòng từ 37.2 MB xuống ~1.6 MB' },
-    { name: 'parseToExcelSerialDate', file: 'src/services/apiService.ts', line: 525, desc: 'Chuyển đổi chuỗi ngày tháng / giờ sang Excel Serial Date Number chuẩn 1900 Date System của Microsoft Excel, hỗ trợ dd/mm/yyyy, dd/mm/yyyy hh:mm, hh:mm' },
-    { name: 'exportGridExcelApi', file: 'src/services/apiService.ts', line: 635, desc: 'Tầng API Service sinh file Excel .xlsx thuần OpenXML native (zero-dependency) có nén Deflate siêu nhẹ (~1.6 MB): Lưu trữ ngày/giờ chuẩn Excel Serial Number và numFmt (dd/mm/yyyy, dd/mm/yyyy hh:mm, hh:mm) giúp AutoFilter của Excel nhận diện 100% Date Filters và gom nhóm cây Năm/Tháng/Ngày, mặc định kẻ viền (border) toàn bộ các ô, tắt đường lưới Excel (showGridLines="0"), tô màu Header 2 tầng (Navy #0F172A & Slate #1E293B, chữ trắng in đậm), dòng nhóm Group Header nền #F1F5F9 in đậm kèm tổng sum số, bật sẵn AutoFilter của Excel trên hàng cột con, format chuẩn số #,##0 / #,##0.00 chống tràn ###' },
+    // --- src/components/grid/TwelveMonthChartCell.tsx ---
+    { name: 'FORMULA_CYCLE', file: 'src/components/grid/TwelveMonthChartCell.tsx', line: 17, desc: 'Chu kỳ xoay chế độ công thức thống kê (AVG -> SUM -> MIN -> MAX) di trú về module grid' },
+    { name: 'FORMULA_META', file: 'src/components/grid/TwelveMonthChartCell.tsx', line: 24, desc: 'Metadata nhãn & style token badge theo từng FormulaMode (AVG/SUM/MIN/MAX)' },
+    { name: 'TwelveMonthChartCell', file: 'src/components/grid/TwelveMonthChartCell.tsx', line: 110, desc: 'Biểu đồ Sparkline 12 tháng: Sóng Catmull-Rom spline, tích hợp Animate UI Tooltip qua Portal (agv-tooltip-spring-up/down, boxShadow var(--popup-shadow)), đổi màu theo cực trị, SVG arrow, tự đóng khi cuộn' },
 
-    // --- src/components/grid/gridUtils.ts ---
-    { name: 'matchFilterValue', file: 'src/components/grid/gridUtils.ts', line: 302, desc: 'Động cơ so khớp toán tử lọc theo kiểu dữ liệu text, number, date, time chuẩn DevExtreme tích hợp trong thư viện' },
+    // --- src/App.tsx & src/pages/UiPrimitivesPage.tsx ---
+    { name: 'App', file: 'src/App.tsx', line: 105, desc: 'Shell điều hướng PNT B2B (Light/Dark) nạp lười `LoginPanel` & 5 trang con qua React.lazy: hỗ trợ hash query `#/airports?grid=...&mode=...`, phiên đăng nhập (`ui-test` xem không cần login) và bật/tắt `.dark`' },
+    { name: 'handleSelectPage', file: 'src/App.tsx', line: 129, desc: 'Chuyển trang tra cứu (countries/airports/partners/bookings/ui-test) đồng bộ URL hash và localStorage' },
+    { name: 'handleToggleColorScheme', file: 'src/App.tsx', line: 141, desc: 'Chuyển nhanh chế độ Sáng / Tối PNT B2B và đồng bộ class `.dark` lên document.documentElement' },
+    { name: 'UiPrimitivesPage', file: 'src/pages/UiPrimitivesPage.tsx', line: 33, desc: 'Trang `Thử nghiệm UI` (Nhóm B): kiểm thử trực tiếp AdvPopover + AdvSelect, AdvHoverCard và AdvTooltip' },
 
-    // --- src/demo/TwelveMonthChartCell.tsx ---
-    { name: 'TwelveMonthChartCell', file: 'src/demo/TwelveMonthChartCell.tsx', line: 64, desc: 'Biểu đồ Sparkline 12 tháng: Sóng Catmull-Rom spline, tích hợp Animate UI Tooltip (Base UI + Motion style) qua Portal với Spring Physics và Shared Sliding Glide mượt mà 120ms, tự động đổi màu số liệu theo đốm cực đại (var(--agv-trend-up)) và cực tiểu (var(--agv-trend-down)) trên đường line, SVG arrow định vị, tự động lật ngược flip-up, kẹp biên an toàn, định dạng số formatGridNumber, tự đóng khi cuộn' },
+    // --- src/services/b2bAuth.ts & src/services/b2bApi.ts ---
+    { name: 'apiCall', file: 'src/services/b2bAuth.ts', line: 161, desc: 'Fetch wrapper cho BE-CRM (tách về `b2bAuth.ts`): tự gắn Bearer token, single-flight RefreshToken khi 401 và chuẩn hóa envelope {Id, Message, Data}' },
+    { name: 'loginAccount', file: 'src/services/b2bAuth.ts', line: 245, desc: 'Đăng nhập tài khoản BE-CRM qua /api/Auth/Login (hỗ trợ bước 2FA)' },
+    { name: 'verifyTwoFaCode', file: 'src/services/b2bAuth.ts', line: 275, desc: 'Xác thực mã 2FA qua /api/Auth/Verify2FA' },
+    { name: 'normalizePaged', file: 'src/services/b2bApi.ts', line: 150, desc: 'Chuẩn hóa dữ liệu phân trang từ nhiều biến thể payload BE-CRM' },
+    { name: 'fetchCountriesPage', file: 'src/services/b2bApi.ts', line: 225, desc: 'Tải 1 trang danh sách Quốc gia theo `page`/`pageSize` và bộ lọc từ /api/Country/SearchList' },
+    { name: 'fetchAirportsPage', file: 'src/services/b2bApi.ts', line: 283, desc: 'Tải trang danh sách Sân bay từ /api/AirPortInfo/SearchList (nếu filters.country có >=2 mã như "SA,AF,EG" thì tách bắn song song rồi gộp/cắt trang)' },
+    { name: 'fetchAllAirports', file: 'src/services/b2bApi.ts', line: 374, desc: 'Tải toàn bộ danh sách sân bay (2.771 dòng) qua collectAllPages + fetchAirportsPage theo lô 5 trang x 200 dòng' },
+    { name: 'fetchPartnersPage', file: 'src/services/b2bApi.ts', line: 466, desc: 'Tải 1 trang danh sách Đại lý theo `page`/`pageSize`, trạng thái & SalesUser từ /api/Partner/GetList' },
+    { name: 'usePagedListQuery', file: 'src/pages/usePagedListQuery.ts', line: 80, desc: 'Shared hook quản lý phân trang server-side + LRU Page Cache 0ms (`page=1`, `pageSize=20`, `serverTotal`, `loading`, `error`, `refresh`, `apiLoadMs`, `renderStartRef`) cho các trang B2B-PNT' },
+    { name: 'captureRuntimeTelemetry / useGridStageTelemetry / GridTelemetryLine', file: 'src/pages/gridPageTelemetry.tsx', line: 10, desc: 'Bộ đo hiệu năng runtime dùng chung cho các trang Grid: đo `Tải API` (ms), `Render bảng` (ms qua rAF + settle 120ms), `JS đã nạp` (kB/files), `RAM JS Heap` (MB) và `DOM trong bảng` (.agv-grid-root nodes)' },
 
-    // --- src/demo/airlineData.ts ---
-    { name: 'LEGACY_KEY_MAP', file: 'src/demo/airlineData.ts', line: 75, desc: 'Bảng ánh xạ tự động chuyển đổi cấu hình từ các phiên bản cũ sang chuẩn 23 cột mới' },
-    { name: 'getRawAirlineDataset', file: 'src/demo/airlineData.ts', line: 110, desc: 'Cung cấp trực tiếp mảng tuple dữ liệu gốc 339.737 dòng phục vụ tính tổng và gom nhóm cực tốc Single-Pass Stream' },
-    { name: 'getFastAirlineCellVal', file: 'src/demo/airlineData.ts', line: 114, desc: 'Trích xuất giá trị ô siêu tốc O(1) không sinh rác GC từ 339.737 dòng tuple dữ liệu vé máy bay' },
-    { name: 'getAirlineRowValueForSort', file: 'src/demo/airlineData.ts', line: 135, desc: 'Trích xuất giá trị cột để phục vụ pipeline sắp xếp mảng kiểu dữ liệu nhanh cho vé máy bay' },
-    { name: 'getAirlineRowData', file: 'src/demo/airlineData.ts', line: 145, desc: 'Tạo đối tượng AirlineRowData cho dòng hiển thị theo chunk' },
-    { name: 'updateAirlineCellValue', file: 'src/demo/airlineData.ts', line: 185, desc: 'Cập nhật giá trị ô vào bộ nhớ đệm cho dữ liệu hàng không' },
-    { name: 'matchAirlineFilterValue', file: 'src/demo/airlineData.ts', line: 260, desc: 'Động cơ so khớp toán tử lọc theo text, number, date (hỗ trợ contains/not_contains/starts_with/ends_with theo số và chuỗi, date/time parseDateToNum, dải số và ngày between, toán tử Khác ≠ và Không chứa loại trừ AND De Morgan)' },
-    { name: 'getAirlineEmptyColumns', file: 'src/demo/airlineData.ts', line: 137, desc: 'Phát hiện nhanh các cột rỗng hoàn toàn trong bộ dữ liệu (~0ms) và cache cho các lần truy vấn tiếp theo' },
+    // --- src/components/grid/modules/, columns/, gridFeatures.ts, DataGrid.tsx ---
+    { name: 'GRID_MODULE_IDS', file: 'src/components/grid/modules/index.ts', line: 1, desc: 'Danh mục 19 ID module tính năng Grid (`rowNumber`, `pagination`, `columnPinning`, `centerDock`, `rowPinning`, `responsiveLayout`, ...)' },
+    { name: 'RowNumberModule', file: 'src/components/grid/modules/index.ts', line: 34, desc: 'Module hiển thị cột STT (`col_stt`)' },
+    { name: 'ColumnPinningModule', file: 'src/components/grid/modules/index.ts', line: 37, desc: 'Module ghim cột Trái / Phải độc lập khỏi lõi PC read-only' },
+    { name: 'CenterDockModule', file: 'src/components/grid/modules/index.ts', line: 41, desc: 'Module Dock giữa (tách riêng hoàn toàn khỏi ColumnPinningModule)' },
+    { name: 'RowPinningModule', file: 'src/components/grid/modules/index.ts', line: 42, desc: 'Module ghim dòng (qua context menu hoặc `pinnedTopRowData`)' },
+    { name: 'ResponsiveLayoutModule', file: 'src/components/grid/modules/index.ts', line: 82, desc: 'Module chuyển đổi tự động PC <-> Tablet <-> Phone (tách riêng khỏi PC read-only)' },
+    { name: 'BasicViewModules', file: 'src/components/grid/modules/index.ts', line: 88, desc: 'Preset tối giản chỉ có `[RowNumberModule, PaginationModule]`' },
+    { name: 'StandardGridModules', file: 'src/components/grid/modules/index.ts', line: 94, desc: 'Preset chuẩn B2B gồm 13 module (STT, Pagination, Summary, Pinning/CenterDock/RowPinning, Sort, Filter, Sizing, Chooser, Fullscreen, ContextMenu, Toolbar)' },
+    { name: 'AllEnterpriseModules', file: 'src/components/grid/modules/index.ts', line: 111, desc: 'Preset đầy đủ 19 module (kèm QueryBuilder, RowSelection, RowGrouping, CellEditing, ResponsiveLayout)' },
+    { name: 'toModuleIdSet', file: 'src/components/grid/modules/index.ts', line: 133, desc: 'Chuyển mảng `GridModule[]` thành `Set<GridModuleId>`' },
+    { name: 'hasGridModule', file: 'src/components/grid/modules/index.ts', line: 145, desc: 'Kiểm tra một module có tồn tại trong `Set<GridModuleId>` hay không' },
+    { name: 'createColumnHelper', file: 'src/components/grid/columns/createColumnHelper.ts', line: 27, desc: 'Factory kiểu TanStack Table v8 tạo cột typed `.accessor(...)`, `.display(...)`, `.group(...)`' },
+    { name: 'normalizeGridColumns', file: 'src/components/grid/columns/normalizeColumns.ts', line: 159, desc: 'Chuẩn hóa `ColumnHelper*`/`ColumnDef`/nhóm lồng + `defaultColDef` thành `flatColumns` & `columnGroups` cho `DataGrid`' },
+    { name: 'GRID_VARIANTS', file: 'src/components/grid/gridFeatures.ts', line: 8, desc: 'Enum preset chế độ Grid (`full` | `basic`)' },
+    { name: 'resolveGridFeatures', file: 'src/components/grid/gridFeatures.ts', line: 107, desc: 'Single source of truth giải quyết `modules` (ưu tiên nếu truyền, mặc định `BasicViewModules`) kết hợp `variant` và từng cờ `enable*` riêng (`enableColumnPinning`, `enableCenterDock`, `enableRowPinning`, `enableCellEditing`, `enableResponsiveLayout`...)' },
+    { name: 'useDataGridController', file: 'src/components/grid/DataGrid.tsx', line: 165, desc: 'Core controller hook tổng quát: dùng `gridSimpleFilter` fast-path + dynamic `gridFilterEngine`/`gridGroupingEngine`/`queryUtils`, không clone object khi không sort/edit, cache `getRowKeyAt`, hỗ trợ `modules`, `columns`/`columnDefs`/`defaultColDef`/`data`/`pagination`/`pinnedTopRowData`' },
+    { name: 'DataGrid', file: 'src/components/grid/DataGrid.tsx', line: 2407, desc: 'Component thư viện `<DataGrid<TRecord> />` hỗ trợ `modules`, `createColumnHelper`, `defaultColDef`, `pagination`, `pinnedTopRowData`, `GridSelectionCheckbox`, lazy `LazyGridStatusBar` và hybrid server/client paging' },
+    { name: 'LoginPanel', file: 'src/components/b2b/LoginPanel.tsx', line: 9, desc: 'Form đăng nhập BE-CRM 2 bước (tài khoản/mật khẩu và mã 2FA 6 số)' },
 
-    // --- src/App.tsx ---
-    { name: 'renderCell', file: 'src/App.tsx', line: 1398, desc: 'Bộ render ô tùy biến: bảo toàn 100% React.memo của GridRow bằng cách đọc trực tiếp prop isChecked từ CellRenderParams và phụ thuộc đúng giá trị số chartColumnWidth thay vì cả object colWidths' },
-    { name: 'handleReorderColumns', file: 'src/App.tsx', line: 375, desc: 'Kéo thả đổi thứ tự cột và tự động lưu vào localStorage' },
-    { name: 'handleToggleCheck', file: 'src/App.tsx', line: 521, desc: 'Chuyển đổi trạng thái chọn/bỏ chọn dòng trong Set checkedRowIndices (hỗ trợ Shift + Click chọn dải dòng liên tiếp)' },
-    { name: 'handleToggleGroupByColumn', file: 'src/App.tsx', line: 414, desc: 'Chuyển đổi trạng thái nhóm theo cột từ chuột phải Context Menu, tự động thiết lập mặc định thu gọn tất cả (collapsed by default), lưu localStorage' },
-    { name: 'handleToggleGroupSort', file: 'src/App.tsx', line: 241, desc: 'Chuyển đổi luân phiên 3 trạng thái sắp xếp nhóm theo tổng của cột số: Giảm dần -> Tăng dần -> Mặc định (Option B Toolbar3) và lưu localStorage' },
-    { name: 'handleToggleGroupCollapse', file: 'src/App.tsx', line: 425, desc: 'Đóng/mở nhóm dòng phân cấp khi click vào dòng Group Header' },
-    { name: 'handleCollapseAllGroups', file: 'src/App.tsx', line: 1243, desc: 'Thu gọn toàn bộ tất cả các nhóm trên bảng' },
-    { name: 'handleExpandAllGroups', file: 'src/App.tsx', line: 1247, desc: 'Mở rộng toàn bộ tất cả các nhóm trên bảng' },
-    { name: 'handleUngroup', file: 'src/App.tsx', line: 1256, desc: 'Hủy nhóm theo cột, khôi phục bảng phẳng 50.000 dòng' },
-    { name: 'handleCopyGroupTable', file: 'src/App.tsx', line: 1263, desc: 'Sao chép toàn bộ dữ liệu của nhóm sang định dạng TSV vào clipboard (có/không kèm tên cột)' },
-    { name: 'handleExportGroupExcel', file: 'src/App.tsx', line: 1293, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho nhóm dữ liệu' },
-    { name: 'handleExportAllExcel', file: 'src/App.tsx', line: 1323, desc: 'Ủy quyền sang apiService.exportGridExcelApi xuất Excel cho toàn bộ bảng dữ liệu' },
-    { name: 'rawGroupBuckets', file: 'src/App.tsx', line: 1086, desc: 'Chia nhóm cấu trúc 50.000 dòng tách biệt khỏi luồng tính tổng (không phải gom nhóm lại khi tích chọn dòng)' },
-    { name: 'columnSums', file: 'src/App.tsx', line: 1181, desc: 'Tính toán tổng giá trị cho tất cả các cột số bằng động cơ Single-Pass Stream O(N); khi có dòng được chọn (checkedRowIndices.size > 0) tự động tính theo các dòng đang chọn với fast-path O(K)' },
-    { name: 'groupedDisplayModel', file: 'src/App.tsx', line: 1184, desc: 'Động cơ nhóm dòng, cộng dồn tổng và sắp xếp các nhóm theo tổng số tiền (groupSortConfig) trong đúng 1 vòng lặp duy nhất' },
-    { name: 'renderGroupHeaderRow', file: 'src/components/grid/GridRow.tsx', line: 446, desc: 'Render dòng tiêu đề nhóm dữ liệu: icon mở/đóng ▼/▶, line ngang borderBottom liền mạch qua toàn bộ ô, ẩn tiền tố tên cột chỉ hiển thị trực tiếp giá trị nhóm và badge số lượng bản ghi, tổng sum các cột số căn đúng vị trí cột' }
+    // --- src/pages/CountriesPage.tsx, AirportsPage.tsx, PartnersPage.tsx, BookingsPage.tsx ---
+    { name: 'CountriesPage', file: 'src/pages/CountriesPage.tsx', line: 38, desc: 'Trang tra cứu Quốc gia: cột `createColumnHelper<CountryRow>()` + `defaultColDef` + dòng `Đo thực tế` (`GridTelemetryLine`) + `<DataGrid gridId="b2b_countries" modules={[...StandardGridModules, QueryBuilderModule, ColumnChooserModule]} data={...} getRowId={...} pagination={...} />`' },
+    { name: 'AirportsPage', file: 'src/pages/AirportsPage.tsx', line: 219, desc: 'Trang tra cứu 2.771 dòng Sân bay (`fetchAllAirports`): dùng `<DataGrid modules={BasicViewModules} />` (`mode=all|paged`) và thanh `Đo thực tế` (`useGridStageTelemetry` + `GridTelemetryLine`)' },
+    { name: 'PartnersPage', file: 'src/pages/PartnersPage.tsx', line: 64, desc: 'Trang tra cứu Đại lý: 4 status tabs + cột `createColumnHelper<PartnerListItem>()` + `defaultColDef` + `<DataGrid gridId="b2b_partners" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`' },
+    { name: 'BookingsPage', file: 'src/pages/BookingsPage.tsx', line: 97, desc: 'Trang tra cứu Đặt chỗ B2B: 7 status tabs + 14 cột phẳng qua `createColumnHelper<BookingListItem>()` (`valueGetter`) & `defaultColDef` + `<DataGrid gridId="b2b_bookings" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`' },
+    { name: 'fetchBookingsPage', file: 'src/services/b2bApi.ts', line: 880, desc: 'Tải 1 trang danh sách Đặt chỗ B2B theo `page`/`pageSize` và bộ lọc từ /api/Booking/SearchListBooking' },
+    { name: 'normalizeSortRules', file: 'src/components/grid/multiSortUtils.ts', line: 12, desc: 'Chuẩn hóa mảng quy tắc sắp xếp đa cột (loại bỏ key rỗng/trùng lặp, fallback từ sortConfig đơn)' },
+    { name: 'toggleColumnSortRules', file: 'src/components/grid/multiSortUtils.ts', line: 44, desc: 'Chuyển đổi quy tắc sắp xếp khi click (thay thế đơn) hoặc Shift+Click (xếp chồng/luân chuyển đa cột)' },
+    { name: 'reorderSortRules', file: 'src/components/grid/multiSortUtils.ts', line: 86, desc: 'Đổi vị trí quy tắc sắp xếp từ `fromIndex` sang `toIndex` bất biến và kiểm tra biên an toàn' },
+    { name: 'sortRowIndicesMulti', file: 'src/components/grid/multiSortUtils.ts', line: 120, desc: 'Động cơ sắp xếp đa cấp Lazy Tie-Breaker: chỉ tính mảng tầng 0 ở O(N) và trích xuất lười các tầng sau khi tầng trước bằng nhau' },
+    { name: 'AdvMultiSortPopup', file: 'src/components/grid/AdvMultiSortPopup.tsx', line: 40, desc: 'Popup Portal Sắp xếp phân cấp đa cột áp dụng tức thì (pointer drag + translateY mượt như AdvColumnChooserModal với hover 0ms, FLIP settle, AdvSelect cột, nút icon toggle MorphSortIcon arrowUp/Down, Xóa hết, backdrop pointer-events-auto)' },
+    { name: 'resolveEventTargetElement', file: 'src/components/grid/popupLockUtils.ts', line: 13, desc: 'Chuẩn hóa EventTarget (kể cả Text node có nodeType === 3) về Element/parentElement an toàn để gọi closest()' },
+    { name: 'isTargetInsidePopupSelector', file: 'src/components/grid/popupLockUtils.ts', line: 25, desc: 'Kiểm tra EventTarget (kể cả Text node) có nằm trong selector popup hay không' },
+    { name: 'canWheelScrollInsidePopup', file: 'src/components/grid/popupLockUtils.ts', line: 65, desc: 'Kiểm tra wheel (kể cả trên Text node & HiDPI subpixel tolerance 0.2/0.5) có đang nằm trên vùng con có thể cuộn tiếp bên trong popup hay không để chống scroll-chaining xuống Grid' },
+    { name: 'shouldBlockGridInteractionWhenPopupOpen', file: 'src/components/grid/popupLockUtils.ts', line: 110, desc: 'Xác định target (kể cả Text node) có nằm ngoài popup hay không để Grid chặn tương tác khi popup đang mở' },
+    { name: 'renderGroupHeaderRow', file: 'src/components/grid/GridGroupHeaderRow.tsx', line: 22, desc: 'Component `GridGroupHeaderRow` tách `React.lazy` khỏi `GridRow`: lazy `LazyRowGroupChevronMorphIcon`, giá trị nhóm, badge số lượng & summary tổng các cột số' }
   ],
 
   // ============================================================================
   // PHẦN D: TỪ ĐIỂN BIẾN CSS THEME & Z-INDEX (CSS TOKENS & STACKING)
   // ============================================================================
   cssTokens: [
-    { token: '--agv-bg-root', desc: 'Màu nền chính của viewport / ứng dụng', defaultLight: '#ffffff', defaultDark: '#0f172a' },
-    { token: '--agv-bg-header', desc: 'Màu nền thanh tiêu đề GridHeader (Tier 1 & Tier 2)', defaultLight: '#f8fafc', defaultDark: '#1e293b' },
-    { token: '--agv-text-header', desc: 'Màu chữ thanh tiêu đề', defaultLight: '#475569', defaultDark: '#cbd5e1' },
-    { token: '--agv-text-main', desc: 'Màu chữ nội dung chính trong bảng', defaultLight: '#0f172a', defaultDark: '#f8fafc' },
-    { token: '--agv-text-muted', desc: 'Màu chữ phụ / nhãn mờ', defaultLight: '#94a3b8', defaultDark: '#64748b' },
-    { token: '--agv-border', desc: 'Màu đường viền giữa các ô và cột trong bảng', defaultLight: '#e2e8f0', defaultDark: '#334155' },
-    { token: '--agv-border-strong', desc: 'Màu đường viền đáy header / phân tách vùng', defaultLight: '#cbd5e1', defaultDark: '#475569' },
-    { token: '--agv-accent', desc: 'Màu chủ đạo / điểm nhấn tương tác (Buttons, Checkbox checked, Pinned divider)', defaultLight: '#2563eb', defaultDark: '#38bdf8' },
-    { token: '--agv-accent-text', desc: 'Màu chữ trên nền chủ đạo (luôn là màu trắng)', defaultLight: '#ffffff', defaultDark: '#ffffff' },
-    { token: '--agv-bg-selected', desc: 'Màu nền dòng đang được chọn (Selected Row)', defaultLight: '#eff6ff', defaultDark: '#1e293b' },
-    { token: '--agv-bg-row', desc: 'Màu nền dòng chẵn', defaultLight: '#ffffff', defaultDark: '#0f172a' },
-    { token: '--agv-bg-row-alt', desc: 'Màu nền dòng lẻ', defaultLight: '#f8fafc', defaultDark: '#111827' },
-    { token: '--agv-bg-hover', desc: 'Màu nền khi rê chuột qua dòng (Row Hover)', defaultLight: '#f1f5f9', defaultDark: '#1e293b' },
-    { token: '--scroll-thumb', desc: 'Màu thanh cuộn (Scrollbar thumb) đồng bộ theme', defaultLight: '#cbd5e1', defaultDark: '#3E4D63' },
-    { token: '--scroll-thumb-hover', desc: 'Màu thanh cuộn khi rê chuột vào', defaultLight: '#94a3b8', defaultDark: '#64748B' }
+    { token: '--background / --agv-bg-root', desc: 'Màu nền chính của trang PNT B2B', defaultLight: '#f4f7f8', defaultDark: '#071c24' },
+    { token: '--table-header / --agv-bg-header', desc: 'Màu nền thanh tiêu đề GridHeader & thead LookUp', defaultLight: '#f0f6f8', defaultDark: '#12313b' },
+    { token: '--foreground / --agv-text-header', desc: 'Màu chữ thanh tiêu đề & nội dung chính', defaultLight: '#102a33', defaultDark: '#f1f7f8' },
+    { token: '--muted-foreground / --agv-text-muted', desc: 'Màu chữ phụ / nhãn mờ', defaultLight: '#5a717a', defaultDark: '#aec0c6' },
+    { token: '--border / --agv-border', desc: 'Màu đường viền giữa các ô và bảng', defaultLight: '#d5e1e4', defaultDark: '#29454e' },
+    { token: '--control-border / --agv-border-strong', desc: 'Màu đường viền controls nhập liệu', defaultLight: '#7e959d', defaultDark: '#5f7f89' },
+    { token: '--primary / --agv-accent', desc: 'Teal chủ đạo cho nút CTA chính và focus ring', defaultLight: '#1c6987', defaultDark: '#70bdd2' },
+    { token: '--primary-foreground / --agv-accent-text', desc: 'Màu chữ trên nền --primary CTA', defaultLight: '#ffffff', defaultDark: '#062a36' },
+    { token: '--brand-gold / --brand-gold-on-light', desc: 'Gold nhấn tab gạch chân, viền 1px đồng đều thẻ chọn Phone & chữ STT dòng focus', defaultLight: '#d49f4f / #8f6227', defaultDark: '#d49f4f / #d6a55d' },
+    { token: '--surface-selected / --agv-bg-selected', desc: 'Màu nền dòng/mục đang chọn (không tô đậm teal tràn hàng)', defaultLight: '#e5eff3', defaultDark: '#173d49' },
+    { token: '--card / --agv-bg-row', desc: 'Màu nền card & dòng dữ liệu bảng', defaultLight: '#ffffff', defaultDark: '#0d2731' },
+    { token: '--surface-hover / --agv-bg-hover', desc: 'Màu nền khi rê chuột qua dòng/item', defaultLight: '#f8fbfc', defaultDark: '#153640' },
+    { token: '--scrollbar-thumb / --scroll-thumb', desc: 'Màu thanh cuộn (Scrollbar thumb 8px) đồng bộ PNT B2B', defaultLight: 'color-mix(in srgb, #7e959d 35%, transparent)', defaultDark: 'color-mix(in srgb, #5f7f89 45%, transparent)' },
+    { token: '--scrollbar-thumb-hover / --scroll-thumb-hover', desc: 'Màu thanh cuộn khi rê chuột vào', defaultLight: 'color-mix(in srgb, #7e959d 55%, transparent)', defaultDark: 'color-mix(in srgb, #5f7f89 65%, transparent)' },
+    { token: '--popup-background / --agv-bg-popup', desc: 'Màu nền đặc cho Popup, Dropdown, Menu, Drawer & Modal (tránh bị trong suốt)', defaultLight: '#ffffff', defaultDark: '#0d2731' },
+    { token: '--safe-area-top / --safe-area-bottom', desc: 'Vùng an toàn tai thỏ / thanh điều hướng cảm ứng cho Drawer & Responsive Footer', defaultLight: 'env(safe-area-inset-*, 0px)', defaultDark: 'env(safe-area-inset-*, 0px)' }
   ],
 
   zIndexes: [
@@ -686,122 +797,254 @@ export const CODE_DICTIONARY = {
   // ============================================================================
   files: [
     {
-      fileName: 'src/components/grid/VirtualizedGrid.tsx',
-      totalLines: 2238,
-      description: 'Động cơ chính của Grid (bọc React.memo): Điều khiển ảo hóa chunkRowsCacheRef giữ nguyên 100% tham chiếu chunk cũ khi cuộn cao tốc, cuộn mượt theo dt 60-144Hz, đo vận tốc trung bình cửa sổ 120ms (windowAccumDistanceRef), cố định handleToggleQuickFilterSmart bảo toàn React.memo cho GridFloatingToolbar, cố định listener bàn phím qua keyNavStateRef, ghim cột, kéo độ rộng, phím tắt, menu ngữ cảnh & 3 chế độ tương tác ô, In-Cell Editing Scroll Lock, Popup Scroll Lock (cache 64ms), dynamic header height, columnSums and grouping props forwarding',
+      fileName: 'src/App.tsx',
+      totalLines: 284,
+      description: 'Application Shell B2B-PNT nạp lười `LoginPanel` & 5 trang qua React.lazy (không kéo `./components/grid` vào `index.js`), hỗ trợ hash query `#/airports?grid=...&mode=...`, xác thực BE-CRM, bật/tắt `.dark` & AppHeaderFrame Gold tabs',
       sections: [
-        { lineRange: '1 - 85', category: 'Imports, Prop Types & Cached Popup Selectors', functions: ['POPUP_SELECTORS', 'isAnyPopupActive (64ms cached)', 'VirtualizedGridProps', 'VirtualizedGridRef'] },
-        { lineRange: '86 - 350', category: 'State & Refs Initialization', functions: ['colWidths', 'columnPins', 'hiddenColKeys', 'effectiveColumns', 'setColWidth', 'setMultipleColWidths'] },
-        { lineRange: '351 - 660', category: 'Column Offsets & Pin Calculation', functions: ['calculatePinnedOffsets', 'leftOffsets', 'rightOffsets'] },
-        { lineRange: '661 - 745', category: 'Column Group Definitions & Memoization', functions: ['flatColumns', 'middleElements', 'collapsedBands'] },
-        { lineRange: '746 - 1020', category: 'Column Resize, Auto-Fit, Pinning, Hide/Show & Context Menu Handlers', functions: ['handleMouseDownResize', 'handleAutoFitColumn', 'handleAutoFitAllColumns', 'handleSetPin', 'handleHideColumn', 'handleColumnContextMenu', 'handleBandContextMenu', 'handleCellContextMenu', 'handleGroupContextMenu'] },
-        { lineRange: '1260 - 1545', category: 'Sticky Group Header, Wheel Snapping, Popup Scroll Lock & Stable Ref Keyboard Navigation', functions: ['computeStickyGroupIdx', 'handleWheelSnap', 'handleWheelLock', 'keyNavStateRef', 'handleKeyDownNav'] },
-        { lineRange: '1546 - 1790', category: 'High-Speed AutoScroll Loop, 120ms Window Velocity Scroll Engine & Chunk Row Cache (chunkRowsCacheRef)', functions: ['autoScrolling dt loop', 'windowAccumDistanceRef', 'handleScroll', 'visibleChunkIndices', 'chunkRowsCacheRef', 'visibleChunksMap'] },
-        { lineRange: '1791 - 2238', category: 'JSX Render Viewport, Memoized GridHeader & GridFilterRow, Chunks Block, FloatingToolbar & ContextMenu Portal', functions: ['GridHeader (React.memo)', 'GridFilterRow (React.memo)', 'GridChunkBlock iteration', 'GridFloatingToolbar', 'ColumnContextMenu', 'React.memo(VirtualizedGridComponent)'] }
+        { lineRange: '1 - 104', category: 'Lazy LoginPanel + Page Imports, parseHashPageKey(), Tabs & Initial Readers', functions: ['parseHashPageKey', 'readInitialPage', 'readInitialDarkMode'] },
+        { lineRange: '105 - 190', category: 'Session, Hash & Dark Mode Effect Handlers', functions: ['App', 'handleSelectPage', 'handleToggleColorScheme'] },
+        { lineRange: '191 - 284', category: 'AppHeaderFrame, Gold Tabs & Suspense Lazy PageShell Router JSX', functions: ['LoginPanel', 'PageShell', 'ListPagePanel', 'CountriesPage', 'AirportsPage', 'PartnersPage', 'BookingsPage', 'UiPrimitivesPage'] }
+      ]
+    },
+    {
+      fileName: 'src/services/b2bAuth.ts',
+      totalLines: 312,
+      description: 'BE-CRM Auth & Session Client tách khỏi `b2bApi.ts` để tách chunk `App` nhẹ không kéo Catalog/Booking endpoints',
+      sections: [
+        { lineRange: '1 - 160', category: 'Auth Types, SessionStorage Store & Refresh Single-Flight', functions: ['AuthSession', 'loadAuthSession', 'getB2bToken'] },
+        { lineRange: '161 - 312', category: 'Fetch Wrapper & Auth Endpoints (Login / Verify2FA / Logout)', functions: ['apiCall', 'loginAccount', 'verifyTwoFaCode', 'logoutAccount'] }
+      ]
+    },
+    {
+      fileName: 'src/services/b2bApi.ts',
+      totalLines: 910,
+      description: 'BE-CRM Catalog & Booking Endpoints: tái sử dụng `apiCall` từ `./b2bAuth`, chuẩn hóa phân trang `normalizePaged`, các hàm `fetch*Page` & `fetchAllAirports`',
+      sections: [
+        { lineRange: '1 - 149', category: 'Geography, Country, Airport & Partner Types + DDL Loaders', functions: ['CountryRow', 'AirportInfoRow', 'PartnerListItem', 'PartnerSalesUser', 'fetchGeographyDDL'] },
+        { lineRange: '150 - 465', category: 'Pagination Helper, Countries, Airports & AllAirports Fetchers', functions: ['normalizePaged', 'collectAllPages', 'fetchCountriesPage', 'fetchCountryDDL', 'fetchAirportsPage', 'fetchAllAirports'] },
+        { lineRange: '466 - 910', category: 'Partner & Bookings Types, MSSQL Date Helpers & Fetchers', functions: ['fetchPartnerSalesUsers', 'fetchPartnersPage', 'toBookingListFromDate', 'toBookingListToDate', 'fetchBookingCarriersDDL', 'fetchBookingPartnersDDL', 'fetchBookingUsersDDL', 'fetchBookingsPage'] }
+      ]
+    },
+    {
+      fileName: 'src/components/b2b/LoginPanel.tsx',
+      totalLines: 189,
+      description: 'Form đăng nhập BE-CRM (Account/Password + Verify2FA) dùng design tokens b2b-pnt (`bg-card`, `CONTROL_HOVER_CLASS`, `CONTROL_FOCUS_CLASS`, CTA `bg-primary h-9`) và NO_AUTOFILL_PROPS',
+      sections: [
+        { lineRange: '1 - 75', category: 'State & Submit Handlers (Login + 2FA)', functions: ['LoginPanel', 'handleLoginSubmit', 'handleVerify2Fa'] },
+        { lineRange: '76 - 189', category: 'Credentials & 2FA Form JSX', functions: ['NO_AUTOFILL_PROPS', 'CONTROL_SURFACE_CLASS'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/DataGrid.tsx',
+      totalLines: 1928,
+      description: 'Core Library Component (`<DataGrid<TRecord> />` & `useDataGridController`): gỡ static `gridUtils` & `MorphCheckbox`, dùng fast-path `gridSimpleFilter` + dynamic `gridFilterEngine`/`gridGroupingEngine`/`queryUtils`, uncloned `getRow`, cache `getRowKeyAt`, `GridSelectionCheckbox` & truyền `_resolvedFeatures`',
+      sections: [
+        { lineRange: '1 - 149', category: 'Imports (gridFormatUtils + gridSimpleFilter + queryRuleCheck), Feature/Column Types', functions: ['UseDataGridControllerOptions'] },
+        { lineRange: '150 - 740', category: 'Default RowKey/Accessors, Module/Column Normalization & Dynamic Lazy Engine Refs', functions: ['defaultGetRowKey', 'useDataGridController', 'resolveGridFeatures', 'normalizeGridColumns'] },
+        { lineRange: '741 - 1226', category: 'Filtering (Simple Fast-Path + Lazy Full Engine), Multi-Sort, Pagination Slice, Sums & Lazy Grouping', functions: ['filteredRowIndices', 'displayRowIndices', 'pagedRowIndices', 'columnSums', 'groupedDisplayModel'] },
+        { lineRange: '1227 - 1726', category: 'Page Handlers, Selection, Column/Filter Mutations & Cell Rendering', functions: ['handlePageChange', 'handlePageSizeChange', 'renderCell'] },
+        { lineRange: '1727 - 1928', category: 'DataGrid Component JSX, GridSelectionCheckbox, AutoHeight Wrapper & VirtualizedGrid + LazyGridStatusBar', functions: ['DataGrid', 'GridSelectionCheckbox', 'VirtualizedGrid', 'LazyGridStatusBar'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridStatusBar.tsx',
+      totalLines: 182,
+      description: 'Thanh phân trang đáy tích hợp vào core Grid (`statusBar` prop): tái sử dụng `AdvSelect` (`20 / 50 / 100 / 200`), nút `<`/`>` (`ChevronLeft`/`ChevronRight`), ô nhập số trang (`NO_AUTOFILL_PROPS`), `/ {totalPages}` và khoảng dòng `start-end / totalItems`',
+      sections: [
+        { lineRange: '1 - 75', category: 'Props, Page Bounds Calculation & Draft Page Input Commit', functions: ['GridStatusBarProps', 'GridStatusBar', 'commitDraftPage'] },
+        { lineRange: '76 - 182', category: 'Pager Controls JSX (AdvSelect PageSize, Prev/Input/Next, Item Range)', functions: ['AdvSelect', 'ChevronLeft', 'ChevronRight', 'NO_AUTOFILL_PROPS'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/usePagedListQuery.ts',
+      totalLines: 190,
+      description: 'Shared hook quản lý phân trang server-side kèm LRU Page Cache 0ms (`page=1`, `pageSize=20`, `serverTotal`, `loading`, `error`, `refresh`, `apiLoadMs`, `renderStartRef`) cho các trang danh mục B2B-PNT',
+      sections: [
+        { lineRange: '1 - 79', category: 'LRU Page Cache Helpers & Key Serialization', functions: ['serializeStableValue', 'buildCacheKey', 'getCachedEntry', 'setCachedEntry'] },
+        { lineRange: '80 - 190', category: 'State, Abortable Page Query Effect, API Timing & Reset Handlers', functions: ['usePagedListQuery', 'handlePageSizeChange', 'refresh'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/gridPageTelemetry.tsx',
+      totalLines: 168,
+      description: 'Module đo lường hiệu năng runtime dùng chung cho các trang Grid (`captureRuntimeTelemetry`, `countGridDomNodes`, `useGridStageTelemetry`, `<GridTelemetryLine />`)',
+      sections: [
+        { lineRange: '1 - 74', category: 'JS Payload, Memory Heap & `.agv-grid-root` DOM Counter', functions: ['captureRuntimeTelemetry', 'countGridDomNodes'] },
+        { lineRange: '75 - 168', category: 'rAF + Lazy Settle Telemetry Hook & Telemetry Line JSX', functions: ['useGridStageTelemetry', 'GridTelemetryLine'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/CountriesPage.tsx',
+      totalLines: 357,
+      description: 'Trang tra cứu Quốc gia: lọc server h-9 + dòng `Đo thực tế` (`GridTelemetryLine`) + cột `createColumnHelper<CountryRow>()` & `defaultColDef` + `<DataGrid gridId="b2b_countries" modules={[...StandardGridModules, QueryBuilderModule, ColumnChooserModule]} data={...} getRowId={...} pagination={...} />`',
+      sections: [
+        { lineRange: '1 - 37', category: 'Imports, ColumnHelper & DefaultColDef Config', functions: ['createColumnHelper'] },
+        { lineRange: '38 - 357', category: 'CountriesPage Query, Telemetry Stage, Columns, Filter Bar & DataGrid JSX', functions: ['CountriesPage', 'useGridStageTelemetry', 'GridTelemetryLine', 'DataGrid'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/AirportsPage.tsx',
+      totalLines: 603,
+      description: 'Trang tra cứu 2.771 dòng Sân bay (`fetchAllAirports`): dùng `<DataGrid modules={BasicViewModules} />` (`?mode=all|paged`), bộ lọc BE-CRM & thanh `Đo thực tế` dùng `useGridStageTelemetry` + `GridTelemetryLine`',
+      sections: [
+        { lineRange: '1 - 214', category: 'Filter Options, ColumnHelper Definitions (`BasicViewModules`) & Hash Parser', functions: ['useAirportGridColumns', 'parseAirportRowMode'] },
+        { lineRange: '215 - 405', category: 'AirportsPage Full Fetch (`fetchAllAirports`), Telemetry Hook & Mode Switcher', functions: ['AirportsPage', 'useGridStageTelemetry', 'handleSelectRowMode', 'refresh'] },
+        { lineRange: '406 - 603', category: 'Filter Bar, Row Mode Switcher, Telemetry Line & DataGrid Stage JSX', functions: ['GridTelemetryLine', 'DataGrid'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/PartnersPage.tsx',
+      totalLines: 409,
+      description: 'Trang tra cứu Đại lý: StatusTabs Gold, bộ lọc h-9 + cột `createColumnHelper<PartnerListItem>()` & `defaultColDef` + `<DataGrid gridId="b2b_partners" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`',
+      sections: [
+        { lineRange: '1 - 63', category: 'Imports, StatusTabs & SalesUser LookUp Config', functions: ['createColumnHelper'] },
+        { lineRange: '64 - 409', category: 'PartnersPage Query, Columns, Filter Bar & DataGrid JSX', functions: ['PartnersPage', 'handleSelectStatusTab', 'handleSubmit', 'DataGrid'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/BookingsPage.tsx',
+      totalLines: 605,
+      description: 'Trang tra cứu Đặt chỗ B2B: 7 tab StatusTabs, AdvDateRangePicker size="md", 14 cột phẳng qua `createColumnHelper<BookingListItem>()` (`valueGetter`) & `defaultColDef` + `<DataGrid gridId="b2b_bookings" modules={StandardGridModules} data={...} getRowId={...} pagination={...} />`',
+      sections: [
+        { lineRange: '1 - 96', category: 'Imports, Status Tabs, LookUp Columns & ColumnHelper', functions: ['BOOKING_STATUS_TABS', 'PARTNER_LOOKUP_COLUMNS', 'USER_LOOKUP_COLUMNS'] },
+        { lineRange: '97 - 420', category: 'BookingsPage DDL Loaders, Server Query Loader & 14 Typed Columns', functions: ['BookingsPage', 'fetchBookingsPage', 'columns'] },
+        { lineRange: '421 - 605', category: 'Filter Bar JSX & DataGrid Render', functions: ['DataGrid'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/multiSortUtils.ts',
+      totalLines: 215,
+      description: 'Động cơ sắp xếp phân cấp đa cột + `reorderSortRules` + Lazy Tie-Breaker tối ưu hiệu năng khi dữ liệu không trùng khóa',
+      sections: [
+        { lineRange: '1 - 119', category: 'Rule Normalization, Click/Shift+Click Stack & Reorder Transitions', functions: ['normalizeSortRules', 'toggleColumnSortRules', 'reorderSortRules'] },
+        { lineRange: '120 - 215', category: 'Lazy Tie-Breaker Multi-Level Comparator', functions: ['sortRowIndicesMulti'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/popupLockUtils.ts',
+      totalLines: 117,
+      description: 'Tiện ích thuần chuẩn hóa EventTarget Text node (`resolveEventTargetElement`), kiểm tra điều kiện cuộn trong popup với ngưỡng subpixel HiDPI (`canWheelScrollInsidePopup`) và chặn tương tác xuyên Grid (`shouldBlockGridInteractionWhenPopupOpen`)',
+      sections: [
+        { lineRange: '1 - 64', category: 'Target Resolution, Overflow & Axis Scroll Bounds Helpers', functions: ['resolveEventTargetElement', 'isTargetInsidePopupSelector', 'isScrollableOverflowValue', 'canElementScrollOnAxis'] },
+        { lineRange: '65 - 117', category: 'Popup Wheel Containment & Grid Guard Predicates', functions: ['canWheelScrollInsidePopup', 'shouldBlockGridInteractionWhenPopupOpen'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/AdvMultiSortPopup.tsx',
+      totalLines: 646,
+      description: 'Popup Portal Sắp xếp phân cấp nhiều cột gắn neo nút trên GridFloatingToolbar (áp dụng tức thì, không nút Áp dụng): Pointer Drag (`translateY`) + FLIP settle mượt như AdvColumnChooserModal, AdvSelect chọn cột, nút icon toggle MorphSortIcon, wrapper pointer-events-none z-[1250] + ngoại lệ `.agv-float-toolbar-btn` & scroll lock',
+      sections: [
+        { lineRange: '1 - 196', category: 'Props, Settle FLIP Layout Effect & Click Outside', functions: ['AdvMultiSortPopup', 'useLayoutEffect settle FLIP'] },
+        { lineRange: '197 - 646', category: 'Stable Anchor Coords, Pointer Drag Reorder (translateY), MorphSortIcon Toggle & Footer Clear All', functions: ['AdvSelect', 'GripVertical', 'MorphSortIcon', 'reorderSortRules'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/VirtualizedGrid.tsx',
+      totalLines: 2164,
+      description: 'Động cơ chính của Grid (bọc React.memo): tiếp nhận `_resolvedFeatures`, tách `useGridColumnLayout` & `useGridPopupLock`, bỏ `viewportWidth` thừa, tải lười 6 UI chunks + `gridGroupingEngine` + `gridFilterEngine`, 1-pass `useLayoutEffect`, CHUNK = 20',
+      sections: [
+        { lineRange: '1 - 86', category: 'Imports, Lazy UI Chunks & Prop Types', functions: ['LazyGridFilterRow', 'LazyColumnContextMenu', 'LazyAdvChecklistFilterPopup', 'LazyGridFloatingToolbar', 'LazyGridResponsiveHeader', 'LazyResponsiveSortFilterModal', 'VirtualizedGridProps'] },
+        { lineRange: '87 - 650', category: 'Component Entry, Hook Composition (`useGridColumnLayout`, Resize/AutoFit/Pin/Hide)', functions: ['VirtualizedGridComponent', 'toggleFullscreen', 'handleMouseDownResize', 'handleAutoFitColumn', 'handleSetPin', 'handleSetBandPin', 'handleHideColumn', 'handleHideBand'] },
+        { lineRange: '651 - 1165', category: 'Scroll To Top/Bottom, Context Menu Triggers, Dynamic Engine & Group Sticky', functions: ['handleScrollToTop', 'handleScrollToBottom', 'handleColumnContextMenu', 'handleBandContextMenu', 'handleCellContextMenu', 'handleFilterByValue', 'handleGroupContextMenu', 'computeStickyGroupIdx'] },
+        { lineRange: '1166 - 1510', category: 'Popup Scroll Lock Sync, Scroll Handler, Chunk Row Map & Imperative Handle', functions: ['useGridPopupLock', 'handleScroll', 'visibleChunksMap', 'useImperativeHandle'] },
+        { lineRange: '1511 - 2164', category: 'JSX Render Viewport, GridHeader, Suspense Lazy Modals & Export', functions: ['GridHeader', 'LazyGridFilterRow', 'GridChunkBlock', 'LazyGridFloatingToolbar', 'LazyResponsiveSortFilterModal', 'LazyColumnContextMenu', 'VirtualizedGrid'] }
       ]
     },
     {
       fileName: 'src/components/grid/GridHeader.tsx',
-      totalLines: 700,
-      description: 'Thanh tiêu đề linh hoạt 1 tầng (34px) hoặc 2 tầng (64px), tích hợp MorphSortIcon biến hình lò xo ArrowUp <-> ArrowDown theo hướng ASC/DESC, HTML5 Drag & Drop đổi thứ tự cột, drop indicator, ghim vị trí, thu gọn nhóm, tắt chuột phải STT/Chọn và context menu',
+      totalLines: 642,
+      description: 'Thanh tiêu đề linh hoạt 1 tầng (34px) hoặc 2 tầng (64px), dùng `middleElements` precomputed từ `useGridColumnLayout`, lazy-load `LazyHeaderSortMorphIcon` & `LazyHeaderBandToggleMorphIcon`, Drag & Drop & context menu',
       sections: [
-        { lineRange: '1 - 50', category: 'Imports & Header Props', functions: ['GridHeaderProps'] },
-        { lineRange: '51 - 95', category: 'Header Outer Container, Height Calculation & Theme Classes', functions: ['GridHeader outer wrapper', 'dynamic header height 34px/64px'] },
-        { lineRange: '96 - 200', category: 'HTML5 Drag & Drop Column Reordering', functions: ['handleDragStart', 'handleDragOver', 'handleDrop', 'dropIndicator'] },
-        { lineRange: '201 - 350', category: 'Khu vực ghim trái (Pinned Left Tier 1 & 2)', functions: ['renderPinnedLeftHeaders', 'tắt chuột phải STT/Chọn'] },
-        { lineRange: '351 - 550', category: 'Khu vực giữa: Cột phẳng 1 tầng hoặc Nhóm tầng 1 & Cột con tầng 2', functions: ['renderMiddleHeaders', 'onBandContextMenu', 'collapsible group toggle'] },
-        { lineRange: '551 - 700', category: 'Khu vực ghim phải (Pinned Right)', functions: ['renderPinnedRightHeaders', 'resize handle'] }
+        { lineRange: '1 - 41', category: 'Imports, Lazy Morph Primitives & Header Props', functions: ['LazyHeaderSortMorphIcon', 'LazyHeaderBandToggleMorphIcon', 'GridHeaderProps'] },
+        { lineRange: '42 - 203', category: 'Header Outer Container, Drag & Drop Column Reordering & Multi-Tier Detection', functions: ['GridHeader', 'middleElements'] },
+        { lineRange: '204 - 642', category: 'Shared Header Cell Content (`col.renderHeader()`), Pinned Left/Middle/Right Headers & Resize Handles', functions: ['renderHeaderCellContent', 'onBandContextMenu'] }
       ]
     },
     {
       fileName: 'src/components/grid/GridRow.tsx',
-      totalLines: 1008,
-      description: 'Renderer của dòng dữ liệu: gắn data-row-focused, data-row-checked và data-cell-role (stt/chk/data) cho cơ chế phân biệt dòng Focus / Chọn Kiểu A không dùng border, tích hợp hiệu ứng xuất hiện mượt mà .agv-row-enter (140ms spring cubic-bezier(0.16, 1, 0.3, 1), animationDelay theo vị trí dòng trong chunk, tự động xóa transform sau khi chạy xong để bảo toàn 100% position: sticky), hỗ trợ Group Header Row với MorphChevronIcon biến hình lò xo ChevronRight <-> ChevronDown khi đóng mở nhóm, mở/đóng với thuật toán titleColSpan Toolbar3 (không lệch cột, diff=0px, đường line ngang theme.borderBottom liền mạch, tổng sum cột số, sticky tiêu đề nhóm khi cuộn ngang, kích hoạt onGroupContextMenu chuột phải), sticky cells, highlight check/select/hover toàn dòng, in-cell editing với showPreset={false}, DateRangeCellEditor, DateCellEditor (bỏ agv-filter-datepicker, allowClear={false}, bo tròn rounded-md), TimeCellEditor và CellEditor (tích hợp preventScroll và chặn phím cuộn Lên/Xuống/PageUp/PageDown khi đang gõ)',
+      totalLines: 381,
+      description: 'Fast row renderer dùng `ColRenderMeta`, row-level event delegation, tải lười `LazyGridGroupHeaderRow` & `LazyGridInCellEditor`, sticky cells & `col.valueGetter`',
       sections: [
-        { lineRange: '1 - 60', category: 'Imports & GridRowProps', functions: ['GridRowProps', 'isCellEditable guard'] },
-        { lineRange: '61 - 114', category: 'In-Cell Text/Number Editor (Zero Autofill)', functions: ['CellEditor', 'auto-focus preventScroll', 'select-all', 'onKeyDown (Enter/Tab/Esc/Arrow/PageUp/PageDown)', 'onBlur save'] },
-        { lineRange: '115 - 180', category: 'In-Cell Date & DateRange Editors', functions: ['DateCellEditor (AdvDatePicker integration)', 'DateRangeCellEditor (AdvDateRangePicker integration)'] },
-        { lineRange: '181 - 285', category: 'In-Cell Time Editor (HH:mm) & ComboBox/LookUp Editors', functions: ['TimeCellEditor (preventScroll)', 'AdvComboBoxEdit (preventScroll)', 'AdvSearchLookUpEdit (preventScroll)'] },
-        { lineRange: '286 - 440', category: 'Row Background & Sticky Style Calculations', functions: ['GridRow wrapper', 'isRowActive', 'cellBgClasses', 'stickyStyle'] },
-        { lineRange: '441 - 575', category: 'Group Header Row Renderer (Row Grouping titleColSpan Toolbar3)', functions: ['_isGroupRow guard', 'titleColSpan dynamic calculation (Toolbar3)', 'diff 0px column alignment', 'MorphChevronIcon toggle (ChevronRight <-> ChevronDown)', 'group badge count', 'group numeric column sums', 'sticky left title', 'onGroupContextMenu contextmenu event'] },
-        { lineRange: '576 - 745', category: 'In-Cell Editing Render Delegation', functions: ['DateRangeCellEditor trigger', 'DateCellEditor trigger', 'TimeCellEditor trigger', 'CellEditor trigger'] },
-        { lineRange: '746 - 994', category: 'Cell Container JSX & Memo Equality Check', functions: ['cell render params', 'memo comparer'] }
+        { lineRange: '1 - 72', category: 'Imports, LazyGroupHeaderRow/LazyInCellEditor & Raw Value Getter', functions: ['LazyGridInCellEditor', 'LazyGridGroupHeaderRow', 'GridRowProps', 'getRawCellValue'] },
+        { lineRange: '73 - 200', category: 'GridRow Entry, Group Row Lazy Delegate & Sticky Offsets', functions: ['GridRow', 'LazyGridGroupHeaderRow'] },
+        { lineRange: '201 - 381', category: 'Cells (`colRenderMetas`, `col.valueGetter`), `<Suspense><LazyGridInCellEditor /></Suspense>` & Memo Comparator', functions: ['ColRenderMeta', 'LazyGridInCellEditor'] }
       ]
     },
     {
       fileName: 'src/components/ui/AdvDatePicker.tsx',
-      totalLines: 3821,
-      description: 'Hệ thống chọn ngày/giờ cao cấp chuẩn DevExpress: tích hợp 100% Lucide Icons, AdvDatePicker đơn lẻ, AdvDateRangePicker dải ngày kép, AdvDatePresetSelect mốc thời gian nhanh, hỗ trợ allowClear={false} ẩn dấu x, tích hợp getGridControlRadiusClass() bo tròn 6px đồng nhất hệ thống, 100% theme CSS variables, min-h 28px, điều hướng chọn năm 2017',
+      totalLines: 718,
+      description: 'Component chọn ngày/giờ đơn chuẩn PNT B2B & DevExpress (và barrel re-exports cho bộ datepicker/*): `size="md"` dùng `var(--control-height)` (36px), mặc định/sm 28px cho ô lọc, đồng bộ PNT Light/Dark CSS tokens, min-h 28px',
       sections: [
-        { lineRange: '1 - 150', category: 'Imports from Lucide & Theme Utility Functions', functions: ['Calendar', 'Clock', 'Check', 'ChevronRight', 'ChevronDown', 'getThemeClass'] },
-        { lineRange: '151 - 700', category: 'CSS Variables & Dynamic Styles Injection', functions: ['ensureDatePickerStyles', 'theme variables (Light, Dark, Bezier, E-Ink)', 'min-height 28px constraint'] },
-        { lineRange: '701 - 1400', category: 'Date Parsing & Formatting Utilities', functions: ['formatDateToYMD', 'parseDateToTimestamp', 'formatDisplayDate', 'computeCalendarCoords', 'usePopupDismiss'] },
-        { lineRange: '1401 - 2200', category: 'Preset Selection System (Mốc Thời Gian Nhanh)', functions: ['AdvDatePresetSelect', 'computePresetDateRange', 'getPresetLabel', 'PRESET_OPTIONS'] },
-        { lineRange: '2201 - 2760', category: 'DevExpress Calendar Body (Ngày / Tháng / Năm)', functions: ['AdvDevExpressCalendarBody', 'CalendarDayView', 'CalendarMonthView', 'CalendarYearView'] },
-        { lineRange: '2761 - 4020', category: 'AdvDateRangePicker Component (Dải Ngày Kép)', functions: ['AdvDateRangePicker', 'dual input bar', 'preset section on top (mb-2 border-b)', 'range selection hover', 'openCalendar(preferredState)', 'smart date swap'] },
-        { lineRange: '4021 - 4564', category: 'AdvDatePicker Component (Ngày Đơn & Giờ Phút)', functions: ['AdvDatePicker', 'single input bar', 'preset section on top', 'TimePickerBlock integration', 're-exports'] }
+        { lineRange: '1 - 150', category: 'Imports, Re-exports & Prop Types', functions: ['AdvDatePickerProps', 'getThemeClass'] },
+        { lineRange: '151 - 718', category: 'AdvDatePicker Component & Portal Calendar/Preset/Time Integration', functions: ['AdvDatePicker', 'ensureDatePickerStyles', 'computeCalendarCoords'] }
       ]
     },
     {
       fileName: 'src/components/grid/GridChunkBlock.tsx',
-      totalLines: 267,
-      description: 'Khối chứa 20 dòng ảo hóa với GPU transform translate3d, tracking isSelected & isChecked theo dữ liệu/rowKey chống trôi khi sắp xếp, React.memo comparator lọc theo phạm vi dòng của chunk cho cả checkedRowIndices, selectedRowIndex và editingCell (bỏ qua 100% các chunk không bị ảnh hưởng), forwarding editing states & onGroupContextMenu callback, forwarding emptyColKeys',
+      totalLines: 380,
+      description: 'Khối chứa 20 dòng ảo hóa GPU translate3d: dùng `ColRenderMeta`, render trực tiếp GridRow trên PC và tải lười `LazyResponsiveChunkRow` qua `<Suspense>` khi ở Tablet/Phone, bảo toàn React.memo range-aware',
       sections: [
-        { lineRange: '1 - 45', category: 'Imports & GridChunkBlockProps', functions: ['GridChunkBlockProps'] },
-        { lineRange: '46 - 105', category: 'GPU Positioning & AntiGhost Containment', functions: ['GridChunkBlock wrapper', 'translate3d offset'] },
-        { lineRange: '106 - 168', category: 'Rows Iteration via GridRow with stable key, data selection & editMode forwarding', functions: ['rows.map GridRow', 'rowKey', 'isSelected', 'isChecked', 'editMode', 'editingCell', 'onGroupContextMenu forwarding'] },
-        { lineRange: '170 - 267', category: 'Memo Comparator Optimization (Range-aware for checkedRowIndices, selectedRow & editingCell)', functions: ['chunk memo comparer with range check [startRowIndex, endRowIndex]'] }
+        { lineRange: '1 - 62', category: 'Imports, LazyResponsiveChunkRow & GridChunkBlockProps', functions: ['LazyResponsiveChunkRow', 'GridChunkBlockProps'] },
+        { lineRange: '63 - 260', category: 'GPU Positioning, PC GridRow Render & Responsive Suspense Branch', functions: ['GridChunkBlock', 'GridRow', 'LazyResponsiveChunkRow'] },
+        { lineRange: '261 - 380', category: 'Memo Comparator Optimization (Range-aware for checkedRowIndices, selectedRow & editingCell)', functions: ['chunk memo comparer with range check [startRowIndex, endRowIndex]'] }
       ]
     },
     {
       fileName: 'src/components/grid/ColumnContextMenu.tsx',
-      totalLines: 1039,
-      description: 'Menu ngữ cảnh chuột phải 4 phạm vi (Header, Band, Row/Cell, Group Header): thanh mỏng mũi tên biến hình lò xo MorphChevronIcon thu gọn/mở rộng các tùy chọn Vừa độ rộng & tác vụ sao chép/xuất ở đáy menu (mặc định ẩn, không chữ, chiều cao mỏng 18px), Row/Cell menu tinh gọn (đã xóa bỏ 2 mục Sao chép dòng & Sao chép kèm Tên cột), Smart Disable Empty Columns (tinh gọn siêu nhỏ chỉ giữ Ẩn cột rỗng & Ẩn tất cả cột rỗng), Menu Tiêu Đề Nhóm đồng bộ 100% CSS và text "Hủy nhóm cột" (chữ màu accent font-semibold, bỏ icon cọc cạch), đưa lên đầu kèm Thu gọn/Mở rộng tất cả và thanh mỏng mở rộng 3 tác vụ Sao chép/Xuất Excel, Nhóm theo cột / Hủy nhóm cột trên header, chọn công thức cho col_formula, 100% theme tokens, click outside auto-close',
+      totalLines: 1190,
+      description: 'Menu ngữ cảnh chuột phải 4 phạm vi (HEADER, BAND, GROUP, ROW): tái sử dụng `CONTEXT_MENU_TYPES` từ `./types`, tách biệt `enableColumnPinning` (Trái/Phải) và `enableCenterDock` (Giữa) qua `renderPinButtons`, tôn trọng `groupable !== false` & `hideable !== false`, click outside capture, export default cho React.lazy',
       sections: [
-        { lineRange: '1 - 120', category: 'Imports & Component State/ClickOutside & Safe Coords', functions: ['ColumnContextMenu', 'useRef', 'isAutoFitExpanded state', 'computeContextMenuCoords'] },
-        { lineRange: '121 - 380', category: 'Header Menu View (Nhóm theo cột, Pin, Công thức col_formula [TB, Tổng, Min, Max], Auto-fit đơn lựa chọn, Hide/Restore)', functions: ['renderHeaderMenu', 'Nhóm theo cột / Hủy nhóm cột', 'Pin options', 'FormulaMode selection', 'Single Auto-fit rule', 'Restore hidden'] },
-        { lineRange: '381 - 500', category: 'Band Menu View (Pin band, Auto-fit band, Hide band)', functions: ['renderBandMenu', 'Pin band left/mid/right', 'Auto-fit band cols', 'Hide entire band'] },
-        { lineRange: '501 - 584', category: 'Row/Cell Menu View (Công thức col_formula, Copy cell, Quick Filter, Copy row with headers, Scroll to top/bottom)', functions: ['renderRowMenu', 'Cell formula options', 'Copy cell value', 'Filter by value', 'ScrollToTop/Bottom'] },
-        { lineRange: '585 - 720', category: 'Group Header Menu View (Thu gọn tất cả, Mở rộng tất cả, Hủy nhóm, Sao chép bảng, Sao chép bảng kèm tên cột, Xuất Excel bảng)', functions: ['renderGroupMenu', 'handleCollapseAllGroups', 'handleExpandAllGroups', 'handleUngroup', 'handleCopyGroupTable', 'handleExportGroupExcel'] },
-        { lineRange: '721 - 890', category: 'Portal Container, Backdrop & Keyboard Listener', functions: ['context menu portal', 'fixed position styling', 'escape key listener'] }
+        { lineRange: '1 - 224', category: 'Imports, ClickOutside Capture, Safe Coords & `renderPinButtons`', functions: ['ColumnContextMenu', 'renderPinButtons', 'CONTEXT_MENU_TYPES'] },
+        { lineRange: '225 - 658', category: 'HEADER Menu Branch (Pinning Left/Right vs Center, Formula, AutoFit, Hide, Group)', functions: ['renderPinButtons', 'hideable', 'groupable'] },
+        { lineRange: '659 - 782', category: 'BAND Menu Branch (Band Pinning Left/Right vs Center, AutoFit, Hide)', functions: ['CONTEXT_MENU_TYPES.BAND', 'renderPinButtons'] },
+        { lineRange: '783 - 1190', category: 'GROUP & ROW/CELL Menu Branches, Portal Container & Default Export', functions: ['CONTEXT_MENU_TYPES.GROUP', 'CONTEXT_MENU_TYPES.ROW', 'handleCopyCell'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridFormatUtils.ts',
+      totalLines: 296,
+      description: 'Pure formatting, predicate & filter factory helpers siêu nhẹ (chỉ import `./types`, cắt đứt leak sang `AdvDatePicker`): `formatDisplayDate`, `formatGridDateValue`, `getSttColWidth`, `parseGridNumber`, `formatGridNumber`, `createColumnFilter`, `createEqualsFilter`',
+      sections: [
+        { lineRange: '1 - 104', category: 'Date Formatting & STT Width Helpers', functions: ['formatDisplayDate', 'formatGridDateValue', 'getSttColWidth'] },
+        { lineRange: '105 - 296', category: 'Number Format/Parse, Alignment Classes, Predicates & Filter Factories', functions: ['parseGridNumber', 'formatGridNumber', 'getAlignTextClass', 'isNoInputFilterOp', 'isSelectionColumn', 'getColumnFilterType', 'getDefaultFilterOpForColumn', 'createColumnFilter', 'createEqualsFilter'] }
       ]
     },
     {
       fileName: 'src/components/grid/gridUtils.ts',
-      totalLines: 852,
-      description: 'Bộ công cụ đo Canvas Auto-Fit, sao chép Clipboard an toàn, tính toán tọa độ Context Menu và động cơ định dạng số chuẩn tài chính #,###.## (số âm bỏ trong ngoặc đơn (1.000)), parseGridNumber nhận diện số âm ngoặc đơn và chuẩn chấm hàng nghìn (khắc phục lỗi 1k -> 1.000)',
+      totalLines: 42,
+      description: 'Barrel siêu nhẹ re-export `./gridFormatUtils`, `./gridFilterEngine`, `./gridAutoFitUtils`, `./gridClipboardUtils`, `./gridSelectionUtils` giữ tương thích ngược 100%',
       sections: [
-        { lineRange: '1 - 22', category: 'Canvas Text Width Measurement', functions: ['measureTextWidth', 'offscreen canvas singleton'] },
-        { lineRange: '23 - 70', category: 'Auto-Fit Column Width Engine', functions: ['calcColAutoFitWidth', '100-row sampling', 'minWidth/maxWidth clamping', 'Map & object cell resilience'] },
-        { lineRange: '71 - 105', category: 'Safe Clipboard Copier', functions: ['copyTextToClipboard', 'navigator.clipboard', 'textarea fallback'] },
-        { lineRange: '106 - 169', category: 'Context Menu Safe Coordinates Calculation', functions: ['computeContextMenuCoords', 'boundary overflow clamping'] },
-        { lineRange: '170 - 245', category: 'Vietnamese Accounting Number Parsing & Formatting Engine', functions: ['parseGridNumber', 'formatGridNumber', 'accounting negative parentheses (1.000)', 'dot thousand separator', 'comma decimal separator'] },
-        { lineRange: '246 - 450', category: 'Alignments & Filter Operator Helpers', functions: ['ALIGN_TEXT_CLASSES', 'ALIGN_JUSTIFY_CLASSES', 'isNoInputFilterOp', 'isBetweenFilterOp', 'createColumnFilter'] },
-        { lineRange: '451 - 852', category: 'Row Sorting & Filter Match Engine', functions: ['matchFilterValue', 'compareGridRows', 'getRowValueForSortGeneric', 'splitDateRange', 'parseSingleDateTimestamp'] }
+        { lineRange: '1 - 42', category: 'Pure Backward-Compatible Re-exports', functions: ['gridFormatUtils', 'gridFilterEngine', 'gridAutoFitUtils', 'gridClipboardUtils', 'gridSelectionUtils'] }
       ]
     },
     {
       fileName: 'src/components/grid/smartNumberUtils.ts',
-      totalLines: 240,
-      description: 'Bộ công cụ số thông minh: xử lý phím tắt ghi gọn (1k, 100k, 1tr, 1b, t, ty, tỷ), phân tích khoảng số (.., /, -, ~) và bộ lọc phím bấm chặn chữ cái rác',
+      totalLines: 232,
+      description: 'Bộ công cụ số thông minh theo quy ước k x1000, m/tr x1000000, b/ty x1000000000; phân tích khoảng số (.., /, -, ~) và bộ lọc phím bấm chặn chữ cái rác',
       sections: [
-        { lineRange: '1 - 50', category: 'Shortcuts Regex & Expansion Engine', functions: ['NUMERIC_SHORTCUT_REGEX', 'expandAllShortcuts', 'formatNumberWithCommas'] },
-        { lineRange: '51 - 168', category: 'Smart Numeric Range Parser', functions: ['cleanNumericInput', 'parseSmartNumericRange'] },
-        { lineRange: '169 - 213', category: 'Smart Numeric Input Formatter', functions: ['formatSmartNumericInput'] },
-        { lineRange: '214 - 240', category: 'Strict Numeric Keydown Filter', functions: ['handleNumericKeyDown'] }
+        { lineRange: '1 - 52', category: 'Shortcuts Regex & Expansion Engine (k, m, tr, b, ty)', functions: ['NUMERIC_SHORTCUT_REGEX', 'expandAllShortcuts', 'formatNumberWithCommas'] },
+        { lineRange: '53 - 158', category: 'Smart Numeric Range Parser', functions: ['cleanNumericInput', 'parseSmartNumericRange'] },
+        { lineRange: '159 - 206', category: 'Smart Numeric Input Formatter', functions: ['formatSmartInputText'] },
+        { lineRange: '207 - 232', category: 'Strict Numeric Keydown Filter', functions: ['handleNumericKeyDown'] }
+      ]
+    },
+    {
+      fileName: 'src/components/ui/MorphCheckbox.tsx',
+      totalLines: 132,
+      description: 'Control Checkbox Morph Line 3 trạng thái thuần React + SVG CSS-keyframe (`viewBox="0 0 13 10"`, hitbox >= 28px), 0 dependency `morphicons`/`lucide`',
+      sections: [
+        { lineRange: '1 - 32', category: 'Morph Line SVG Paths & Keyframe Map', functions: ['MORPH_LINE_PATHS', 'MorphCheckboxProps'] },
+        { lineRange: '33 - 132', category: 'MorphCheckbox Component', functions: ['MorphCheckbox'] }
       ]
     },
     {
       fileName: 'src/components/ui/MorphIcons.tsx',
-      totalLines: 199,
-      description: 'Bộ điều khiển biểu tượng biến hình lò xo (morphicons & Lucide)',
+      totalLines: 104,
+      description: 'Bộ biểu tượng biến hình (`MorphIcon`, `MorphActionIcon`, `MorphSortIcon`, `MorphChevronIcon` + 6 Lucide icon thiết yếu; re-export `MorphCheckbox`)',
       sections: [
-        { lineRange: '1 - 34', category: 'Imports & Base Wrapper', functions: ['MorphIcon'] },
-        { lineRange: '35 - 90', category: 'MorphCheckbox (Square <-> SquareCheck <-> SquareMinus)', functions: ['MorphCheckbox single-layer spring morphing'] },
-        { lineRange: '91 - 115', category: 'MorphActionIcon', functions: ['MorphActionIcon'] },
-        { lineRange: '116 - 138', category: 'MorphSortIcon (Header Sort)', functions: ['MorphSortIcon (ArrowUp <-> ArrowDown snappy)'] },
-        { lineRange: '139 - 165', category: 'MorphChevronIcon (Group Row & Menu Toggle)', functions: ['MorphChevronIcon (ChevronRight <-> ChevronDown hoặc ChevronDown <-> ChevronUp snappy)'] },
-        { lineRange: '166 - 199', category: 'Lucide Icon Exports', functions: ['Check', 'X', 'ChevronLeft', 'Moon', 'Sun', 'Search', 'Filter', 'Calendar', 'Clock', 'ChevronRight', 'ChevronDown', 'ChevronUp'] }
+        { lineRange: '1 - 39', category: 'Imports, Re-exports (MorphIcon, MorphCheckbox) & MorphActionIcon', functions: ['MorphIcon', 'MorphCheckbox', 'MorphActionIcon'] },
+        { lineRange: '40 - 62', category: 'MorphSortIcon (Header Sort ArrowUp <-> ArrowDown snappy)', functions: ['MorphSortIcon'] },
+        { lineRange: '63 - 104', category: 'MorphChevronIcon & 6 Trimmed Lucide Icon Exports', functions: ['MorphChevronIcon', 'ChevronLeft', 'ChevronRight', 'ChevronDown', 'ChevronUp', 'ArrowUp', 'ArrowDown'] }
       ]
     },
     {
@@ -818,15 +1061,300 @@ export const CODE_DICTIONARY = {
     },
     {
       fileName: 'src/components/grid/GridFloatingToolbar.tsx',
-      totalLines: 662,
-      description: 'Thanh công cụ nổi 6 nút Toolbar3, tích hợp Shared Sliding Tooltip lướt tọa độ Y với spring physics, giữ nguyên mở rộng không thu gọn khi đang di chuyển (is-dragging), computePopupGeometry giới hạn chiều cao & vị trí 4 popup nằm gọn trong khung Grid, kéo thả dọc kẹp biên, phím tắt Ctrl+F, badge đếm cột dữ liệu',
+      totalLines: 667,
+      description: 'Thanh công cụ nổi cạnh trái (`floatingToolbar.css`): lazy-load toàn bộ 4 popup (`AdvQuickFilterFlyout`, `AdvMultiSortPopup`, `AdvGridQueryBuilderModal`, `AdvColumnChooserModal`) kèm hover preload, cô lập vị trí Y theo `gridId`, đồng bộ `onActivePopupChange`, `computePopupGeometry` & scroll lock',
       sections: [
-        { lineRange: '1 - 85', category: 'Imports & Toolbar Props Type', functions: ['GridFloatingToolbarProps', 'isDraggingToolbar state'] },
-        { lineRange: '86 - 150', category: 'Data Columns Filter & Atomic Group Badge Counts', functions: ['dataColumns', 'totalChooserItemCount', 'visibleChooserItemCount'] },
-        { lineRange: '151 - 250', category: 'computePopupGeometry & Vertical Drag Clamping', functions: ['computePopupGeometry', 'window resize listener', 'handleDragStart'] },
-        { lineRange: '251 - 325', category: 'Shared Sliding Tooltip System (Spring Physics)', functions: ['tooltipState', 'handleShowTooltip', 'handleHideTooltip', 'relativeTop clamping'] },
-        { lineRange: '326 - 520', category: 'Floating Bar Buttons with Sliding Tooltips (QuickFilter, Query, Chooser, Settings, Export, Excel)', functions: ['toolbar buttons JSX', 'count badges', 'sliding tooltip pill'] },
-        { lineRange: '521 - 662', category: 'Portals / Popups Renderer Bounded in Grid', functions: ['AdvQuickFilterFlyout', 'AdvGridQueryBuilderModal', 'AdvColumnChooserModal', 'AdvGridSettingsPopup'] }
+        { lineRange: '1 - 120', category: 'Imports (`floatingToolbar.css` + Lazy Popups), Props & onActivePopupChange Sync', functions: ['GridFloatingToolbar', 'LazyQuickFilterFlyout', 'LazyMultiSortPopup', 'onActivePopupChange'] },
+        { lineRange: '121 - 270', category: 'Data Columns Filter, Atomic Group Badge Counts & computePopupGeometry', functions: ['dataColumns', 'computePopupGeometry', 'handleDragStart'] },
+        { lineRange: '271 - 425', category: 'Drag Clamping & Keyboard Shortcuts (Ctrl+F, Alt+Shift+F, Escape)', functions: ['useEffect keydown'] },
+        { lineRange: '426 - 667', category: 'Floating Bar Buttons & Lazy Portals / Popups Renderer Bounded in Grid', functions: ['AdvQuickFilterFlyout', 'AdvMultiSortPopup', 'AdvGridQueryBuilderModal', 'AdvColumnChooserModal'] }
+      ]
+    },
+    {
+      fileName: 'src/components/ui/AdvDrawer.tsx',
+      totalLines: 598,
+      description: 'Bottom Sheet Drawer chuẩn shadcn/ui Base UI & kích thước tối đa D:\\Dự án\\b2b-pnt: Phone w-full max-w-none, Tablet md:max-w-lg (512px) md:mx-auto, max-h 90dvh, z-[10000], nền đặc var(--popup-background), CHILD_POPUP_SELECTOR + hadChildPopupOnDownRef chống đóng nhầm Drawer khi tắt lịch con, mở khóa cuộn Grid tức thì khi đóng',
+      sections: [
+        { lineRange: '1 - 170', category: 'Drawer Context, Lifecycle & Escape/Body Lock', functions: ['Drawer', 'DrawerProps', 'CHILD_POPUP_SELECTOR'] },
+        { lineRange: '171 - 262', category: 'DrawerPortal & DrawerOverlay (z-[10000] + hadChildPopupOnDownRef)', functions: ['DrawerPortal', 'DrawerOverlay'] },
+        { lineRange: '263 - 464', category: 'DrawerContent, Downward Swipe-to-Dismiss & Outside Click Guard', functions: ['DrawerContent', 'w-full max-w-none md:max-w-lg', 'max-h-[min(90dvh,calc(100dvh-var(--safe-area-top,0px)))]'] },
+        { lineRange: '465 - 598', category: 'DrawerSwipeHandle, Header, Title, Description, Body, Footer & Close', functions: ['DrawerSwipeHandle', 'DrawerHeader', 'DrawerTitle', 'DrawerDescription', 'DrawerBody', 'DrawerFooter', 'DrawerClose'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/responsive/ResponsiveSortFilterModal.tsx',
+      totalLines: 1441,
+      description: 'Drawer Lọc & Sắp xếp cạnh dưới (`bottom-0`) tối ưu Mobile chia 2 phân đoạn (`Tìm kiếm & Lọc` | `Sắp xếp`): đồng bộ 100% toán tử PC theo dạng cột (`text`, `number`, `date`, `time`) qua thanh icon DevExtreme 1 hàng chia đều (`FilterOpIcon`, 0 cuộn ngang, 0 dropdown con, 0 tooltip) + `Một giá trị` / `Nhiều giá trị` (`MobileColDraft` độc lập từng cột) + Chip chọn phạm vi (`min-h-[36px]`), danh sách dọc các cột `min-h-[40px]` chạm chọn/bỏ, `Chiều sắp xếp` và footer 2 cột `h-11` / `md:h-9`',
+      sections: [
+        { lineRange: '1 - 719', category: 'Props, Multi-Value Token/Range Parsers, Per-Column Draft State (`MobileColDraft`), Operator Sync (`getAllowedFilterOpsForColumn`) & Apply/Reset Builders', functions: ['parseMultiValueTokens', 'splitRangePair', 'hasActiveColFilter', 'ResponsiveSortFilterModalProps', 'buildDraftForColumn', 'buildFilterValueFromDraft', 'handleApply', 'handleReset'] },
+        { lineRange: '720 - 1441', category: 'AdvDrawer Header Tablist, 1-Row Icon-Only Operator Radiogroup, Type-Aware Single/Multi Inputs (`text`/`number`/`date`/`time`), Scope Chips, Sort Listbox & Footer', functions: ['ResponsiveSortFilterModal', 'role="tablist"', 'role="radiogroup" (FilterOpIcon)', 'SmartNumberFilterInput', 'NumberRangeFilterInput', 'AdvDatePicker', 'AdvDateRangePicker', 'TimeFilterInput', 'TimeRangeFilterInput'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/TwelveMonthChartCell.tsx',
+      totalLines: 427,
+      description: 'Biểu đồ 12 tháng tích hợp vào `src/components/grid/` (module nội bộ của grid): giữ nguyên chế độ phân tích `FORMULA_MODES` / `MONTH_ANALYTICS_MODES` / `FORMULA_CYCLE` / `FORMULA_META`, tooltip đồng bộ bóng đổ `var(--popup-shadow)` và re-export qua `src/components/grid/index.ts`',
+      sections: [
+        { lineRange: '1 - 109', category: 'Types, Formula Constants & Exports (`FORMULA_MODES`, `MONTH_ANALYTICS_MODES`)', functions: ['FORMULA_CYCLE', 'FORMULA_META', 'FORMULA_MODES', 'MONTH_ANALYTICS_MODES'] },
+        { lineRange: '110 - 427', category: 'TwelveMonthChartCell Component & var(--popup-shadow) Tooltip', functions: ['TwelveMonthChartCell'] }
+      ]
+    },
+    {
+      fileName: 'src/pages/UiPrimitivesPage.tsx',
+      totalLines: 144,
+      description: 'Trang `Thử nghiệm UI` (tab `ui-test`, truy cập trực tiếp không cần đăng nhập B2B) thử nghiệm Nhóm B (`AdvTooltip`, `AdvHoverCard`, `AdvPopover` + `AdvSelect` lồng nhau) theo đúng Mockup đã duyệt, `min-h-[28px]`, 100% token `var(--agv-*)`',
+      sections: [
+        { lineRange: '1 - 32', category: 'Imports, Options & DemoCard Wrapper', functions: ['DemoCard'] },
+        { lineRange: '33 - 144', category: 'UiPrimitivesPage Component Render (3 Cards: AdvPopover+AdvSelect, AdvHoverCard, AdvTooltip)', functions: ['UiPrimitivesPage', 'AdvPopover', 'AdvSelect', 'AdvHoverCard', 'AdvTooltip'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/modules/index.ts',
+      totalLines: 156,
+      description: 'Module hóa kiểu AG Grid React: 19 hằng số GridModule, 3 preset (`BasicViewModules`, `StandardGridModules`, `AllEnterpriseModules`), `toModuleIdSet`, `hasGridModule`',
+      sections: [
+        { lineRange: '1 - 33', category: 'GRID_MODULE_IDS Enum & Core Types', functions: ['GRID_MODULE_IDS', 'GridModuleId', 'GridModule'] },
+        { lineRange: '34 - 87', category: '19 GridModule Definitions (RowNumber, ColumnPinning, CenterDock, RowPinning, ResponsiveLayout...)', functions: ['RowNumberModule', 'ColumnPinningModule', 'CenterDockModule', 'RowPinningModule', 'ResponsiveLayoutModule'] },
+        { lineRange: '88 - 156', category: 'Presets & Module Resolution Helpers', functions: ['BasicViewModules', 'StandardGridModules', 'AllEnterpriseModules', 'toModuleIdSet', 'hasGridModule'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/columns/columnTypes.ts',
+      totalLines: 136,
+      description: 'Types hợp nhất TanStack Table v8 + AG Grid (`createColumnHelper`, `defaultColDef`, `PaginationConfig` hỗ trợ `total`/`serverTotal`, nested group columns)',
+      sections: [
+        { lineRange: '1 - 136', category: 'Column Input, DefaultColDef & PaginationConfig Types', functions: ['ColumnHelperAccessorColumn', 'ColumnHelperGroupColumn', 'DefaultColDef', 'PaginationConfig'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/columns/createColumnHelper.ts',
+      totalLines: 49,
+      description: 'Helper tạo định nghĩa cột typed kiểu TanStack Table v8 (`createColumnHelper<TData>()`) với `.accessor()`, `.display()`, `.group()`',
+      sections: [
+        { lineRange: '1 - 26', category: 'Imports & ColumnHelper Interface', functions: ['ColumnHelper'] },
+        { lineRange: '27 - 49', category: 'createColumnHelper Implementation', functions: ['createColumnHelper'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/columns/normalizeColumns.ts',
+      totalLines: 241,
+      description: 'Chuẩn hóa cột từ ColumnHelper / ColumnDef / nhóm lồng + `defaultColDef` thành `flatColumns` & `columnGroups`, tự gắn `renderHeader`, `valueGetter`, `renderCell` và tách gate ghim Trái/Phải vs Giữa',
+      sections: [
+        { lineRange: '1 - 158', category: 'DefaultColDef Merge, Accessor/ValueGetter & Pin Isolation Helpers', functions: ['ColumnNormalizationResult'] },
+        { lineRange: '159 - 241', category: 'normalizeGridColumns Flatten & Band Group Builder', functions: ['normalizeGridColumns'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridDateFilterCell.tsx',
+      totalLines: 93,
+      description: 'Ô lọc ngày (`AdvDatePicker`) tách riêng để `GridFilterRow` lazy-load qua `React.lazy` chỉ khi bảng có cột DATE',
+      sections: [
+        { lineRange: '1 - 93', category: 'GridDateFilterCell Component', functions: ['GridDateFilterCell'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridMorphPrimitives.tsx',
+      totalLines: 42,
+      description: 'Cầu nối lazy-load `morphicons` cho `GridHeader` (`HeaderSortMorphIcon`, `HeaderBandToggleMorphIcon`) và `GridRow` (`RowGroupChevronMorphIcon`)',
+      sections: [
+        { lineRange: '1 - 42', category: 'Lazy Morph Bridge Components', functions: ['HeaderSortMorphIcon', 'HeaderBandToggleMorphIcon', 'RowGroupChevronMorphIcon'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/floating/queryRuleCheck.ts',
+      totalLines: 45,
+      description: 'Helpers siêu nhẹ kiểm tra active query rules tách khỏi `queryUtils.ts`',
+      sections: [
+        { lineRange: '1 - 45', category: 'isRuleActive, hasActiveQueryRules, countActiveQueryRules', functions: ['isRuleActive', 'hasActiveQueryRules', 'countActiveQueryRules'] }
+      ]
+    },
+    {
+      fileName: 'src/components/ui/AdvSearchLookUpPopup.tsx',
+      totalLines: 449,
+      description: 'Popup Portal danh mục `AdvSearchLookUpEdit` tách chunk lazy (`React.lazy` + preload khi hover/focus): filter row, menu toán tử, bảng `table-fixed` + `useVirtualList`, `<MorphCheckbox />`, `isKeyboardNav`',
+      sections: [
+        { lineRange: '1 - 449', category: 'AdvSearchLookUpPopup Portal Table & Filter Row & useVirtualList', functions: ['AdvSearchLookUpPopup'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridFeatures.ts',
+      totalLines: 340,
+      description: 'Single source of truth giải quyết `modules?: readonly GridModule[]` (mặc định `BasicViewModules`), `variant="full" | "basic"` và từng cờ `enable*` độc lập',
+      sections: [
+        { lineRange: '1 - 106', category: 'GRID_VARIANTS, GridFeatureProps & ResolvedGridFeatures Types', functions: ['GRID_VARIANTS', 'GridFeatureProps', 'ResolvedGridFeatures'] },
+        { lineRange: '107 - 340', category: 'resolveGridFeatures Module + Override Resolver', functions: ['resolveGridFeatures'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/editors/GridInCellEditor.tsx',
+      totalLines: 497,
+      description: 'Chunk lazy chứa toàn bộ bộ sửa ô in-cell tách khỏi `GridRow.tsx` (`CellEditor`, `DateCellEditor`, `DateRangeCellEditor`, `TimeCellEditor`, `GridInCellEditor`), chỉ tải khi bật `CellEditingModule`',
+      sections: [
+        { lineRange: '1 - 196', category: 'Text/Number & Date/DateRange In-Cell Editors', functions: ['CellEditor', 'DateCellEditor', 'DateRangeCellEditor'] },
+        { lineRange: '197 - 354', category: 'TimeCellEditor (HH:mm)', functions: ['TimeCellEditor'] },
+        { lineRange: '355 - 497', category: 'GridInCellEditor Router Component (ComboBox/LookUp/Date/Time/Text)', functions: ['GridInCellEditor'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/responsive/ResponsiveChunkRow.tsx',
+      totalLines: 88,
+      description: 'Chunk lazy bridge render `GridTabletRow` / `GridPhoneCard` tách khỏi `GridChunkBlock.tsx` để bảng PC read-only không tải code responsive',
+      sections: [
+        { lineRange: '1 - 25', category: 'Imports & ResponsiveChunkRowProps', functions: ['ResponsiveChunkRowProps'] },
+        { lineRange: '26 - 88', category: 'ResponsiveChunkRow Component', functions: ['ResponsiveChunkRow'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/hooks/useGridColumnLayout.ts',
+      totalLines: 660,
+      description: 'Custom hook tách khỏi `VirtualizedGrid.tsx`: quản lý độ rộng/ghim/band/ẩn cột, `middleElements`, bỏ qua đo vị trí tự nhiên & `ResizeObserver` khi không có cột center-pinned',
+      sections: [
+        { lineRange: '1 - 40', category: 'Types & Helper Definitions', functions: ['GridMiddleElement'] },
+        { lineRange: '41 - 660', category: 'useGridColumnLayout Width/Pin/Hide/Offset State & Center-Dock Observer', functions: ['useGridColumnLayout', 'setColWidth', 'setMultipleColWidths', 'effectiveColumns', 'middleElements'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/hooks/useGridPopupLock.ts',
+      totalLines: 200,
+      description: 'Custom hook khóa cuộn & chặn tương tác Grid tách khỏi `VirtualizedGrid.tsx`, dùng `isAnyPopupActive` zero-allocation qua `document.body.children`',
+      sections: [
+        { lineRange: '1 - 24', category: 'isAnyPopupActive Zero-Alloc Guard', functions: ['isAnyPopupActive'] },
+        { lineRange: '25 - 200', category: 'useGridPopupLock Wheel/TouchMove & Global Interaction Listeners', functions: ['useGridPopupLock'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/hooks/columnResizeEngine.ts',
+      totalLines: 313,
+      description: 'Engine DOM 120fps Viewport-Culled cho thao tác kéo giãn cột, nạp lười khi pointerdown từ `useColumnResize.ts`',
+      sections: [
+        { lineRange: '1 - 313', category: 'Viewport-Culled Resize Session Engine', functions: ['startColumnResizeSession'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/hooks/sortFlipEngine.ts',
+      totalLines: 177,
+      description: 'Engine FLIP Sort Animation 300ms nạp lười từ `useGridSortFlipAnimation.ts`',
+      sections: [
+        { lineRange: '1 - 73', category: 'FLIP Delta Calculation', functions: ['computeSortRowFlipState'] },
+        { lineRange: '74 - 177', category: 'GPU FLIP Animation Runner', functions: ['runSortFlipAnimation'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridSimpleFilter.ts',
+      totalLines: 148,
+      description: 'Động cơ lọc nhanh đồng bộ cho text/equals & router kiểm tra khi nào cần tải lười `gridFilterEngine.ts`',
+      sections: [
+        { lineRange: '1 - 37', category: 'needsFullFilterEngine Predicate', functions: ['needsFullFilterEngine'] },
+        { lineRange: '38 - 148', category: 'matchSimpleFilterSync Fast-Path', functions: ['matchSimpleFilterSync'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridFilterEngine.ts',
+      totalLines: 505,
+      description: 'Engine lọc nâng cao (date/time/number/multiValues/multiRanges) tách lazy khỏi `DataGrid`',
+      sections: [
+        { lineRange: '1 - 82', category: 'Date/Time/Range Parsers', functions: ['gridFilterEngine'] },
+        { lineRange: '83 - 505', category: 'Full matchFilterValue Engine', functions: ['matchFilterValue'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridGroupingEngine.ts',
+      totalLines: 191,
+      description: 'Engine gom nhóm dòng & copy bảng nhóm tách lazy khỏi `DataGrid`/`VirtualizedGrid`',
+      sections: [
+        { lineRange: '1 - 126', category: 'Group Model Builder', functions: ['buildGroupedDisplayModel'] },
+        { lineRange: '127 - 191', category: 'Clipboard & Sticky Group Top Index', functions: ['copyGroupTableToClipboard', 'computeStickyGroupIndexAtTop'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridAutoFitUtils.ts',
+      totalLines: 113,
+      description: 'Tiện ích đo Canvas Text Width & Auto-Fit tách lazy khỏi `gridUtils.ts`',
+      sections: [
+        { lineRange: '1 - 113', category: 'measureTextWidth & calcColAutoFitWidth', functions: ['measureTextWidth', 'calcColAutoFitWidth'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridClipboardUtils.ts',
+      totalLines: 73,
+      description: 'Tiện ích tọa độ Menu ngữ cảnh & Clipboard tách lazy khỏi `gridUtils.ts`',
+      sections: [
+        { lineRange: '1 - 73', category: 'computeContextMenuCoords & copyTextToClipboard', functions: ['computeContextMenuCoords', 'copyTextToClipboard'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/gridSelectionUtils.ts',
+      totalLines: 106,
+      description: 'Tiện ích chọn hàng loạt theo tập đã lọc tách lazy khỏi `gridUtils.ts`',
+      sections: [
+        { lineRange: '1 - 106', category: 'computeFilteredSelectionState & toggleFilteredRowsSelection', functions: ['computeFilteredSelectionState', 'toggleFilteredRowsSelection'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/colRenderMeta.ts',
+      totalLines: 186,
+      description: 'Tính sẵn metadata cột sticky/divider/align dùng chung cho `GridChunkBlock` và `GridRow`',
+      sections: [
+        { lineRange: '1 - 186', category: 'buildColRenderMetas', functions: ['buildColRenderMetas'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridSelectionCheckbox.tsx',
+      totalLines: 23,
+      description: 'Checkbox chọn dòng siêu nhẹ tách `MorphCheckbox` khỏi cold bundle của `DataGrid` và `GridFilterRow`',
+      sections: [
+        { lineRange: '1 - 23', category: 'GridSelectionCheckbox', functions: ['GridSelectionCheckbox'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridGroupHeaderRow.tsx',
+      totalLines: 267,
+      description: 'Component dòng tiêu đề nhóm tách lazy qua `React.lazy` khỏi `GridRow.tsx`',
+      sections: [
+        { lineRange: '1 - 267', category: 'GridGroupHeaderRow Component', functions: ['GridGroupHeaderRow'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridFilterRow.tsx',
+      totalLines: 913,
+      description: 'Dòng lọc trực tiếp sticky (`./filterRow.css`): lazy-load toàn bộ input đặc thù (Date, Time, SmartNumber, MultiFilter, CriteriaSummary)',
+      sections: [
+        { lineRange: '1 - 66', category: 'Lazy Imports (GridDateFilterCell, GridTimeFilterInputs, GridSmartNumberInputs, Popups)', functions: ['LazyNumberRangeFilterInput', 'LazySmartNumberFilterInput'] },
+        { lineRange: '67 - 913', category: 'GridFilterRow Component, Portal Operator Menu & Suspense Inputs', functions: ['GridFilterRow', 'GridSelectionCheckbox'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridTimeFilterInputs.tsx',
+      totalLines: 170,
+      description: 'Ô lọc giờ `TimeFilterInput` & dải giờ `TimeRangeFilterInput` tách `React.lazy` khỏi `GridFilterRow.tsx`',
+      sections: [
+        { lineRange: '1 - 107', category: 'TimeRangeFilterInput', functions: ['TimeRangeFilterInput'] },
+        { lineRange: '108 - 170', category: 'TimeFilterInput', functions: ['TimeFilterInput'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/GridSmartNumberInputs.tsx',
+      totalLines: 266,
+      description: 'Ô lọc số thông minh `SmartNumberFilterInput` & dải số `NumberRangeFilterInput` tách `React.lazy` khỏi `GridFilterRow.tsx`',
+      sections: [
+        { lineRange: '1 - 164', category: 'Types & NumberRangeFilterInput', functions: ['NumberRangeFilterInput'] },
+        { lineRange: '165 - 266', category: 'SmartNumberFilterInput', functions: ['SmartNumberFilterInput'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/responsive/responsiveLayoutEngine.ts',
+      totalLines: 127,
+      description: 'Engine `ResizeObserver` & Hysteresis +-16px cho Responsive Layout Mode, tải lười từ `useGridLayoutMode.ts`',
+      sections: [
+        { lineRange: '1 - 127', category: 'GRID_BREAKPOINTS, Hysteresis & ResizeObserver Attachment', functions: ['GRID_BREAKPOINTS', 'resolveActiveModeWithHysteresis', 'getInitialGridMode', 'attachResponsiveLayoutObserver'] }
+      ]
+    },
+    {
+      fileName: 'src/components/grid/responsive/GridResponsiveHeader.tsx',
+      totalLines: 73,
+      description: 'Header responsive hợp nhất Tablet/Phone theo chuẩn theme CSS variables',
+      sections: [
+        { lineRange: '1 - 73', category: 'GridResponsiveHeader Component', functions: ['GridResponsiveHeader'] }
       ]
     }
   ]

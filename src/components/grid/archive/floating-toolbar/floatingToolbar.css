@@ -1,0 +1,408 @@
+/* ==============================================================================
+   PINNED FLOATING TOOLBAR (LEFT-DOCKED) - THUỘC VỀ GRID, GIỚI HẠN TRONG GRID
+   ============================================================================== */
+.agv-floating-toolbar {
+  position: absolute;
+  left: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 10px;
+  min-width: 10px;
+  padding: 6px 0;
+  overflow: hidden;
+  background-color: var(--agv-accent) !important;
+  border: 1px solid var(--agv-accent) !important;
+  border-left: none !important;
+  border-radius: 0 8px 8px 0;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  opacity: 0.35;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  transition:
+    width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.25s ease,
+    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width, background-color, border-color, opacity, top;
+}
+
+.agv-floating-toolbar::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  right: -14px;
+  left: auto;
+  width: 14px;
+  cursor: pointer;
+}
+
+.agv-floating-toolbar::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.agv-floating-toolbar .agv-float-toolbar-btn,
+.agv-floating-toolbar .agv-float-toolbar-divider,
+.agv-floating-toolbar .agv-floating-search-wrap,
+.agv-floating-toolbar .agv-float-toolbar-handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  flex-shrink: 0;
+}
+
+.agv-floating-toolbar:hover,
+.agv-floating-toolbar.is-expanded,
+.agv-floating-toolbar.is-dragging {
+  width: 38px !important;
+  min-width: 38px !important;
+  padding: 6px 4px;
+  opacity: 1 !important;
+  overflow: visible;
+  background-color: var(--agv-bg-control, var(--agv-bg-root)) !important;
+  border: 1px solid var(--agv-border) !important;
+  border-left: none !important;
+  box-shadow: 0 4px 16px var(--agv-shadow-pinned);
+  transition:
+    background-color 0s,
+    border-color 0s,
+    opacity 0s,
+    width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.22s ease;
+}
+
+.agv-floating-toolbar:hover::after,
+.agv-floating-toolbar.is-expanded::after,
+.agv-floating-toolbar.is-dragging::after {
+  opacity: 0 !important;
+  transition: opacity 0s !important;
+}
+
+.agv-floating-toolbar:hover .agv-float-toolbar-btn,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-btn,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-btn,
+.agv-floating-toolbar:hover .agv-float-toolbar-divider,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-divider,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-divider,
+.agv-floating-toolbar:hover .agv-floating-search-wrap,
+.agv-floating-toolbar.is-expanded .agv-floating-search-wrap,
+.agv-floating-toolbar.is-dragging .agv-floating-search-wrap,
+.agv-floating-toolbar:hover .agv-float-toolbar-handle,
+.agv-floating-toolbar.is-expanded .agv-float-toolbar-handle,
+.agv-floating-toolbar.is-dragging .agv-float-toolbar-handle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: opacity 0.1s ease;
+}
+
+.agv-float-toolbar-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 12px;
+  cursor: grab;
+  touch-action: none;
+  opacity: 0.6;
+}
+
+.agv-float-toolbar-handle:hover {
+  opacity: 1;
+}
+
+.agv-float-toolbar-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+.agv-float-toolbar-divider {
+  width: 18px;
+  height: 1px;
+  background-color: var(--agv-border);
+  margin: 1px 0;
+}
+
+.agv-float-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--agv-text-main);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.agv-float-toolbar-btn:hover {
+  background-color: var(--agv-bg-item-hover);
+  border-color: var(--agv-border);
+  color: var(--agv-accent);
+}
+
+.agv-float-toolbar-btn:active {
+  background-color: var(--agv-bg-item-active);
+}
+
+.agv-float-toolbar-btn:focus-visible {
+  outline: none;
+  border-color: var(--brand, var(--agv-accent));
+  box-shadow: 0 0 0 1px var(--agv-bg-control, var(--background)), 0 0 0 3px var(--ring);
+}
+
+.agv-float-toolbar-btn.is-active,
+.agv-float-toolbar-btn.is-active:hover {
+  background-color: var(--agv-accent) !important;
+  border: none !important;
+  color: var(--agv-accent-text, #ffffff) !important;
+  opacity: 1 !important;
+}
+
+.agv-float-toolbar-btn.is-active svg {
+  color: var(--agv-accent-text, #ffffff) !important;
+  stroke: currentColor !important;
+}
+
+.agv-float-dot-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--agv-accent);
+  box-shadow: 0 0 0 1px var(--agv-bg-control, #ffffff);
+}
+
+.agv-float-toolbar-btn.is-active .agv-float-dot-badge {
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  box-shadow: 0 0 0 1px var(--agv-accent);
+}
+
+.agv-float-count-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  background-color: var(--agv-accent);
+  color: var(--agv-accent-text, #ffffff);
+  pointer-events: none;
+}
+
+.agv-float-toolbar-btn.is-active .agv-float-count-badge {
+  background-color: var(--agv-accent-text, #ffffff) !important;
+  color: var(--agv-accent) !important;
+}
+
+/* ==============================================================================
+   POPUP 1: QUICK SEARCH FLYOUT
+   ============================================================================== */
+.agv-float-search-flyout:focus-within {
+  outline: none;
+  border-color: var(--brand, var(--agv-accent)) !important;
+  box-shadow: var(--popup-shadow), inset 0 0 0 1px var(--brand, var(--agv-accent)) !important;
+}
+
+.agv-float-search-flyout {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background-color: var(--popup-background) !important;
+  border: 1px solid var(--brand, var(--agv-accent)) !important;
+  border-radius: 6px;
+  padding: 2px 6px;
+  box-shadow: var(--popup-shadow) !important;
+  width: 280px;
+  min-height: 32px;
+  box-sizing: border-box;
+  animation: agv-slide-right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1210;
+}
+
+@keyframes agv-slide-left {
+  from {
+    opacity: 0;
+    transform: translate(10px, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+}
+
+@keyframes agv-slide-right {
+  from {
+    opacity: 0;
+    transform: translate(-10px, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+}
+
+.agv-float-search-input {
+  width: 100%;
+  min-height: 28px;
+  height: 28px;
+  line-height: 28px;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 24px 0 26px;
+  font-size: 12px;
+  color: var(--agv-text-main) !important;
+  box-sizing: border-box;
+}
+
+.agv-float-search-input::placeholder {
+  color: var(--agv-text-muted) !important;
+  font-size: 12px;
+}
+
+.agv-float-search-mode-btn {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  z-index: 2;
+}
+
+.agv-float-search-mode-btn.is-smart {
+  color: var(--agv-accent) !important;
+}
+
+.agv-float-search-mode-btn:not(.is-smart) {
+  color: var(--agv-text-subtle);
+}
+
+.agv-float-search-mode-btn:hover {
+  background-color: var(--agv-bg-item-hover);
+}
+
+.agv-float-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  color: var(--agv-text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+.agv-float-search-clear:hover {
+  color: var(--agv-text-main);
+  background-color: var(--agv-bg-item-hover);
+}
+
+.agv-sliding-tooltip-wrap {
+  position: absolute;
+  left: calc(100% + 8px);
+  pointer-events: none;
+  z-index: 1300;
+  will-change: transform, opacity;
+}
+
+.agv-sliding-tooltip-pill {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  background-color: var(--agv-bg-root);
+  color: var(--agv-text-main);
+  border: 1px solid var(--agv-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+@keyframes agv-tooltip-spring-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+@keyframes agv-tooltip-spring-down {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.agv-tooltip-spring-up {
+  animation: agv-tooltip-spring-up 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.agv-tooltip-spring-down {
+  animation: agv-tooltip-spring-down 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}

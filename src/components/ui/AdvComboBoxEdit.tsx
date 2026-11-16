@@ -4,12 +4,25 @@ import { Check } from 'lucide-react';
 import {
   getPortalThemeVars,
   computeEditorCoords,
+  areEditorCoordsEqual,
+  computeDropdownPageStep,
+  computeNextHighlightedIndex,
+  scrollDropdownItemIntoView,
   useClickOutside,
   normalizeSearchText,
   getThemeClass,
   SURFACE_THEMES,
 } from './enterpriseEditorUtils';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../grid/constants';
+import {
+  CONTROL_BOX_CLASS,
+  POPUP_PANEL_CLASS,
+  getControlSizeClass,
+} from './controlFocus';
+import { AdvOverlayScroll } from './AdvOverlayScroll';
+import { useVirtualList } from './useVirtualList';
+
+const COMBO_ROW_STRIDE = 30;
 
 /* ==============================================================================
    CONTROL: AdvComboBoxEdit (Animate UI Base UI Architecture)
@@ -57,9 +70,11 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   const isControlled = value !== undefined;
   const [internalVal, setInternalVal] = useState<string>(isControlled ? value : defaultValue);
   const [isUserTyping, setIsUserTyping] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const curVal = isControlled && !isUserTyping ? value : internalVal;
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isKeyboardNav, setIsKeyboardNav] = useState(false);
   const [coords, setCoords] = useState<{
     top: number;
     left: number;
@@ -71,27 +86,53 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
 
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const navSourceRef = useRef<'pointer' | 'keyboard' | 'init'>('init');
+  const isKeyboardNavRef = useRef(false);
+
+  const setKeyboardNavActive = useCallback((active: boolean) => {
+    if (isKeyboardNavRef.current === active) return;
+    isKeyboardNavRef.current = active;
+    setIsKeyboardNav(active);
+  }, []);
 
   const normalizedOptions = useMemo<AdvComboBoxEditOption[]>(() => {
     return options.map((opt) => (typeof opt === 'string' ? { value: opt, label: opt } : opt));
   }, [options]);
 
-  const selectedIndex = useMemo(() => {
-    const checkVal = isControlled ? value : internalVal;
-    const idx = normalizedOptions.findIndex((opt) => opt.value === checkVal || opt.label === checkVal);
-    return idx >= 0 ? idx : 0;
-  }, [normalizedOptions, isControlled, value, internalVal]);
+  const optionIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < normalizedOptions.length; i++) {
+      const opt = normalizedOptions[i];
+      if (!map.has(opt.value)) map.set(opt.value, i);
+      if (!map.has(opt.label)) map.set(opt.label, i);
+    }
+    return map;
+  }, [normalizedOptions]);
 
-  const selectedOption = useMemo(() => {
-    return normalizedOptions[selectedIndex] || null;
-  }, [normalizedOptions, selectedIndex]);
+  const checkVal = isControlled ? value : internalVal;
+  const matchedIndex = checkVal !== undefined ? (optionIndexMap.get(checkVal) ?? -1) : -1;
+  const matchedSelectedOption = matchedIndex >= 0 ? normalizedOptions[matchedIndex] : null;
+  const selectedIndex = matchedIndex >= 0 ? matchedIndex : 0;
+  const selectedOption = normalizedOptions[selectedIndex] || null;
 
-  const displayVal = isUserTyping
+  const isSelectOnly = !allowCustomInput;
+  const displayVal = isSelectOnly
+    ? isOpen
+      ? searchText
+      : matchedSelectedOption
+      ? matchedSelectedOption.label
+      : curVal
+    : isUserTyping
     ? internalVal
     : selectedOption && (selectedOption.value === curVal || selectedOption.label === curVal)
     ? selectedOption.label
     : curVal;
+
+  const activePlaceholder = isSelectOnly && isOpen && matchedSelectedOption
+    ? matchedSelectedOption.label
+    : placeholder;
 
   const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
 
@@ -101,28 +142,54 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     }
   }, [isControlled, value, isUserTyping]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen && !isUserTyping) {
-      const idx = normalizedOptions.findIndex((opt) => opt.value === curVal || opt.label === curVal);
+      const idx = curVal !== undefined ? (optionIndexMap.get(curVal) ?? -1) : -1;
+      navSourceRef.current = 'init';
       setHighlightedIndex(idx >= 0 ? idx : 0);
     }
-  }, [isOpen, curVal, normalizedOptions, isUserTyping]);
+  }, [isOpen, curVal, optionIndexMap, isUserTyping]);
 
-  // Bộ lọc danh sách tức thì khi gõ
+  const searchCacheRef = useRef<{
+    optionsRef: AdvComboBoxEditOption[];
+    labels: string[];
+    values: string[];
+  } | null>(null);
+
+  // Bộ lọc danh sách tức thì khi gõ (tiền chuẩn hóa lazy 1 lần theo options)
   const filteredOptions = useMemo<AdvComboBoxEditOption[]>(() => {
-    if (!isUserTyping) return normalizedOptions;
-    if (!curVal || !curVal.trim()) return normalizedOptions;
-    const q = normalizeSearchText(curVal);
-    return normalizedOptions.filter(
-      (opt) =>
-        normalizeSearchText(opt.label).includes(q) ||
-        normalizeSearchText(opt.value).includes(q)
-    );
-  }, [normalizedOptions, isUserTyping, curVal]);
+    const query = isSelectOnly ? searchText : isUserTyping ? curVal : '';
+    if (!query || !query.trim()) return normalizedOptions;
+    const q = normalizeSearchText(query);
+    if (!q) return normalizedOptions;
+
+    let cache = searchCacheRef.current;
+    if (!cache || cache.optionsRef !== normalizedOptions) {
+      const len = normalizedOptions.length;
+      const labels = new Array<string>(len);
+      const values = new Array<string>(len);
+      for (let i = 0; i < len; i++) {
+        const opt = normalizedOptions[i];
+        labels[i] = normalizeSearchText(opt.label);
+        values[i] = normalizeSearchText(opt.value);
+      }
+      cache = { optionsRef: normalizedOptions, labels, values };
+      searchCacheRef.current = cache;
+    }
+
+    const out: AdvComboBoxEditOption[] = [];
+    for (let i = 0; i < normalizedOptions.length; i++) {
+      if (cache.labels[i].includes(q) || cache.values[i].includes(q)) {
+        out.push(normalizedOptions[i]);
+      }
+    }
+    return out;
+  }, [normalizedOptions, isSelectOnly, searchText, isUserTyping, curVal]);
 
   const updateCoords = useCallback(() => {
     if (triggerRef.current) {
-      setCoords(computeEditorCoords(triggerRef.current, 220, 180));
+      const next = computeEditorCoords(triggerRef.current, 220, 180);
+      setCoords((prev) => (areEditorCoordsEqual(prev, next) ? prev : next));
     }
   }, []);
 
@@ -132,6 +199,32 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     }
   }, [defaultOpen, updateCoords]);
 
+  const maxPopupViewportHeight = Math.max(118, coords.maxHeight - 2);
+
+  const virtual = useVirtualList({
+    itemCount: filteredOptions.length,
+    itemHeight: COMBO_ROW_STRIDE,
+    viewportRef: scrollViewportRef,
+    overscan: 6,
+    threshold: 40,
+    enabled: isOpen,
+    defaultViewportHeight: maxPopupViewportHeight,
+  });
+
+  useLayoutEffect(() => {
+    if (!isOpen || navSourceRef.current === 'pointer') return;
+    if (virtual.isVirtualized) {
+      virtual.scrollToIndex(highlightedIndex, 4, 4);
+      return;
+    }
+    const container = scrollViewportRef.current;
+    if (!container) return;
+    const itemEl = container.querySelector<HTMLElement>(`[data-combo-idx="${highlightedIndex}"]`);
+    if (itemEl) {
+      scrollDropdownItemIntoView(container, itemEl, 4, 4);
+    }
+  }, [isOpen, highlightedIndex, filteredOptions.length, virtual.isVirtualized, virtual.scrollToIndex]);
+
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus({ preventScroll: true });
@@ -139,15 +232,21 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     }
   }, [autoFocus]);
 
+  const closeDropdown = useCallback(() => {
+    setIsOpen(false);
+    setIsUserTyping(false);
+    setSearchText('');
+    setKeyboardNavActive(false);
+    onClose?.();
+  }, [setKeyboardNavActive, onClose]);
+
   useClickOutside(
     isOpen,
     () => {
       if (isUserTyping && allowCustomInput) {
         onChange?.(internalVal);
       }
-      setIsOpen(false);
-      setIsUserTyping(false);
-      onClose?.();
+      closeDropdown();
     },
     updateCoords,
     triggerRef,
@@ -157,17 +256,29 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   const handleSelect = (optVal: string) => {
     setInternalVal(optVal);
     onChange?.(optVal);
-    setIsUserTyping(false);
-    setIsOpen(false);
-    onClose?.();
+    closeDropdown();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!allowCustomInput) return;
     const v = e.target.value;
+    if (isSelectOnly) {
+      setSearchText(v);
+      navSourceRef.current = 'keyboard';
+      setKeyboardNavActive(v.trim().length > 0);
+      setHighlightedIndex(0);
+      virtual.resetScroll();
+      if (!isOpen) {
+        updateCoords();
+        setIsOpen(true);
+      }
+      return;
+    }
     setInternalVal(v);
     setIsUserTyping(true);
+    navSourceRef.current = 'keyboard';
+    setKeyboardNavActive(v.trim().length > 0);
     setHighlightedIndex(0);
+    virtual.resetScroll();
     if (!isOpen) {
       updateCoords();
       setIsOpen(true);
@@ -184,23 +295,40 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
-    if (e.key === 'ArrowDown') {
+    const isNavKey =
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'PageDown' ||
+      e.key === 'PageUp' ||
+      (isSelectOnly && !searchText && (e.key === 'Home' || e.key === 'End'));
+
+    if (isNavKey) {
       e.preventDefault();
       if (!isOpen) {
-        updateCoords();
-        setIsUserTyping(false);
-        setIsOpen(true);
-        setHighlightedIndex(0);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          updateCoords();
+          navSourceRef.current = 'init';
+          setIsUserTyping(false);
+          setSearchText('');
+          setKeyboardNavActive(true);
+          setIsOpen(true);
+          const idx = curVal !== undefined ? (optionIndexMap.get(curVal) ?? -1) : -1;
+          setHighlightedIndex(idx >= 0 ? idx : 0);
+        }
       } else if (filteredOptions.length > 0) {
-        setHighlightedIndex((prev) => (prev + 1) % filteredOptions.length);
-      }
-      return;
-    }
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (isOpen && filteredOptions.length > 0) {
-        setHighlightedIndex((prev) => (prev - 1 + filteredOptions.length) % filteredOptions.length);
+        const container = scrollViewportRef.current;
+        const firstItem = container?.querySelector<HTMLElement>('[data-combo-idx]');
+        const pageStep = computeDropdownPageStep(
+          container?.clientHeight || 212,
+          virtual.isVirtualized ? COMBO_ROW_STRIDE : firstItem?.offsetHeight || 28,
+          6
+        );
+        navSourceRef.current = 'keyboard';
+        setKeyboardNavActive(true);
+        setHighlightedIndex((prev) => {
+          const next = computeNextHighlightedIndex(e.key, prev, filteredOptions.length, pageStep);
+          return next !== null ? next : prev;
+        });
       }
       return;
     }
@@ -213,11 +341,15 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
         if (matched) {
           handleSelect(matched.value);
         }
+      } else if (isOpen && isSelectOnly) {
+        e.preventDefault();
+        closeDropdown();
       } else {
         if (isUserTyping && allowCustomInput) {
           onChange?.(internalVal);
           setIsUserTyping(false);
         }
+        setKeyboardNavActive(false);
         if (isOpen) {
           setIsOpen(false);
         }
@@ -225,13 +357,21 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
       return;
     }
 
+    if (e.key === 'Tab' && isOpen) {
+      if (isUserTyping && allowCustomInput) {
+        onChange?.(internalVal);
+      }
+      closeDropdown();
+      return;
+    }
+
     if (e.key === 'Escape') {
       if (isOpen) {
         e.preventDefault();
-        setIsOpen(false);
-        setIsUserTyping(false);
+        closeDropdown();
+      } else {
+        onClose?.();
       }
-      onClose?.();
       return;
     }
   };
@@ -240,55 +380,85 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
     if (disabled) return;
     if (!isOpen) {
       updateCoords();
+      navSourceRef.current = 'init';
+      const idx = curVal !== undefined ? (optionIndexMap.get(curVal) ?? -1) : -1;
+      setHighlightedIndex(idx >= 0 ? idx : 0);
       setIsUserTyping(false);
+      setSearchText('');
+      setKeyboardNavActive(false);
       setIsOpen(true);
     }
     inputRef.current?.focus({ preventScroll: true });
   };
 
+  const renderComboOptionRow = (
+    opt: AdvComboBoxEditOption,
+    idx: number,
+    isVirtualRow: boolean
+  ) => {
+    const isSelected = opt.value === curVal || opt.label === curVal;
+    const isHighlighted = isKeyboardNav && idx === highlightedIndex;
+
+    return (
+      <div
+        key={opt.value}
+        data-combo-idx={idx}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSelect(opt.value);
+        }}
+        className={`agv-popup-item justify-between ${
+          isVirtualRow ? 'h-[28px] min-h-[28px] mb-[2px]' : ''
+        } ${
+          isSelected ? 'is-selected' : isHighlighted ? 'is-highlighted' : ''
+        }`.trim()}
+      >
+        <span className="truncate">{opt.label}</span>
+        {isSelected && (
+          <Check size={13} strokeWidth={2.5} className="ml-1.5 shrink-0" />
+        )}
+      </div>
+    );
+  };
+
   const themeClass = theme ? getThemeClass(theme) : '';
-  const sizeHeight = size === 'md' ? 'h-8' : 'h-7';
 
   return (
     <div
       ref={triggerRef}
+      data-agv-trigger="true"
       data-theme={theme || undefined}
+      data-state={isOpen ? 'open' : 'closed'}
+      aria-expanded={isOpen}
+      aria-disabled={disabled || undefined}
       style={{
-        backgroundColor: 'var(--agv-bg-control, var(--agv-bg-root))',
-        color: 'var(--agv-text-main)',
-        borderColor: isOpen ? 'var(--agv-accent)' : 'var(--agv-border)',
         ...getPortalThemeVars(theme),
         ...style,
       }}
       onClick={handleTriggerClick}
-      className={`agv-comboboxedit-wrapper relative inline-flex items-center ${getGridControlRadiusClass()} min-h-[28px] max-h-[30px] w-full h-full ${sizeHeight} ${
-        isOpen
-          ? 'is-open border-2'
-          : 'border'
-      } ${disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'} ${themeClass} ${className}`.trim()}
+      className={`agv-comboboxedit-wrapper relative inline-flex items-center ${CONTROL_BOX_CLASS} ${getGridControlRadiusClass()} ${getControlSizeClass(
+        size
+      )} w-full ${isOpen ? 'is-open' : ''} ${
+        disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'
+      } ${themeClass} ${className}`.trim()}
     >
       {/* Ô nhập thuần túy, tràn viền 100%, không chứa icon phụ theo đúng yêu cầu */}
       <input
         ref={inputRef}
         type="text"
         disabled={disabled}
-        readOnly={!allowCustomInput}
         value={displayVal}
         onChange={handleInputChange}
         onBlur={handleInputBlur}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={activePlaceholder}
         {...NO_AUTOFILL_PROPS}
-        style={{
-          color: 'var(--agv-text-main)',
-          backgroundColor: 'transparent',
-        }}
-        className={`agv-comboboxedit-input w-full h-full bg-transparent px-2.5 text-xs outline-none placeholder:text-[var(--agv-text-muted)] ${
-          !allowCustomInput ? 'cursor-pointer select-none' : ''
+        className={`agv-comboboxedit-input w-full h-full bg-transparent border-0 px-2.5 text-foreground outline-none placeholder:text-muted-foreground ${
+          size === 'md' ? 'text-sm' : 'text-xs'
         }`}
       />
 
-      {/* Popup Dropdown danh sách qua Portal (Chuẩn Animate UI + Base UI) */}
+      {/* Popup Dropdown danh sách qua Portal */}
       {isOpen &&
         createPortal(
           <div
@@ -303,64 +473,47 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
               width: `${coords.width}px`,
               maxHeight: `${coords.maxHeight}px`,
               zIndex: 99999999,
-              backgroundColor: 'var(--agv-bg-popup)',
-              borderColor: 'var(--agv-border-popup, var(--agv-border))',
-              color: 'var(--agv-text-main)',
-              boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
               ...getPortalThemeVars(theme),
             }}
-            className={`agv-comboboxedit-dropdown rounded-md border p-1 overflow-y-auto text-xs ${
+            className={`agv-comboboxedit-dropdown ${POPUP_PANEL_CLASS} overflow-hidden select-none text-xs ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${themeClass}`}
             data-agv-popup="true"
+            onMouseMove={() => {
+              if (isKeyboardNavRef.current) {
+                navSourceRef.current = 'pointer';
+                setKeyboardNavActive(false);
+              }
+            }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            {filteredOptions.length === 0 ? (
-              <div className="px-3 py-2 text-center text-xs text-[var(--agv-text-muted)] select-none">
-                Không tìm thấy kết quả
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {filteredOptions.map((opt, idx) => {
-                  const isSelected = opt.value === curVal || opt.label === curVal;
-                  const isHighlighted = idx === highlightedIndex;
-
-                  return (
-                    <div
-                      key={opt.value}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelect(opt.value);
-                      }}
-                      onMouseEnter={() => setHighlightedIndex(idx)}
-                      style={
-                        isSelected
-                          ? {
-                              backgroundColor: 'var(--agv-accent)',
-                              color: 'var(--agv-accent-text, #ffffff)',
-                              fontWeight: 600,
-                            }
-                          : isHighlighted
-                          ? {
-                              backgroundColor: 'var(--agv-bg-item-hover)',
-                              color: 'var(--agv-text-main)',
-                            }
-                          : {
-                              backgroundColor: 'transparent',
-                              color: 'var(--agv-text-main)',
-                            }
-                      }
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition-colors text-xs select-none"
-                    >
-                      <span className="truncate">{opt.label}</span>
-                      {isSelected && (
-                        <Check size={13} strokeWidth={2.5} className="ml-2 shrink-0 text-current" />
+            <AdvOverlayScroll
+              viewportRef={scrollViewportRef}
+              onScroll={virtual.handleScroll}
+              viewportClassName="overflow-y-auto overflow-x-hidden p-1"
+              viewportStyle={{ maxHeight: `${maxPopupViewportHeight}px` }}
+              contentSignature={`${filteredOptions.length}:${virtual.startIndex}:${virtual.endIndex}`}
+            >
+              {filteredOptions.length === 0 ? (
+                <div className="px-3 py-2 text-center text-xs text-muted-foreground select-none">
+                  Không tìm thấy kết quả
+                </div>
+              ) : virtual.isVirtualized ? (
+                <div style={{ height: `${virtual.totalHeight}px`, position: 'relative' }}>
+                  <div style={{ transform: `translate3d(0, ${virtual.offsetY}px, 0)` }}>
+                    {filteredOptions
+                      .slice(virtual.startIndex, virtual.endIndex)
+                      .map((opt, offset) =>
+                        renderComboOptionRow(opt, virtual.startIndex + offset, true)
                       )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  {filteredOptions.map((opt, idx) => renderComboOptionRow(opt, idx, false))}
+                </div>
+              )}
+            </AdvOverlayScroll>
           </div>,
           document.body
         )}

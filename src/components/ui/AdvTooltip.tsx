@@ -1,6 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getPortalThemeVars, getThemeClass, SURFACE_THEMES } from './enterpriseEditorUtils';
+import {
+  areEditorCoordsEqual,
+  getPortalThemeVars,
+  getThemeClass,
+  SURFACE_THEMES,
+} from './enterpriseEditorUtils';
 
 export interface AdvTooltipProps {
   content: React.ReactNode;
@@ -17,7 +22,7 @@ export const AdvTooltip: React.FC<AdvTooltipProps> = ({
   children,
   delay = 200,
   placement = 'auto',
-  theme = SURFACE_THEMES.BEZIER_ARTHOUSE,
+  theme = SURFACE_THEMES.LIGHT,
   disabled = false,
   className = '',
 }) => {
@@ -56,8 +61,15 @@ export const AdvTooltip: React.FC<AdvTooltipProps> = ({
       ? Math.max(8, Math.round(rect.top - tipH - 6))
       : Math.round(rect.bottom + 6);
 
-    setCoords({ top, left, isFlipUp: shouldFlip });
+    const next = { top, left, isFlipUp: shouldFlip };
+    setCoords((prev) => (prev && areEditorCoordsEqual(prev, next) ? prev : next));
   }, [placement]);
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      updateCoords();
+    }
+  }, [isOpen, updateCoords]);
 
   const handleMouseEnter = () => {
     if (disabled || !content) return;
@@ -109,16 +121,16 @@ export const AdvTooltip: React.FC<AdvTooltipProps> = ({
           >
             <div
               ref={tooltipRef}
-              className={`absolute px-2.5 py-1 rounded-md text-xs font-sans shadow-lg select-none whitespace-nowrap border ${
-                coords.isFlipUp ? 'agv-tooltip-spring-up' : 'agv-tooltip-spring-down'
+              className={`agv-popup-panel absolute px-2.5 py-1 text-xs font-sans select-none whitespace-nowrap ${
+                coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
               }`}
               style={{
                 top: `${coords.top}px`,
                 left: `${coords.left}px`,
-                backgroundColor: 'var(--agv-bg-popup)',
-                color: 'var(--agv-text-main)',
-                borderColor: 'var(--agv-border)',
-                boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.22), 0 2px 6px -1px rgba(0, 0, 0, 0.1)',
+                backgroundColor: 'var(--popup-background)',
+                color: 'var(--popover-foreground)',
+                borderColor: 'var(--popup-border)',
+                boxShadow: 'var(--popup-shadow)',
               }}
             >
               {content}

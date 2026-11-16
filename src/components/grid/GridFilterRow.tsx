@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Check } from 'lucide-react';
+import { AdvAnchoredPopover } from '../ui/AdvPopover';
 import {
   ColumnDef,
   ColumnFilterValue,
@@ -26,26 +27,44 @@ import {
   getDefaultFilterOpForColumn,
   RangeArrowSeparator,
 } from './FilterIcons';
+import './filterRow.css';
 import { getPinnedDividerClass, getRightPinnedDividerClass, NO_AUTOFILL_PROPS, getGridControlRadiusClass } from './constants';
-import { AdvDatePicker, AdvDateRangePicker } from '../ui/AdvDatePicker';
+import { CONTROL_BOX_CLASS } from '../ui/controlFocus';
+import { AdvButton } from '../ui/AdvButton';
 import {
+  createEqualsFilter,
   formatGridNumber,
   isNoInputFilterOp,
   isBetweenFilterOp,
   isNegativeFilterOp,
-  createEqualsFilter,
   isSelectionColumn,
-} from './gridUtils';
+} from './gridFormatUtils';
 import { getThemeClass } from '../../themes';
-import { AdvMultiFilterPopup } from './AdvMultiFilterPopup';
-import { AdvCriteriaSummaryPopup } from './AdvCriteriaSummaryPopup';
-import { MorphCheckbox } from '../ui/MorphIcons';
-import { hasActiveQueryRules } from './floating/queryUtils';
-import {
-  formatSmartInputText,
-  parseSmartNumericRange,
-  handleNumericKeyDown,
-} from './smartNumberUtils';
+import { GridSelectionCheckbox } from './GridSelectionCheckbox';
+import { hasActiveQueryRules } from './floating/queryRuleCheck';
+const LazyNumberRangeFilterInput = React.lazy(() =>
+  import('./GridSmartNumberInputs').then((m) => ({ default: m.NumberRangeFilterInput }))
+);
+const LazySmartNumberFilterInput = React.lazy(() =>
+  import('./GridSmartNumberInputs').then((m) => ({ default: m.SmartNumberFilterInput }))
+);
+
+const LazyTimeRangeFilterInput = React.lazy(() =>
+  import('./GridTimeFilterInputs').then((m) => ({ default: m.TimeRangeFilterInput }))
+);
+const LazyTimeFilterInput = React.lazy(() =>
+  import('./GridTimeFilterInputs').then((m) => ({ default: m.TimeFilterInput }))
+);
+
+const LazyGridDateFilterCell = React.lazy(() =>
+  import('./GridDateFilterCell').then((m) => ({ default: m.GridDateFilterCell }))
+);
+const LazyAdvMultiFilterPopup = React.lazy(() =>
+  import('./AdvMultiFilterPopup').then((m) => ({ default: m.AdvMultiFilterPopup }))
+);
+const LazyAdvCriteriaSummaryPopup = React.lazy(() =>
+  import('./AdvCriteriaSummaryPopup').then((m) => ({ default: m.AdvCriteriaSummaryPopup }))
+);
 
 export interface GridFilterRowProps<T = any> {
   totalGridWidth: number;
@@ -74,359 +93,19 @@ export interface GridFilterRowProps<T = any> {
   groupByColumnKey?: string | null;
   quickFilterText?: string;
   sortConfig?: SortConfig | null;
+  sortRules?: SortConfig[];
   groupSortConfig?: GroupSortConfig | null;
   appliedQueryTree?: any;
   pinnedRows?: Array<{ rowKey: string | number; rowIndex: number; row: any }>;
   onUngroup?: () => void;
   onSortChange?: (sort: SortConfig | null) => void;
+  onRemoveSortRule?: (colKey: string) => void;
   onToggleGroupSort?: (colKey: string) => void;
   onQuickFilterTextChange?: (text: string) => void;
   onApplyQueryTree?: (tree: any) => void;
   onUnpinRow?: (rowKey: string | number) => void;
   onClearPinnedRows?: () => void;
 }
-
-/**
- * Bộ lọc dải giờ phút [Từ HH:mm] — [Đến HH:mm]
- * Hỗ trợ nhập trực tiếp hoặc tự động chuẩn hóa định dạng HH:mm, zero autofill, min-h 28px
- */
-export const TimeRangeFilterInput: React.FC<{
-  from: string;
-  to: string;
-  onChange: (from: string, to: string) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  onClear?: () => void;
-  hasValue?: boolean;
-}> = ({ from, to, onChange, onFocus, onBlur, onClear, hasValue }) => {
-  const [fromText, setFromText] = useState(from);
-  const [toText, setToText] = useState(to);
-
-  useEffect(() => {
-    setFromText(from);
-  }, [from]);
-
-  useEffect(() => {
-    setToText(to);
-  }, [to]);
-
-  const handleFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
-    setFromText(raw);
-    onChange(raw, toText);
-  };
-
-  const handleToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
-    setToText(raw);
-    onChange(fromText, raw);
-  };
-
-  const formatOnBlur = (val: string, isFrom: boolean) => {
-    if (!val) return;
-    const m = val.match(/^(\d{1,2}):?(\d{0,2})$/);
-    if (m) {
-      let h = parseInt(m[1], 10);
-      if (h > 23) h = 23;
-      let min = m[2] ? parseInt(m[2], 10) : 0;
-      if (min > 59) min = 59;
-      const formatted = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      if (isFrom) {
-        setFromText(formatted);
-        onChange(formatted, toText);
-      } else {
-        setToText(formatted);
-        onChange(fromText, formatted);
-      }
-    }
-  };
-
-  return (
-    <div className="relative w-full h-full flex items-center gap-1 px-1" style={{ minHeight: '28px' }}>
-      <input
-        type="text"
-        placeholder="Từ"
-        value={fromText}
-        onChange={handleFromChange}
-        onFocus={onFocus}
-        onBlur={() => {
-          formatOnBlur(fromText, true);
-          onBlur?.();
-        }}
-        {...NO_AUTOFILL_PROPS}
-        className="w-full flex-1 min-w-0 bg-transparent text-[11px] font-medium outline-none text-center p-0 placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60"
-        style={{ color: 'var(--agv-text-main)', minHeight: '28px' }}
-      />
-      <RangeArrowSeparator className="mx-0.5" />
-      <input
-        type="text"
-        placeholder="Đến"
-        value={toText}
-        onChange={handleToChange}
-        onFocus={onFocus}
-        onBlur={() => {
-          formatOnBlur(toText, false);
-          onBlur?.();
-        }}
-        {...NO_AUTOFILL_PROPS}
-        className="w-full flex-1 min-w-0 bg-transparent text-[11px] font-medium outline-none text-center p-0 placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60"
-        style={{ color: 'var(--agv-text-main)', minHeight: '28px' }}
-      />
-      {hasValue && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
-        >
-          <X size={10} strokeWidth={2.5} />
-        </button>
-      )}
-    </div>
-  );
-};
-
-/**
- * Bộ lọc giờ đơn lẻ (Bằng, Khác, Lớn hơn hoặc bằng, Nhỏ hơn hoặc bằng, Có chứa...)
- */
-export const TimeFilterInput: React.FC<{
-  value: string;
-  onChange: (val: string) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  onClear?: () => void;
-  placeholder?: string;
-  hasValue?: boolean;
-}> = ({ value, onChange, onFocus, onBlur, onClear, placeholder = 'HH:mm', hasValue }) => {
-  const [text, setText] = useState(value);
-
-  useEffect(() => {
-    setText(value);
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9:]/g, '').slice(0, 5);
-    setText(raw);
-    onChange(raw);
-  };
-
-  const handleBlur = () => {
-    if (text) {
-      const m = text.match(/^(\d{1,2}):?(\d{0,2})$/);
-      if (m) {
-        let h = parseInt(m[1], 10);
-        if (h > 23) h = 23;
-        let min = m[2] ? parseInt(m[2], 10) : 0;
-        if (min > 59) min = 59;
-        const formatted = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-        setText(formatted);
-        onChange(formatted);
-      }
-    }
-    onBlur?.();
-  };
-
-  return (
-    <div className="relative w-full h-full flex items-center px-1" style={{ minHeight: '28px' }}>
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={text}
-        onChange={handleChange}
-        onFocus={onFocus}
-        onBlur={handleBlur}
-        {...NO_AUTOFILL_PROPS}
-        className="w-full h-full bg-transparent text-[11px] font-medium outline-none text-center p-0 placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60"
-        style={{ color: 'var(--agv-text-main)', minHeight: '28px' }}
-      />
-      {hasValue && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
-        >
-          <X size={10} strokeWidth={2.5} />
-        </button>
-      )}
-    </div>
-  );
-};
-
-/**
- * Bộ lọc khoảng số [Từ...] — [Đến...]
- * Hỗ trợ nhập phím tắt nhanh 1tr, 1k, 1t (VD: 100k -> 100,000; 1tr -> 1,000,000; 1t -> 1,000,000,000)
- */
-export const NumberRangeFilterInput: React.FC<{
-  from: string;
-  to: string;
-  onChange: (from: string, to: string) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  onClear?: () => void;
-  hasValue?: boolean;
-}> = ({ from, to, onChange, onFocus, onBlur, onClear, hasValue }) => {
-  const [fromText, setFromText] = useState(from);
-  const [toText, setToText] = useState(to);
-
-  useEffect(() => {
-    setFromText(from);
-  }, [from]);
-
-  useEffect(() => {
-    setToText(to);
-  }, [to]);
-
-  const handleFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const formatted = formatSmartInputText(raw);
-    setFromText(formatted);
-    onChange(formatted, toText);
-  };
-
-  const handleToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const formatted = formatSmartInputText(raw);
-    setToText(formatted);
-    onChange(fromText, formatted);
-  };
-
-  const handleBlurFrom = () => {
-    const formatted = formatSmartInputText(fromText);
-    setFromText(formatted);
-    onChange(formatted, toText);
-    onBlur?.();
-  };
-
-  const handleBlurTo = () => {
-    const formatted = formatSmartInputText(toText);
-    setToText(formatted);
-    onChange(fromText, formatted);
-    onBlur?.();
-  };
-
-  return (
-    <div className="relative w-full h-full flex items-center gap-1 px-1" style={{ minHeight: '28px' }}>
-      <input
-        type="text"
-        placeholder="Từ"
-        value={fromText}
-        onChange={handleFromChange}
-        onKeyDown={handleNumericKeyDown}
-        onFocus={onFocus}
-        onBlur={handleBlurFrom}
-        {...NO_AUTOFILL_PROPS}
-        className="w-full flex-1 min-w-0 bg-transparent text-[11px] font-medium outline-none text-center p-0 placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 tabular-nums"
-        style={{ color: 'var(--agv-text-main)', minHeight: '28px' }}
-      />
-      <RangeArrowSeparator className="mx-0.5" />
-      <input
-        type="text"
-        placeholder="Đến"
-        value={toText}
-        onChange={handleToChange}
-        onKeyDown={handleNumericKeyDown}
-        onFocus={onFocus}
-        onBlur={handleBlurTo}
-        {...NO_AUTOFILL_PROPS}
-        className="w-full flex-1 min-w-0 bg-transparent text-[11px] font-medium outline-none text-center p-0 placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 tabular-nums"
-        style={{ color: 'var(--agv-text-main)', minHeight: '28px' }}
-      />
-      {hasValue && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
-        >
-          <X size={10} strokeWidth={2.5} />
-        </button>
-      )}
-    </div>
-  );
-};
-
-/**
- * Bộ lọc ô số đơn lẻ thông minh (hỗ trợ phím tắt 1tr, 1k, 1t và tự động phát hiện khoảng số nếu gõ - hoặc /)
- */
-export const SmartNumberFilterInput: React.FC<{
-  value: string;
-  onChange: (val: string, opOverride?: FilterOperation) => void;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  onClear?: () => void;
-  placeholder?: string;
-  hasValue?: boolean;
-  isHighlightPlaceholder?: boolean;
-}> = ({ value, onChange, onFocus, onBlur, onClear, placeholder, hasValue, isHighlightPlaceholder }) => {
-  const [localVal, setLocalVal] = useState(value || '');
-
-  useEffect(() => {
-    setLocalVal(value || '');
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const formatted = formatSmartInputText(raw, undefined, true);
-    setLocalVal(formatted);
-
-    // Kiểm tra nếu người dùng vừa nhập dải khoảng số (VD: '100k - 500k', '1tr/5tr', '10k..50k')
-    const range = parseSmartNumericRange(formatted);
-    if (range && range.from && range.to) {
-      onChange(range.formatted, FILTER_OPS.BETWEEN);
-      return;
-    }
-
-    if (formatted.trim().endsWith('-') || formatted.trim().endsWith('/')) {
-      onChange(formatted, FILTER_OPS.BETWEEN);
-      return;
-    }
-
-    onChange(formatted);
-  };
-
-  const handleBlur = () => {
-    const formatted = formatSmartInputText(localVal);
-    setLocalVal(formatted);
-    const range = parseSmartNumericRange(formatted);
-    if (range && range.from && range.to) {
-      onChange(range.formatted, FILTER_OPS.BETWEEN);
-    } else {
-      onChange(formatted);
-    }
-    onBlur?.();
-  };
-
-  return (
-    <div className="relative w-full h-full flex items-center min-w-0">
-      <input
-        type="text"
-        value={localVal}
-        onFocus={onFocus}
-        onBlur={handleBlur}
-        onChange={handleChange}
-        onKeyDown={handleNumericKeyDown}
-        placeholder={placeholder}
-        {...NO_AUTOFILL_PROPS}
-        className={`w-full h-full bg-transparent px-1 text-[11px] outline-none border-none tabular-nums disabled:cursor-not-allowed ${
-          isHighlightPlaceholder
-            ? 'placeholder:text-[var(--agv-accent)] placeholder:opacity-100 placeholder:font-semibold'
-            : 'placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60'
-        } ${hasValue ? 'pr-5' : 'pr-1'}`}
-        style={{
-          color: 'var(--agv-text-main)',
-          minHeight: '28px',
-        }}
-      />
-      {hasValue && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
-        >
-          <X size={10} strokeWidth={2.5} />
-        </button>
-      )}
-    </div>
-  );
-};
 
 export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
   totalGridWidth,
@@ -455,11 +134,13 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
   groupByColumnKey,
   quickFilterText,
   sortConfig,
+  sortRules,
   groupSortConfig,
   appliedQueryTree,
   pinnedRows = [],
   onUngroup,
   onSortChange,
+  onRemoveSortRule,
   onToggleGroupSort,
   onQuickFilterTextChange,
   onApplyQueryTree,
@@ -468,6 +149,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
 }) => {
   // Quản lý popup tập hợp tiêu chí đang áp dụng (STT cell)
   const [isSummaryPopupOpen, setIsSummaryPopupOpen] = useState(false);
+  const [summaryAnchorEl, setSummaryAnchorEl] = useState<HTMLElement | null>(null);
   const [summaryAnchorRect, setSummaryAnchorRect] = useState<{
     top: number;
     left: number;
@@ -483,8 +165,8 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     if (isSummaryPopupOpen) {
       setIsSummaryPopupOpen(false);
     } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setSummaryAnchorRect(rect);
+      setSummaryAnchorEl(e.currentTarget);
+      setSummaryAnchorRect(e.currentTarget.getBoundingClientRect());
       setIsSummaryPopupOpen(true);
     }
   };
@@ -494,7 +176,13 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     let count = activeFilterCount;
     if (groupByColumnKey) count += 1;
     if (quickFilterText && quickFilterText.trim().length > 0) count += 1;
-    if (sortConfig && sortConfig.key) count += 1;
+    const activeSortCount =
+      sortRules && sortRules.length > 0
+        ? sortRules.length
+        : sortConfig && sortConfig.key
+        ? 1
+        : 0;
+    count += activeSortCount;
     if (groupSortConfig && groupSortConfig.colKey) count += 1;
     if (appliedQueryTree && hasActiveQueryRules(appliedQueryTree)) count += 1;
     if (pinnedRows && pinnedRows.length > 0) count += pinnedRows.length;
@@ -504,6 +192,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     groupByColumnKey,
     quickFilterText,
     sortConfig,
+    sortRules,
     groupSortConfig,
     appliedQueryTree,
     pinnedRows,
@@ -512,40 +201,24 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
   // Quản lý popup chọn toán tử đang mở
   const [openDropdownColKey, setOpenDropdownColKey] = useState<string | null>(null);
   const [focusedColKey, setFocusedColKey] = useState<string | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; bottom?: number; isFlipUp?: boolean } | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownAnchorEl, setDropdownAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   // Quản lý popup lọc nhiều điều kiện (OR) khi chuột phải vào ô filter
   const [multiFilterColKey, setMultiFilterColKey] = useState<string | null>(null);
-  const [multiFilterAnchor, setMultiFilterAnchor] = useState<{
-    top: number;
-    left: number;
-    bottom: number;
-    right: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const [multiFilterAnchorEl, setMultiFilterAnchorEl] = useState<HTMLElement | null>(null);
 
   const handleOpenMultiFilter = (colKey: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     // Đóng ngay menu toán tử nếu đang mở
     setOpenDropdownColKey(null);
-    setDropdownPos(null);
+    setDropdownAnchorEl(null);
     window.dispatchEvent(
       new CustomEvent('agv-close-all-popups', {
         detail: { except: 'multi-filter', source: 'multi-filter' },
       })
     );
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMultiFilterAnchor({
-      top: rect.top,
-      left: rect.left,
-      bottom: rect.bottom,
-      right: rect.right,
-      width: rect.width,
-      height: rect.height,
-    });
+    setMultiFilterAnchorEl(e.currentTarget as HTMLElement);
     setMultiFilterColKey(colKey);
   };
 
@@ -555,11 +228,11 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
       const ce = e as CustomEvent;
       if (ce.detail?.except !== 'filter-op') {
         setOpenDropdownColKey(null);
-        setDropdownPos(null);
+        setDropdownAnchorEl(null);
       }
       if (ce.detail?.except !== 'multi-filter') {
         setMultiFilterColKey(null);
-        setMultiFilterAnchor(null);
+        setMultiFilterAnchorEl(null);
       }
     };
     window.addEventListener('agv-close-all-popups', handleCloseAll);
@@ -568,30 +241,11 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     };
   }, []);
 
-  // Click outside listener tự động đóng popup (loại trừ click vào chính nút trigger toán tử để nút tự toggle luân chuyển)
-  useEffect(() => {
-    if (!openDropdownColKey) return;
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (dropdownRef.current && dropdownRef.current.contains(target)) return;
-      if (target.closest?.('.agv-filter-op-btn') || target.closest?.('[data-op-trigger]')) return;
-      setOpenDropdownColKey(null);
-      setDropdownPos(null);
-    };
-    document.addEventListener('mousedown', handleClickOutside, true);
-    document.addEventListener('touchstart', handleClickOutside, true);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-      document.removeEventListener('touchstart', handleClickOutside, true);
-    };
-  }, [openDropdownColKey]);
-
   const handleOpenDropdown = (colKey: string, e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     // Đóng ngay popup multi filter nếu đang mở
     setMultiFilterColKey(null);
-    setMultiFilterAnchor(null);
+    setMultiFilterAnchorEl(null);
     window.dispatchEvent(
       new CustomEvent('agv-close-all-popups', {
         detail: { except: 'filter-op', source: 'filter-op' },
@@ -599,21 +253,10 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     );
     if (openDropdownColKey === colKey) {
       setOpenDropdownColKey(null);
-      setDropdownPos(null);
+      setDropdownAnchorEl(null);
       return;
     }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const spaceBelow = vh - rect.bottom - 8;
-    const spaceAbove = rect.top - 8;
-    const isFlipUp = spaceBelow < 280 && spaceAbove > spaceBelow;
-
-    setDropdownPos({
-      top: isFlipUp ? Math.max(8, rect.top - 4) : rect.bottom + 4,
-      bottom: isFlipUp ? vh - rect.top + 4 : undefined,
-      left: Math.max(8, Math.min(window.innerWidth - 220, rect.left)),
-      isFlipUp,
-    });
+    setDropdownAnchorEl(e.currentTarget);
     setOpenDropdownColKey(colKey);
   };
 
@@ -630,7 +273,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
       val: FILTER_OP_META[op]?.noInput ? '' : current.val,
     });
     setOpenDropdownColKey(null);
-    setDropdownPos(null);
+    setDropdownAnchorEl(null);
   };
 
   const handleInputChange = (colKey: string, val: string, opOverride?: FilterOperation) => {
@@ -659,33 +302,6 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
 
   return (
     <>
-      <style>{`
-        .agv-filter-cell-box:focus-within {
-          border-color: var(--agv-accent) !important;
-          box-shadow: 0 0 0 1px var(--agv-accent) !important;
-        }
-        .agv-filter-cell-box:focus-within .agv-filter-op-btn {
-          color: var(--agv-accent) !important;
-        }
-        .agv-filter-op-btn {
-          padding-right: 0px !important;
-          background-color: transparent !important;
-        }
-        .agv-filter-op-btn:hover {
-          color: var(--agv-accent) !important;
-          background-color: transparent !important;
-        }
-        .agv-filter-datepicker .agv-datepicker-input-box,
-        .agv-filter-datepicker .agv-daterange-bar {
-          border: none !important;
-          background: transparent !important;
-          border-radius: 0 !important;
-          padding: 0 4px !important;
-          box-shadow: none !important;
-          min-height: 26px !important;
-          height: 100% !important;
-        }
-      `}</style>
       <div
         data-agv-fullwidth="true"
         style={{
@@ -696,7 +312,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
           backgroundColor: 'var(--agv-bg-header)',
           borderColor: 'var(--agv-border)',
         }}
-        className="flex items-center box-border h-[34px] min-h-[34px] max-h-[34px] border-b-2 border-b-[var(--agv-border-strong)] select-none sticky z-20"
+        className="flex items-center box-border h-[34px] min-h-[34px] max-h-[34px] border-b-2 border-b-[var(--agv-border)] select-none sticky z-20"
         onContextMenu={(e) => e.preventDefault()}
       >
         {columns.map((col, cIdx) => {
@@ -754,6 +370,18 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
             ? getRightPinnedDividerClass(surfaceTheme)
             : '';
 
+          // 0. CỘT MỞ RỘNG DETAIL VIEW: Ô trống đồng bộ hệ thống
+          if (col.isDetailExpand || col.key === 'col_detail_expand') {
+            return (
+              <div
+                key={`filter_${col.key}`}
+                data-col-key={col.key}
+                style={stickyFilterStyle}
+                className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border)] shrink-0 box-border h-[34px]`}
+              />
+            );
+          }
+
           // 1. CỘT STT: Nút mở Popup Tập Hợp Tiêu Chí Đang Áp Dụng (STT cell)
           if (col.isRowNumber || (col.dataType === DATA_TYPES.SYSTEM && (Boolean(col.title) || cIdx === 0))) {
             return (
@@ -761,32 +389,31 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 key={`filter_${col.key}`}
                 data-col-key={col.key}
                 style={stickyFilterStyle}
-                className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border-strong)] shrink-0 box-border h-[34px]`}
+                className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border)] shrink-0 box-border h-[34px]`}
               >
                 {totalActiveCriteriaCount > 0 ? (
-                  <button
-                    type="button"
+                  <AdvButton
+                    variant="destructive"
+                    size="sm"
                     data-summary-trigger="true"
+                    data-agv-popover-trigger="true"
                     onClick={handleToggleSummaryPopup}
-                    className={`w-full h-[28px] min-h-[28px] ${getGridControlRadiusClass()} px-0.5 flex items-center justify-center gap-0.5 transition cursor-pointer select-none`}
-                    style={{
-                      backgroundColor: 'var(--agv-danger-bg, rgba(239, 68, 68, 0.15))',
-                      color: 'var(--agv-danger, #ef4444)',
-                      border: '1px solid var(--agv-danger, #ef4444)',
-                    }}
+                    className={`w-full px-1 font-bold gap-0.5 select-none ${getGridControlRadiusClass()}`}
                   >
                     <X size={11} strokeWidth={2.5} className="shrink-0" />
-                    <span className="text-[10px] font-bold leading-none">({totalActiveCriteriaCount})</span>
-                  </button>
+                    <span className="text-xs font-bold leading-none">({totalActiveCriteriaCount})</span>
+                  </AdvButton>
                 ) : (
-                  <button
-                    type="button"
+                  <AdvButton
+                    variant="ghost"
+                    size="sm"
                     data-summary-trigger="true"
+                    data-agv-popover-trigger="true"
                     onClick={handleToggleSummaryPopup}
-                    className={`w-full h-[28px] min-h-[28px] ${getGridControlRadiusClass()} px-0.5 flex items-center justify-center text-[11px] text-[var(--agv-text-muted)] hover:text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)] transition cursor-pointer select-none`}
+                    className={`w-full px-1 text-[var(--agv-text-muted)] select-none ${getGridControlRadiusClass()}`}
                   >
                     Lọc
-                  </button>
+                  </AdvButton>
                 )}
               </div>
             );
@@ -810,7 +437,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 key={`filter_${col.key}`}
                 data-col-key={col.key}
                 style={stickyFilterStyle}
-                className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border-strong)] shrink-0 box-border h-[34px]`}
+                className={`flex items-center justify-center px-0.5 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border)] shrink-0 box-border h-[34px]`}
               >
                 <div
                   role="button"
@@ -823,7 +450,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                   }}
                   className="w-full h-[28px] min-h-[28px] bg-transparent flex items-center justify-center cursor-pointer select-none p-0 outline-none"
                 >
-                  <MorphCheckbox
+                  <GridSelectionCheckbox
                     checked={isChecked}
                     indeterminate={isAll}
                     size={16}
@@ -842,9 +469,9 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 key={`filter_${col.key}`}
                 data-col-key={col.key}
                 style={stickyFilterStyle}
-                className={`flex items-center justify-center px-1 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border-strong)] shrink-0 box-border h-[34px]`}
+                className={`flex items-center justify-center px-1 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border)] shrink-0 box-border h-[34px]`}
               >
-                <span className="text-[10px] text-[var(--agv-text-muted)] italic opacity-60">
+                <span className="text-xs text-[var(--agv-text-muted)] italic opacity-60">
                   —
                 </span>
               </div>
@@ -883,16 +510,16 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                 key={`filter_${col.key}`}
                 data-col-key={col.key}
                 style={stickyFilterStyle}
-                className={`flex items-center justify-center px-1 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border-strong)] shrink-0 box-border h-[34px]`}
+                className={`flex items-center justify-center px-1 ${cellBorderRight} ${cellBorderLeft} border-b-2 border-b-[var(--agv-border)] shrink-0 box-border h-[34px]`}
               >
                 <div
                   onFocus={() => {
                     if (!isEmptyCol) {
                       setFocusedColKey(col.key);
                       setOpenDropdownColKey(null);
-                      setDropdownPos(null);
+                      setDropdownAnchorEl(null);
                       setMultiFilterColKey(null);
-                      setMultiFilterAnchor(null);
+                      setMultiFilterAnchorEl(null);
                       window.dispatchEvent(
                         new CustomEvent('agv-close-all-popups', {
                           detail: {
@@ -915,20 +542,18 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                       handleOpenMultiFilter(col.key, e);
                     }
                   }}
-                  className={`flex items-center w-full h-[28px] min-h-[28px] ${getGridControlRadiusClass()} border transition-colors overflow-hidden agv-filter-cell-box ${
-                    isEmptyCol ? 'opacity-60 cursor-not-allowed' : isFocused ? 'is-focused' : ''
+                  className={`flex items-center w-full h-[28px] min-h-[28px] ${getGridControlRadiusClass()} overflow-hidden agv-filter-cell-box ${
+                    isEmptyCol
+                      ? 'bg-muted/40 border border-border opacity-60 cursor-not-allowed'
+                      : `${CONTROL_BOX_CLASS} ${isFocused || isCellActive ? 'is-focused' : ''}`
                   }`}
-                  style={{
-                    backgroundColor: isEmptyCol ? 'var(--agv-bg-card, rgba(0,0,0,0.02))' : 'var(--agv-bg-root)',
-                    borderColor: isCellActive && !isEmptyCol ? 'var(--agv-accent)' : 'var(--agv-border)',
-                    boxShadow: isFocused && !isEmptyCol ? '0 0 0 1px var(--agv-accent)' : 'none',
-                  }}
                 >
                   {/* Nút Icon Toán Tử DevExtreme (chỉ hiển thị khi cột có dữ liệu; cột rỗng để trống hoàn toàn) */}
                   {!isEmptyCol && (
                     <button
                       type="button"
                       data-op-trigger={col.key}
+                      data-agv-popover-trigger="true"
                       disabled={isEmptyCol}
                       onClick={(e) => !isEmptyCol && handleOpenDropdown(col.key, e)}
                       className={`h-full pl-1.5 pr-0 flex items-center justify-center shrink-0 border-none bg-transparent transition-colors agv-filter-op-btn ${
@@ -956,7 +581,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                             className="w-full h-full flex items-center justify-between px-1.5 cursor-pointer select-none"
                           >
                             <span
-                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 truncate max-w-[calc(100%-20px)] bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]"
+                              className="px-1.5 py-0.5 rounded text-xs font-semibold flex items-center gap-1 truncate max-w-[calc(100%-20px)] bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]"
                             >
                               {isNegativeMulti ? 'AND: ' : 'OR: '}{filterVal?.multiRanges && filterVal.multiRanges.length > 0
                                 ? `${filterVal.multiRanges.length} khoảng`
@@ -968,7 +593,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                                 e.stopPropagation();
                                 handleClearColFilter(col.key);
                               }}
-                              className="w-4 h-4 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
+                              className="agv-inline-clear-destructive w-4 h-4 shrink-0"
                             >
                               <X size={10} strokeWidth={2.5} />
                             </button>
@@ -976,166 +601,112 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                         );
                       })()
                     ) : isNoInputOp ? (
-                      <div className="w-full h-full flex items-center px-2 text-[11px] italic text-[var(--agv-text-muted)] opacity-70">
+                      <div className="w-full h-full flex items-center px-2 text-xs italic text-[var(--agv-text-muted)] opacity-70">
                         {meta.label}
                       </div>
                     ) : dataType === DATA_TYPES.DATE ? (
-                    (() => {
-                      const dateBounds = col.minDate && col.maxDate
-                        ? { min: col.minDate, max: col.maxDate }
-                        : (getColumnDateBounds?.(col.key) || { min: '2017-01-01', max: '2027-12-31' });
-
-                      return col.isDateRange || isBetweenFilterOp(currentOp) ? (
-                        <div className="w-full h-full agv-filter-datepicker flex items-center">
-                          {(() => {
-                            let rangeFrom = '';
-                            let rangeTo = '';
-                            if (inputVal.includes('..')) {
-                              const parts = inputVal.split('..');
-                              rangeFrom = parts[0]?.trim() || '';
-                              rangeTo = parts[1]?.trim() || '';
-                            } else if (inputVal.includes(' - ')) {
-                              const parts = inputVal.split(' - ');
-                              rangeFrom = parts[0]?.trim() || '';
-                              rangeTo = parts[1]?.trim() || '';
-                            } else if (inputVal.trim()) {
-                              rangeFrom = inputVal.trim();
-                              rangeTo = inputVal.trim();
-                            }
-
-                            return (
-                              <AdvDateRangePicker
-                                from={rangeFrom}
-                                to={rangeTo}
-                                onChange={(range) => {
-                                  const f = range.from || '';
-                                  const t = range.to || '';
-                                  const combined = f && t ? `${f}..${t}` : f ? `${f}..` : t ? `..${t}` : '';
-                                  handleInputChange(col.key, combined);
-                                }}
-                                min={dateBounds.min}
-                                max={dateBounds.max}
-                                placeholderFrom={col.isDateRange ? 'Ngày đi' : 'Từ'}
-                                placeholderTo={col.isDateRange ? 'Ngày về' : 'Đến'}
-                                theme={surfaceTheme}
-                                size="xs"
-                                showPreset={true}
-                                dualMonth={false}
-                                showTime={Boolean(col.showTime)}
-                              />
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <div className="w-full h-full agv-filter-datepicker flex items-center">
-                          <AdvDatePicker
-                            value={inputVal}
-                            onChange={(val, range) => {
-                              if (range && range.from && range.to && range.from !== range.to) {
-                                handleInputChange(col.key, `${range.from}..${range.to}`);
-                              } else {
-                                handleInputChange(col.key, val);
-                              }
-                            }}
-                            min={dateBounds.min}
-                            max={dateBounds.max}
-                            placeholder={placeholderText}
-                            showTime={Boolean(col.showTime)}
-                            theme={surfaceTheme}
-                            showPreset={true}
-                            size="xs"
-                            className="w-full h-full"
-                          />
-                        </div>
-                      );
-                    })()
+                    <React.Suspense fallback={null}>
+                      <LazyGridDateFilterCell
+                        col={col}
+                        inputVal={inputVal}
+                        currentOp={currentOp}
+                        placeholderText={placeholderText}
+                        surfaceTheme={surfaceTheme}
+                        getColumnDateBounds={getColumnDateBounds}
+                        onCommitValue={(colKey, val) => handleInputChange(colKey, val)}
+                      />
+                    </React.Suspense>
                   ) : dataType === DATA_TYPES.TIME ? (
-                    isBetweenFilterOp(currentOp) ? (
-                      <TimeRangeFilterInput
-                        from={(() => {
-                          if (inputVal.includes('..')) return inputVal.split('..')[0]?.trim() || '';
-                          if (inputVal.includes(' - ')) return inputVal.split(' - ')[0]?.trim() || '';
-                          return inputVal.trim();
-                        })()}
-                        to={(() => {
-                          if (inputVal.includes('..')) return inputVal.split('..')[1]?.trim() || '';
-                          if (inputVal.includes(' - ')) return inputVal.split(' - ')[1]?.trim() || '';
-                          return '';
-                        })()}
-                        onChange={(f, t) => {
-                          const combined = f && t ? (f === t ? f : `${f}..${t}`) : f || (t ? `..${t}` : '');
-                          handleInputChange(col.key, combined);
-                        }}
-                        onFocus={() => setFocusedColKey(col.key)}
-                        onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
-                        onClear={() => handleClearColFilter(col.key)}
-                        hasValue={hasActiveVal}
-                      />
-                    ) : (
-                      <TimeFilterInput
-                        value={inputVal}
-                        onChange={(val) => handleInputChange(col.key, val)}
-                        onFocus={() => setFocusedColKey(col.key)}
-                        onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
-                        onClear={() => handleClearColFilter(col.key)}
-                        placeholder="HH:mm"
-                        hasValue={hasActiveVal}
-                      />
-                    )
+                    <React.Suspense fallback={null}>
+                      {isBetweenFilterOp(currentOp) ? (
+                        <LazyTimeRangeFilterInput
+                          from={(() => {
+                            if (inputVal.includes('..')) return inputVal.split('..')[0]?.trim() || '';
+                            if (inputVal.includes(' - ')) return inputVal.split(' - ')[0]?.trim() || '';
+                            return inputVal.trim();
+                          })()}
+                          to={(() => {
+                            if (inputVal.includes('..')) return inputVal.split('..')[1]?.trim() || '';
+                            if (inputVal.includes(' - ')) return inputVal.split(' - ')[1]?.trim() || '';
+                            return '';
+                          })()}
+                          onChange={(f, t) => {
+                            const combined = f && t ? (f === t ? f : `${f}..${t}`) : f || (t ? `..${t}` : '');
+                            handleInputChange(col.key, combined);
+                          }}
+                          onFocus={() => setFocusedColKey(col.key)}
+                          onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
+                          onClear={() => handleClearColFilter(col.key)}
+                          hasValue={hasActiveVal}
+                        />
+                      ) : (
+                        <LazyTimeFilterInput
+                          value={inputVal}
+                          onChange={(val) => handleInputChange(col.key, val)}
+                          onFocus={() => setFocusedColKey(col.key)}
+                          onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
+                          onClear={() => handleClearColFilter(col.key)}
+                          placeholder="HH:mm"
+                          hasValue={hasActiveVal}
+                        />
+                      )}
+                    </React.Suspense>
                   ) : dataType === DATA_TYPES.NUMBER ? (
-                    isBetweenFilterOp(currentOp) ? (
-                      (() => {
-                        let rangeFrom = '';
-                        let rangeTo = '';
-                        if (inputVal.includes('..')) {
-                          const parts = inputVal.split('..');
-                          rangeFrom = parts[0]?.trim() || '';
-                          rangeTo = parts[1]?.trim() || '';
-                        } else if (inputVal.includes(' - ')) {
-                          const parts = inputVal.split(' - ');
-                          rangeFrom = parts[0]?.trim() || '';
-                          rangeTo = parts[1]?.trim() || '';
-                        } else if (inputVal.includes('/')) {
-                          const parts = inputVal.split('/');
-                          rangeFrom = parts[0]?.trim() || '';
-                          rangeTo = parts[1]?.trim() || '';
-                        } else if (inputVal.includes('~')) {
-                          const parts = inputVal.split('~');
-                          rangeFrom = parts[0]?.trim() || '';
-                          rangeTo = parts[1]?.trim() || '';
-                        } else if (inputVal.trim()) {
-                          rangeFrom = inputVal.trim();
-                        }
+                    <React.Suspense fallback={null}>
+                      {isBetweenFilterOp(currentOp) ? (
+                        (() => {
+                          let rangeFrom = '';
+                          let rangeTo = '';
+                          if (inputVal.includes('..')) {
+                            const parts = inputVal.split('..');
+                            rangeFrom = parts[0]?.trim() || '';
+                            rangeTo = parts[1]?.trim() || '';
+                          } else if (inputVal.includes(' - ')) {
+                            const parts = inputVal.split(' - ');
+                            rangeFrom = parts[0]?.trim() || '';
+                            rangeTo = parts[1]?.trim() || '';
+                          } else if (inputVal.includes('/')) {
+                            const parts = inputVal.split('/');
+                            rangeFrom = parts[0]?.trim() || '';
+                            rangeTo = parts[1]?.trim() || '';
+                          } else if (inputVal.includes('~')) {
+                            const parts = inputVal.split('~');
+                            rangeFrom = parts[0]?.trim() || '';
+                            rangeTo = parts[1]?.trim() || '';
+                          } else if (inputVal.trim()) {
+                            rangeFrom = inputVal.trim();
+                          }
 
-                        return (
-                          <NumberRangeFilterInput
-                            from={rangeFrom}
-                            to={rangeTo}
-                            onChange={(f, t) => {
-                              const combined = f && t ? `${f}..${t}` : f ? `${f}..` : t ? `..${t}` : '';
-                              handleInputChange(col.key, combined, FILTER_OPS.BETWEEN);
-                            }}
-                            onFocus={() => setFocusedColKey(col.key)}
-                            onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
-                            onClear={() => handleClearColFilter(col.key)}
-                            hasValue={hasActiveVal}
-                          />
-                        );
-                      })()
-                    ) : (
-                      <SmartNumberFilterInput
-                        value={inputVal}
-                        onChange={(val, opOverride) => handleInputChange(col.key, val, opOverride)}
-                        onFocus={() => setFocusedColKey(col.key)}
-                        onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
-                        onClear={() => handleClearColFilter(col.key)}
-                        placeholder={placeholderText}
-                        hasValue={hasActiveVal}
-                        isHighlightPlaceholder={Boolean(
-                          hasCheckedRows && columnSums && columnSums[col.key] !== undefined && !isNoInputOp
-                        )}
-                      />
-                    )
+                          return (
+                            <LazyNumberRangeFilterInput
+                              from={rangeFrom}
+                              to={rangeTo}
+                              onChange={(f, t) => {
+                                const combined = f && t ? `${f}..${t}` : f ? `${f}..` : t ? `..${t}` : '';
+                                handleInputChange(col.key, combined, FILTER_OPS.BETWEEN);
+                              }}
+                              onFocus={() => setFocusedColKey(col.key)}
+                              onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
+                              onClear={() => handleClearColFilter(col.key)}
+                              hasValue={hasActiveVal}
+                            />
+                          );
+                        })()
+                      ) : (
+                        <LazySmartNumberFilterInput
+                          value={inputVal}
+                          onChange={(val, opOverride) => handleInputChange(col.key, val, opOverride)}
+                          onFocus={() => setFocusedColKey(col.key)}
+                          onBlur={() => setFocusedColKey((prev) => (prev === col.key ? null : prev))}
+                          onClear={() => handleClearColFilter(col.key)}
+                          placeholder={placeholderText}
+                          hasValue={hasActiveVal}
+                          isHighlightPlaceholder={Boolean(
+                            hasCheckedRows && columnSums && columnSums[col.key] !== undefined && !isNoInputOp
+                          )}
+                        />
+                      )}
+                    </React.Suspense>
                   ) : (
                     <>
                       <input
@@ -1146,10 +717,9 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                         onChange={(e) => handleInputChange(col.key, e.target.value)}
                         placeholder={placeholderText}
                         {...NO_AUTOFILL_PROPS}
-                        className="w-full h-full bg-transparent px-1.5 text-[11px] outline-none border-none placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full h-full bg-transparent px-1.5 text-xs outline-none border-none placeholder:text-[var(--agv-text-muted)] placeholder:opacity-60 disabled:cursor-not-allowed"
                         style={{
                           color: 'var(--agv-text-main)',
-                          minHeight: '28px',
                         }}
                       />
 
@@ -1158,7 +728,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                         <button
                           type="button"
                           onClick={() => handleClearColFilter(col.key)}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center text-[var(--agv-text-muted)] hover:text-[var(--agv-danger,#ef4444)] transition cursor-pointer"
+                          className="agv-inline-clear-destructive absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4"
                         >
                           <X size={10} strokeWidth={2.5} />
                         </button>
@@ -1172,29 +742,27 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
         })}
       </div>
 
-      {/* Popup Menu Danh Sách Toán Tử (DevExtreme Style Operation Menu) */}
-      {openDropdownColKey && dropdownPos && (
-        <div
-          ref={dropdownRef}
-          style={{
-            position: 'fixed',
-            ...(dropdownPos.isFlipUp
-              ? { bottom: `${dropdownPos.bottom}px`, top: 'auto' }
-              : { top: `${dropdownPos.top}px`, bottom: 'auto' }),
-            left: `${dropdownPos.left}px`,
-            zIndex: 99999999,
-            backgroundColor: 'var(--agv-bg-popup)',
-            borderColor: 'var(--agv-border-popup, var(--agv-border))',
-            boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
-            color: 'var(--agv-text-main)',
-          }}
-          className={`agv-filter-dropdown-menu w-48 py-1 rounded-md border text-xs overflow-hidden select-none ${
-            dropdownPos.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
-          } ${getThemeClass(surfaceTheme)}`}
-          data-theme={surfaceTheme}
-          data-agv-popup="true"
-        >
-          {(() => {
+      {/* Popup Menu Danh Sách Toán Tử (Đồng bộ AdvAnchoredPopover phẳng chuẩn Element Plus) */}
+      <AdvAnchoredPopover
+        isOpen={Boolean(openDropdownColKey && dropdownAnchorEl)}
+        anchorEl={dropdownAnchorEl}
+        onClose={() => {
+          setOpenDropdownColKey(null);
+          setDropdownAnchorEl(null);
+        }}
+        placement="bottom-start"
+        showArrow={true}
+        offset={10}
+        width={192}
+        minWidth={192}
+        paddingClassName="agv-popup-menu"
+        contentClassName="text-xs flex flex-col gap-0.5 select-none"
+        zIndex={99999999}
+        theme={surfaceTheme}
+        ignoreClickOutsideSelectors=".agv-filter-op-btn, [data-op-trigger], [data-agv-popover-trigger='true']"
+      >
+        {openDropdownColKey &&
+          (() => {
             const allowedOps = getAllowedFilterOpsForColumn(
               openDropdownColKey,
               columns,
@@ -1211,23 +779,18 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
                   key={op}
                   type="button"
                   onClick={() => handleSelectOp(openDropdownColKey, op)}
-                  className={`w-full h-[28px] min-h-[28px] px-2.5 flex items-center gap-2 text-left transition cursor-pointer ${
-                    isSelected
-                      ? 'bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)]'
-                      : 'text-[var(--agv-text-main)] hover:bg-[var(--agv-bg-item-hover)]'
-                  }`}
+                  className={`agv-popup-item ${isSelected ? 'is-selected' : ''}`}
                 >
                   <FilterOpIcon op={op} size={14} className="shrink-0" />
                   <span className="flex-1 truncate">{opMeta.label}</span>
                   {isSelected && (
-                    <Check size={12} strokeWidth={2.5} className="shrink-0 text-[var(--agv-accent-text,#ffffff)]" />
+                    <Check size={13} strokeWidth={2.5} className="shrink-0" />
                   )}
                 </button>
               );
             });
           })()}
-        </div>
-      )}
+      </AdvAnchoredPopover>
 
       {/* Popup Lọc nhiều điều kiện (OR) khi chuột phải vào ô filter */}
       {multiFilterColKey && (
@@ -1235,68 +798,75 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
           const colDef = columns.find((c) => c.key === multiFilterColKey);
           if (!colDef) return null;
           return (
-            <AdvMultiFilterPopup
-              isOpen={Boolean(multiFilterColKey)}
-              onClose={() => {
-                setMultiFilterColKey(null);
-                setMultiFilterAnchor(null);
-              }}
-              anchorRect={multiFilterAnchor}
-              column={colDef}
-              currentFilter={columnFilters[multiFilterColKey]}
-              onApply={(key, nextFilter) => {
-                onColumnFilterChange?.(key, nextFilter);
-              }}
-              onClear={(key) => {
-                handleClearColFilter(key);
-              }}
-              hasColumnEmptyCells={hasColumnEmptyCells}
-              getColumnDateBounds={getColumnDateBounds}
-              surfaceTheme={surfaceTheme}
-            />
+            <React.Suspense fallback={null}>
+              <LazyAdvMultiFilterPopup
+                isOpen={Boolean(multiFilterColKey)}
+                onClose={() => {
+                  setMultiFilterColKey(null);
+                  setMultiFilterAnchorEl(null);
+                }}
+                anchorEl={multiFilterAnchorEl}
+                column={colDef}
+                currentFilter={columnFilters[multiFilterColKey]}
+                onApply={(key, nextFilter) => {
+                  onColumnFilterChange?.(key, nextFilter);
+                }}
+                onClear={(key) => {
+                  handleClearColFilter(key);
+                }}
+                hasColumnEmptyCells={hasColumnEmptyCells}
+                getColumnDateBounds={getColumnDateBounds}
+                surfaceTheme={surfaceTheme}
+              />
+            </React.Suspense>
           );
         })()
       )}
 
       {/* Popup Tập hợp tiêu chí đang áp dụng khi click vào ô STT */}
       {isSummaryPopupOpen && (
-        <AdvCriteriaSummaryPopup
-          isOpen={isSummaryPopupOpen}
-          onClose={() => setIsSummaryPopupOpen(false)}
-          anchorRect={summaryAnchorRect}
-          surfaceTheme={surfaceTheme}
-          columns={columns}
-          groupByColumnKey={groupByColumnKey}
-          columnFilters={columnFilters}
-          quickFilterText={quickFilterText}
-          sortConfig={sortConfig}
-          groupSortConfig={groupSortConfig}
-          appliedQueryTree={appliedQueryTree}
-          pinnedRows={pinnedRows}
-          onClearRowFilter={(colKey) => handleClearColFilter(colKey)}
-          onClearChecklistFilter={(colKey) => {
-            const current = columnFilters[colKey];
-            onColumnFilterChange?.(colKey, {
-              ...current,
-              selectedValues: undefined,
-              includeBlanks: undefined,
-            });
-          }}
-          onClearGroup={onUngroup}
-          onClearQuickSearch={() => onQuickFilterTextChange?.('')}
-          onClearSortRow={() => onSortChange?.(null)}
-          onClearSortGroup={() => onToggleGroupSort?.('')}
-          onClearQueryTree={() => onApplyQueryTree?.(null)}
-          onUnpinRow={onUnpinRow}
-          onClearAll={() => {
-            onClearPinnedRows?.();
-            if (onClearAllCriteria) {
-              onClearAllCriteria();
-            } else {
-              onClearAllColumnFilters?.();
-            }
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <LazyAdvCriteriaSummaryPopup
+            isOpen={isSummaryPopupOpen}
+            onClose={() => setIsSummaryPopupOpen(false)}
+            anchorRect={summaryAnchorRect}
+            anchorEl={summaryAnchorEl}
+            surfaceTheme={surfaceTheme}
+            columns={columns}
+            groupByColumnKey={groupByColumnKey}
+            columnFilters={columnFilters}
+            quickFilterText={quickFilterText}
+            sortConfig={sortConfig}
+            sortRules={sortRules}
+            groupSortConfig={groupSortConfig}
+            appliedQueryTree={appliedQueryTree}
+            pinnedRows={pinnedRows}
+            onClearRowFilter={(colKey) => handleClearColFilter(colKey)}
+            onClearChecklistFilter={(colKey) => {
+              const current = columnFilters[colKey];
+              onColumnFilterChange?.(colKey, {
+                ...current,
+                selectedValues: undefined,
+                includeBlanks: undefined,
+              });
+            }}
+            onClearGroup={onUngroup}
+            onClearQuickSearch={() => onQuickFilterTextChange?.('')}
+            onClearSortRow={() => onSortChange?.(null)}
+            onRemoveSortRule={onRemoveSortRule}
+            onClearSortGroup={() => onToggleGroupSort?.('')}
+            onClearQueryTree={() => onApplyQueryTree?.(null)}
+            onUnpinRow={onUnpinRow}
+            onClearAll={() => {
+              onClearPinnedRows?.();
+              if (onClearAllCriteria) {
+                onClearAllCriteria();
+              } else {
+                onClearAllColumnFilters?.();
+              }
+            }}
+          />
+        </React.Suspense>
       )}
     </>
   );

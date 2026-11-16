@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, lazy, Suspense, useMemo } from 'react';
 import {
   ColumnDef,
   PinPosition,
@@ -10,7 +10,17 @@ import {
 } from './types';
 import { getThemeClasses } from './constants';
 import { GridRow } from './GridRow';
-import { GridTabletRow, GridPhoneCard } from './responsive';
+import { buildColRenderMetas, type GridLayoutSnapshot } from './colRenderMeta';
+import type { ResponsiveChunkRowProps } from './responsive/ResponsiveChunkRow';
+import {
+  computeTabletTrackMinWidth,
+  type CompiledPhoneCard,
+  type CompiledTabletGroup,
+} from './responsive/responsiveColumnUtils';
+
+const LazyResponsiveChunkRow = lazy(
+  () => import('./responsive/ResponsiveChunkRow')
+) as unknown as React.LazyExoticComponent<React.ComponentType<ResponsiveChunkRowProps<any>>>;
 
 export interface GridChunkBlockProps<T = any> {
   chunkIndex: number;
@@ -18,6 +28,8 @@ export interface GridChunkBlockProps<T = any> {
   startRowIndex: number;
   columns: ColumnDef<T>[];
   colWidths: Record<string, number>;
+  layoutSnapshot?: GridLayoutSnapshot<T>;
+  delegatedEvents?: boolean;
   rowHeight: number;
   chunkSize: number;
   topOffset?: number;
@@ -30,6 +42,7 @@ export interface GridChunkBlockProps<T = any> {
   selectedRowKey?: string | number | null;
   checkedRowIndices?: Set<number | string>;
   onSelectRow?: (rowIndex: number, row: T) => void;
+  onRowDetail?: (row: T, rowIndex: number) => void;
   onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
   onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
   onGroupContextMenu?: (groupRow: any, e: React.MouseEvent) => void;
@@ -53,6 +66,8 @@ export interface GridChunkBlockProps<T = any> {
   getColumnDateBounds?: (colKey: string) => { min: string; max: string };
   emptyColKeys?: Set<string>;
   activeMode?: 'pc' | 'tablet' | 'phone';
+  compiledTabletGroups?: CompiledTabletGroup<T>[];
+  compiledPhoneCard?: CompiledPhoneCard<T>;
 }
 
 export const GridChunkBlock = memo(
@@ -62,6 +77,8 @@ export const GridChunkBlock = memo(
     startRowIndex,
     columns,
     colWidths,
+    layoutSnapshot,
+    delegatedEvents = false,
     rowHeight,
     chunkSize,
     topOffset,
@@ -74,6 +91,7 @@ export const GridChunkBlock = memo(
     selectedRowKey,
     checkedRowIndices,
     onSelectRow,
+    onRowDetail,
     onToggleCheck,
     antiGhostMode = true,
     surfaceTheme,
@@ -97,15 +115,57 @@ export const GridChunkBlock = memo(
     getColumnDateBounds,
     emptyColKeys,
     activeMode = 'pc',
+    compiledTabletGroups,
+    compiledPhoneCard,
   }: GridChunkBlockProps<T>) => {
     const isResponsiveCard = activeMode === 'tablet' || activeMode === 'phone';
     const effectiveChunkHeight = chunkHeight !== undefined ? chunkHeight : rows.length * rowHeight;
     const effectiveTopOffset = topOffset !== undefined ? topOffset : Math.round(chunkIndex * chunkSize * rowHeight);
-    const totalGridWidth = columns.reduce(
-      (acc, col) => acc + (colWidths[col.key] || col.defaultWidth),
-      0
-    );
     const theme = getThemeClasses(surfaceTheme);
+
+    const fallbackMetaResult = useMemo(
+      () =>
+        layoutSnapshot
+          ? null
+          : buildColRenderMetas({
+              columns,
+              colWidths,
+              rowHeight,
+              surfaceTheme,
+              columnPins,
+              leftOffsets,
+              rightOffsets,
+              lastEffectiveLeftColKey,
+              firstEffectiveRightColKey,
+              centerDockStatus,
+              centerLeftOffsets,
+              centerRightOffsets,
+              emptyColKeys,
+            }),
+      [
+        layoutSnapshot,
+        columns,
+        colWidths,
+        rowHeight,
+        surfaceTheme,
+        columnPins,
+        leftOffsets,
+        rightOffsets,
+        lastEffectiveLeftColKey,
+        firstEffectiveRightColKey,
+        centerDockStatus,
+        centerLeftOffsets,
+        centerRightOffsets,
+        emptyColKeys,
+      ]
+    );
+
+    const colRenderMetas = layoutSnapshot
+      ? layoutSnapshot.colRenderMetas
+      : fallbackMetaResult!.metas;
+    const totalGridWidth = layoutSnapshot
+      ? layoutSnapshot.totalRowWidth
+      : fallbackMetaResult!.totalWidth;
 
     const chkCol = columns.find((c) => c.isSelection || (c.dataType === DATA_TYPES.SYSTEM && !c.title));
     const chkColKey = chkCol?.key;
@@ -116,6 +176,15 @@ export const GridChunkBlock = memo(
     const hasRowNumberCol = columns.some(isRowNumberCol);
     const effectiveShowRowNumber = showRowNumber !== undefined ? showRowNumber : hasRowNumberCol;
 
+    const tabletTrackMinWidth =
+      activeMode === 'tablet' && compiledTabletGroups && compiledTabletGroups.length > 0
+        ? computeTabletTrackMinWidth(
+            compiledTabletGroups,
+            effectiveShowRowNumber,
+            effectiveShowSelectionCol
+          )
+        : 0;
+
     return (
       <div
         data-agv-fullwidth={isResponsiveCard ? undefined : "true"}
@@ -124,7 +193,11 @@ export const GridChunkBlock = memo(
           top: 0,
           left: 0,
           width: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
-          minWidth: isResponsiveCard ? '100%' : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
+          minWidth: isResponsiveCard
+            ? tabletTrackMinWidth > 0
+              ? `${tabletTrackMinWidth}px`
+              : '100%'
+            : `var(--agv-total-grid-w, ${totalGridWidth}px)`,
           height: `${effectiveChunkHeight}px`,
           transform: `translate3d(0px, ${effectiveTopOffset}px, 0px)`,
           willChange: antiGhostMode ? 'transform' : undefined,
@@ -154,45 +227,34 @@ export const GridChunkBlock = memo(
 
           const key = rowKey;
 
-          if (activeMode === 'tablet') {
+          if (activeMode === 'tablet' || activeMode === 'phone') {
+            const isCardExpanded = activeMode === 'phone' ? Boolean(phoneExpandedRows?.has(rowKey)) : false;
             return (
-              <GridTabletRow
-                key={key}
-                row={row}
-                rowIndex={actualRowIndex}
-                rowKey={rowKey}
-                rowHeight={rowHeight}
-                isSelected={isSelected}
-                isChecked={isChecked}
-                showRowNumber={effectiveShowRowNumber}
-                showSelectionCol={effectiveShowSelectionCol}
-                onSelectRow={onSelectRow}
-                onToggleCheck={onToggleCheck}
-                surfaceTheme={surfaceTheme}
-                renderCell={renderCell}
-              />
-            );
-          }
-
-          if (activeMode === 'phone') {
-            const isCardExpanded = Boolean(phoneExpandedRows?.has(rowKey));
-            return (
-              <GridPhoneCard
-                key={key}
-                row={row}
-                rowIndex={actualRowIndex}
-                rowKey={rowKey}
-                rowHeight={rowHeight}
-                isSelected={isSelected}
-                isChecked={isChecked}
-                isExpanded={isCardExpanded}
-                showRowNumber={effectiveShowRowNumber}
-                showSelectionCol={effectiveShowSelectionCol}
-                onToggleExpand={onToggleExpandPhoneCard}
-                onSelectRow={onSelectRow}
-                onToggleCheck={onToggleCheck}
-                surfaceTheme={surfaceTheme}
-              />
+              <Suspense key={key} fallback={null}>
+                <LazyResponsiveChunkRow
+                  activeMode={activeMode}
+                  row={row}
+                  rowIndex={actualRowIndex}
+                  rowKey={rowKey}
+                  columns={columns}
+                  compiledTabletGroups={compiledTabletGroups}
+                  compiledPhoneCard={compiledPhoneCard}
+                  rowHeight={rowHeight}
+                  isSelected={isSelected}
+                  isChecked={isChecked}
+                  isExpanded={isCardExpanded}
+                  showRowNumber={effectiveShowRowNumber}
+                  showSelectionCol={effectiveShowSelectionCol}
+                  onToggleExpand={onToggleExpandPhoneCard}
+                  onSelectRow={onSelectRow}
+                  onRowDetail={onRowDetail}
+                  onToggleCheck={onToggleCheck}
+                  onCellContextMenu={onCellContextMenu}
+                  surfaceTheme={surfaceTheme}
+                  renderCell={renderCell}
+                  allowTextSelection={!onCellContextMenu}
+                />
+              </Suspense>
             );
           }
 
@@ -204,6 +266,10 @@ export const GridChunkBlock = memo(
               rowIndex={actualRowIndex}
               columns={columns}
               colWidths={colWidths}
+              colRenderMetas={colRenderMetas}
+              layoutSnapshot={layoutSnapshot}
+              delegatedEvents={delegatedEvents}
+              totalRowWidth={totalGridWidth}
               rowHeight={rowHeight}
               isSelected={isSelected}
               isChecked={isChecked}
@@ -235,15 +301,33 @@ export const GridChunkBlock = memo(
     );
   },
   (prev, next) => {
-    if (prev.columns !== next.columns) return false;
-    if (prev.columnPins !== next.columnPins) return false;
-    if (prev.leftOffsets !== next.leftOffsets) return false;
-    if (prev.rightOffsets !== next.rightOffsets) return false;
-    if (prev.lastEffectiveLeftColKey !== next.lastEffectiveLeftColKey) return false;
-    if (prev.firstEffectiveRightColKey !== next.firstEffectiveRightColKey) return false;
-    if (prev.centerDockStatus !== next.centerDockStatus) return false;
-    if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
-    if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
+    if (prev.delegatedEvents !== next.delegatedEvents) return false;
+    if (prev.compiledTabletGroups !== next.compiledTabletGroups) return false;
+    if (
+      prev.activeMode === 'tablet' ||
+      prev.activeMode === 'phone' ||
+      next.activeMode === 'tablet' ||
+      next.activeMode === 'phone'
+    ) {
+      if (prev.columns !== next.columns) return false;
+    }
+    if (prev.layoutSnapshot || next.layoutSnapshot) {
+      if (prev.layoutSnapshot !== next.layoutSnapshot) return false;
+    } else {
+      if (prev.columns !== next.columns) return false;
+      if (prev.columnPins !== next.columnPins) return false;
+      if (prev.leftOffsets !== next.leftOffsets) return false;
+      if (prev.rightOffsets !== next.rightOffsets) return false;
+      if (prev.lastEffectiveLeftColKey !== next.lastEffectiveLeftColKey) return false;
+      if (prev.firstEffectiveRightColKey !== next.firstEffectiveRightColKey) return false;
+      if (prev.centerDockStatus !== next.centerDockStatus) return false;
+      if (prev.centerLeftOffsets !== next.centerLeftOffsets) return false;
+      if (prev.centerRightOffsets !== next.centerRightOffsets) return false;
+      if (prev.emptyColKeys !== next.emptyColKeys) return false;
+      if (prev.surfaceTheme !== next.surfaceTheme) return false;
+      if (prev.colWidths !== next.colWidths) return false;
+      if (prev.rowHeight !== next.rowHeight) return false;
+    }
     if (prev.rows !== next.rows) return false;
     if (prev.showRowNumber !== next.showRowNumber) return false;
     if (prev.showSelectionCol !== next.showSelectionCol) return false;
@@ -337,17 +421,16 @@ export const GridChunkBlock = memo(
       if (prevEditInChunk || nextEditInChunk) return false;
     }
     if (prev.renderCell !== next.renderCell) return false;
-    if (prev.onCellContextMenu !== next.onCellContextMenu) return false;
-    if (prev.emptyColKeys !== next.emptyColKeys) return false;
+    if (!next.delegatedEvents) {
+      if (prev.onCellContextMenu !== next.onCellContextMenu) return false;
+    }
+    if (prev.onGroupContextMenu !== next.onGroupContextMenu) return false;
 
     return (
       prev.chunkIndex === next.chunkIndex &&
-      prev.rowHeight === next.rowHeight &&
       prev.chunkSize === next.chunkSize &&
       prev.antiGhostMode === next.antiGhostMode &&
-      prev.surfaceTheme === next.surfaceTheme &&
       prev.rows === next.rows &&
-      prev.colWidths === next.colWidths &&
       prev.activeMode === next.activeMode &&
       prev.showRowNumber === next.showRowNumber &&
       prev.showSelectionCol === next.showSelectionCol

@@ -1,17 +1,45 @@
 export * from './types';
+export * from './gridFeatures';
+export * from './modules';
+export * from './columns';
 export * from './constants';
 export * from './VirtualizedGrid';
 export * from './GridHeader';
 export * from './GridChunkBlock';
+export * from './GridVirtualRowSlot';
 export * from './GridRow';
-export * from './ColumnContextMenu';
+export type { ColumnContextMenuProps } from './ColumnContextMenu';
 export * from './FilterIcons';
-export * from './GridFilterRow';
-export * from './AdvChecklistFilterPopup';
+export type { GridFilterRowProps } from './GridFilterRow';
+export type { AdvChecklistFilterPopupProps, AdvChecklistFilterPopupRef } from './AdvChecklistFilterPopup';
+export * from './multiSortUtils';
 export * from './AdvCheckbox';
-export * from './responsive';
-export * from './GridFloatingToolbar';
-export * from './floating';
+export type { UseGridLayoutModeResult } from './responsive/useGridLayoutMode';
+export type {
+  QueryRule,
+  QueryGroup,
+  QueryTreeNode,
+  QueryCombinator,
+  QueryPreset,
+} from './floating/types';
+export { evaluateQueryTreeNode, hasActiveQueryRules } from './floating/queryUtils';
+export * from './gridStorage';
+export * from './GridStatusBar';
+export * from './GridExternalPopupButtons';
+export * from './DataGrid';
+export {
+  createAutoRowSpan,
+  type AutoRowSpanOptions,
+  type SpanWindowPlan,
+  type RowSpanPlan,
+} from './gridCellSpanEngine';
+export {
+  buildTreeForest,
+  flattenVisibleTreeNodes,
+  type TreeNode,
+  type FlattenedTreeRow,
+  type TreeForestResult,
+} from './gridTreeDataEngine';
 export {
   measureTextWidth,
   getSttColWidth,

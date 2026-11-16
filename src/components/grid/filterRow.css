@@ -1,0 +1,23 @@
+/* Single-source border/focus/hover state lives on .agv-control.agv-control-box in src/index.css.
+   Keep only the inner operator accent highlight synchronized with filter cell focus/hover. */
+.agv-filter-cell-box:focus-within .agv-filter-op-btn {
+  color: var(--brand, var(--agv-accent)) !important;
+}
+.agv-filter-op-btn {
+  padding-right: 0px !important;
+  background-color: transparent !important;
+}
+.agv-filter-op-btn:hover {
+  color: var(--brand, var(--agv-accent)) !important;
+  background-color: transparent !important;
+}
+.agv-filter-datepicker .agv-datepicker-input-box,
+.agv-filter-datepicker .agv-daterange-bar {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 4px !important;
+  box-shadow: none !important;
+  min-height: 28px !important;
+  height: 100% !important;
+}

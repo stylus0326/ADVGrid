@@ -708,7 +708,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
     ]
   );
 
-  const sizeClass = size === 'xs' ? 'is-xs' : size === 'sm' ? 'is-sm' : 'is-md';
+  const sizeClass = size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
 
   return (
     <div className={`agv-daterange-picker-wrap ${className}`} ref={triggerRef}>
@@ -719,7 +719,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
         {presetValue ? (
           <div className="agv-daterange-segment flex w-full items-center justify-center overflow-hidden px-1">
             <span
-              className="truncate text-[11px] font-semibold text-[var(--agv-text-main)]"
+              className="truncate font-normal text-foreground"
             >
               {getPresetLabel(presetValue)}
             </span>
@@ -742,7 +742,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
               onBlur={handleSingleBlur}
               onKeyDown={(e) => e.key === 'Enter' && handleSingleBlur()}
               placeholder={showTime ? "DD/MM/YYYY HH:mm" : "DD/MM/YYYY"}
-              className="agv-daterange-text text-center font-medium"
+              className="agv-daterange-text text-center font-normal"
             />
           </div>
         ) : (
@@ -761,7 +761,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
                 onBlur={handleFromBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleFromBlur()}
                 placeholder={effPlaceholderFrom}
-                className="agv-daterange-text text-center font-medium"
+                className="agv-daterange-text text-center font-normal"
               />
             </div>
             <span className="agv-daterange-sep inline-flex items-center justify-center shrink-0">
@@ -781,7 +781,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
                 onBlur={handleToBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleToBlur()}
                 placeholder={effPlaceholderTo}
-                className="agv-daterange-text text-center font-medium"
+                className="agv-daterange-text text-center font-normal"
               />
             </div>
           </>
@@ -800,7 +800,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
               setSelectingState('start');
               emitChange({ from: '', to: '', preset: '' });
             }}
-            className="agv-datepicker-clear-btn"
+            className="agv-datepicker-clear-btn agv-inline-clear-destructive"
           >
             ×
           </button>
@@ -818,9 +818,8 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
                 : { top: `${coords.top}px`, bottom: 'auto' }),
               left: `${coords.left}px`,
               zIndex: 999999999,
-              boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 8px 12px -6px rgba(0, 0, 0, 0.15)',
             }}
-            className={`agv-calendar-popover agv-daterange-popover ${
+            className={`agv-calendar-popover agv-daterange-popover agv-popup-panel ${
               coords.isFlipUp ? 'agv-spring-up' : 'agv-spring-down'
             } ${dualMonth ? 'is-dual' : ''} ${theme ? getThemeClass(theme) : ''}`}
             data-theme={theme || undefined}
@@ -835,7 +834,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
                   min={effMin}
                   max={effMax}
                   dateAnalysis={dateAnalysis}
-                  label="Mốc nhanh:"
+                  label="Mốc thời gian:"
                   theme={theme}
                   onSelect={(presetId: string, isMulti?: boolean) => {
                     setPresetValue(presetId);

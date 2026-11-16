@@ -1,62 +1,105 @@
 import React, { memo } from 'react';
-import { SurfaceTheme } from '../types';
+import { ALIGNMENTS, ColumnDef, SurfaceTheme } from '../types';
+import { AdvButton } from '../../ui/AdvButton';
+import {
+  compileTabletGroups,
+  computeTabletTrackMinWidth,
+  type CompiledTabletGroup,
+} from './responsiveColumnUtils';
 
 export interface GridTabletHeaderProps {
   surfaceTheme: SurfaceTheme;
+  columns?: ColumnDef<any>[];
+  compiledGroups?: CompiledTabletGroup<any>[];
   showRowNumber?: boolean;
   showSelectionCol?: boolean;
   onOpenSortFilter?: () => void;
   hasActiveFilterOrSort?: boolean;
+  sortFilterLabel?: string;
 }
 
 export const GridTabletHeader = memo(({
   surfaceTheme: _surfaceTheme,
+  columns = [],
+  compiledGroups,
   showRowNumber = true,
   showSelectionCol = true,
   onOpenSortFilter,
   hasActiveFilterOrSort = false,
+  sortFilterLabel = 'Lọc & Sắp Xếp',
 }: GridTabletHeaderProps) => {
+  const effectiveGroups =
+    compiledGroups && compiledGroups.length > 0
+      ? compiledGroups
+      : compileTabletGroups(columns);
+  const trackMinWidth = computeTabletTrackMinWidth(
+    effectiveGroups,
+    showRowNumber,
+    showSelectionCol
+  );
+
   return (
     <div
       style={{
-        height: '34px',
+        minHeight: '44px',
+        minWidth: trackMinWidth > 0 ? `${trackMinWidth}px` : undefined,
         backgroundColor: 'var(--agv-bg-header, var(--agv-bg-root))',
         borderColor: 'var(--agv-border)',
         color: 'var(--agv-text-main)',
       }}
-      className="flex items-center border-b px-3 text-[11px] font-bold uppercase tracking-wider select-none shrink-0"
+      className="w-full flex items-center border-b px-3 py-2 text-xs font-semibold select-none shrink-0"
     >
       {(showRowNumber || showSelectionCol) && (
         <div className="w-10 shrink-0 text-center mr-2" style={{ color: 'var(--agv-text-muted)' }}>
-          {showRowNumber ? 'TT' : ''}
+          {showRowNumber ? '#' : ''}
         </div>
       )}
-      <div className="flex-1 min-w-[180px] pr-3">
-        Thông tin Node
-      </div>
-      <div className="flex-1 min-w-[160px] pr-3">
-        Đo lường & Khu vực
-      </div>
-      <div className="w-[140px] shrink-0 pr-3">
-        Biểu đồ 12T & AVG
-      </div>
-      <div className="w-[150px] shrink-0 text-right flex items-center justify-end gap-2">
-        <span>Trạng thái</span>
-        {onOpenSortFilter && (
-          <button
-            type="button"
-            onClick={onOpenSortFilter}
-            className="min-h-[28px] px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer transition-colors uppercase tracking-normal"
-            style={{
-              backgroundColor: hasActiveFilterOrSort ? 'var(--agv-accent)' : 'var(--agv-bg-root)',
-              color: hasActiveFilterOrSort ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-main)',
-              borderColor: 'var(--agv-border)',
-            }}
+
+      {effectiveGroups.map((group, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === effectiveGroups.length - 1;
+        const padClass = isFirst ? 'pr-3' : isLast ? 'pl-3' : 'px-3';
+        const alignClass =
+          group.align === ALIGNMENTS.RIGHT
+            ? 'justify-end text-right'
+            : group.align === ALIGNMENTS.CENTER
+              ? 'justify-center text-center'
+              : 'justify-start text-left';
+
+        const sizeStyle: React.CSSProperties = group.width
+          ? { width: `${group.width}px` }
+          : { minWidth: `${group.minWidth}px` };
+
+        return (
+          <div
+            key={group.id}
+            style={sizeStyle}
+            className={`relative flex items-center gap-2 min-w-0 ${
+              group.width ? 'shrink-0' : 'flex-1'
+            } ${padClass} ${isLast && onOpenSortFilter ? 'justify-between' : alignClass}`}
           >
-            Lọc & Sắp Xếp
-          </button>
-        )}
-      </div>
+            {idx > 0 && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-px h-4"
+                style={{ backgroundColor: 'var(--agv-border)' }}
+              />
+            )}
+            <span className="truncate">{group.header}</span>
+            {isLast && onOpenSortFilter && (
+              <AdvButton
+                variant="outline"
+                size="sm"
+                active={hasActiveFilterOrSort}
+                onClick={onOpenSortFilter}
+                className="font-semibold"
+              >
+                {sortFilterLabel}
+              </AdvButton>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 });

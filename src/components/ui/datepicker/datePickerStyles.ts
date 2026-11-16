@@ -2,18 +2,7 @@ const FALLBACK_STYLE_ID = 'agv-datepicker-core-styles';
 
 function ensureDatePickerStyles() {
   if (typeof document === 'undefined') return;
-  let style = document.getElementById(FALLBACK_STYLE_ID) as HTMLStyleElement | null;
-  if (style) return;
-
-  style = document.createElement('style');
-  style.id = FALLBACK_STYLE_ID;
-  if (document.head.firstChild) {
-    document.head.insertBefore(style, document.head.firstChild);
-  } else {
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
+  const cssText = `
     .agv-datepicker-container,
     .agv-daterange-picker-wrap,
     .agv-custom-select-wrap {
@@ -21,12 +10,15 @@ function ensureDatePickerStyles() {
       display: block;
       width: 100%;
       box-sizing: border-box;
-      font-family: var(--font-sans, inherit);
+      font-family: var(--font-app-sans, 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif);
+      font-size: 12px;
+      line-height: 16px;
     }
     .agv-popup-label {
       display: block;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
       color: var(--agv-text-muted);
       margin-bottom: 4px;
     }
@@ -42,21 +34,41 @@ function ensureDatePickerStyles() {
       min-height: 28px;
       box-sizing: border-box;
       padding: 0 8px;
-      background: var(--agv-bg-popup);
-      border: 1px solid var(--agv-border);
-      border-radius: 6px;
-      color: var(--agv-text-main);
+      background: var(--form-field-label-background, var(--control-background));
+      border: 1px solid var(--control-border);
+      border-radius: var(--control-radius);
+      color: var(--foreground);
+      font-family: inherit;
       font-size: 12px;
-      transition: border-color 120ms ease;
+      line-height: 16px;
+      transition: border-color var(--motion-fast, 120ms) var(--motion-ease-standard, ease), box-shadow var(--motion-fast, 120ms) var(--motion-ease-standard, ease);
       cursor: pointer;
       user-select: none;
     }
-    .agv-datepicker-input-box.is-xs, .agv-daterange-bar.is-xs { height: 28px; min-height: 28px; font-size: 11px; padding: 0 5px; box-sizing: border-box; }
-    .agv-datepicker-input-box.is-sm, .agv-daterange-bar.is-sm, .agv-custom-select-trigger.is-sm { height: 28px; min-height: 28px; font-size: 11.5px; padding: 0 6px; box-sizing: border-box; }
+    .agv-datepicker-input-box:hover:not(.is-focused):not(:focus-within),
+    .agv-daterange-bar:hover:not(.is-focused):not(:focus-within),
+    .agv-custom-select-trigger:hover:not(.is-open) {
+      border-color: var(--control-border-hover);
+    }
+    .agv-datepicker-input-box.is-xs, .agv-daterange-bar.is-xs { height: 28px; min-height: 28px; font-size: 12px; line-height: 16px; padding: 0 6px; box-sizing: border-box; }
+    .agv-datepicker-input-box.is-sm, .agv-daterange-bar.is-sm, .agv-custom-select-trigger.is-sm { height: 28px; min-height: 28px; font-size: 12px; line-height: 16px; padding: 0 8px; box-sizing: border-box; }
+    .agv-datepicker-input-box.is-md, .agv-daterange-bar.is-md, .agv-custom-select-trigger.is-md {
+      height: var(--control-height, 36px);
+      min-height: var(--control-height, 36px);
+      font-size: var(--font-size-body, 14px);
+      line-height: 20px;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
     .agv-datepicker-input-box.is-focused,
+    .agv-datepicker-input-box:focus-within,
     .agv-daterange-bar.is-focused,
-    .agv-custom-select-trigger.is-open {
-      border-color: var(--agv-accent);
+    .agv-daterange-bar:focus-within,
+    .agv-custom-select-trigger.is-open,
+    .agv-custom-select-trigger:focus-visible {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: inset 0 0 0 1px var(--brand);
     }
     .agv-datepicker-text,
     .agv-daterange-text {
@@ -65,14 +77,17 @@ function ensureDatePickerStyles() {
       border: none;
       outline: none;
       background: transparent;
-      color: var(--agv-text-main);
+      color: var(--foreground);
+      font-family: inherit;
       font-size: inherit;
+      line-height: inherit;
+      font-variant-numeric: tabular-nums;
       padding: 2px 0;
     }
     .agv-datepicker-text::placeholder,
     .agv-daterange-text::placeholder {
-      color: var(--agv-text-muted);
-      opacity: 0.6;
+      color: var(--muted-foreground);
+      opacity: 1;
     }
     .agv-filter-datepicker .agv-datepicker-input-box,
     .agv-filter-datepicker .agv-daterange-bar {
@@ -81,24 +96,26 @@ function ensureDatePickerStyles() {
       border-radius: 0 !important;
       padding: 0 4px !important;
       box-shadow: none !important;
-      min-height: 26px !important;
+      min-height: 28px !important;
     }
     .agv-incell-datepicker .agv-datepicker-input-box,
     .agv-incell-datepicker .agv-daterange-bar {
-      border: 2px solid var(--agv-accent) !important;
-      box-shadow: none !important;
+      border: 1px solid var(--brand) !important;
+      box-shadow: inset 0 0 0 1px var(--brand) !important;
       font-size: 12px !important;
+      line-height: 16px !important;
       padding: 0 6px !important;
       min-height: 28px !important;
       max-height: 30px !important;
       height: 100% !important;
-      background: var(--agv-bg-root, var(--agv-bg-popup)) !important;
-      color: var(--agv-text-main) !important;
+      background: var(--form-field-label-background, var(--control-background)) !important;
+      color: var(--foreground) !important;
       box-sizing: border-box !important;
     }
     .agv-incell-datepicker .agv-datepicker-text,
     .agv-incell-datepicker .agv-daterange-text {
       font-size: 12px !important;
+      line-height: 16px !important;
       font-family: var(--font-sans, inherit) !important;
       font-variant-numeric: tabular-nums !important;
       color: var(--agv-text-main) !important;
@@ -111,7 +128,8 @@ function ensureDatePickerStyles() {
     }
     .agv-daterange-sep {
       color: var(--agv-text-subtle);
-      font-size: 11px;
+      font-size: 12px;
+      line-height: 16px;
       padding: 0 1px;
       flex-shrink: 0;
       display: inline-flex;
@@ -126,7 +144,7 @@ function ensureDatePickerStyles() {
       width: 16px;
       height: 16px;
       border-radius: 9999px;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1;
       color: var(--agv-text-subtle);
       background: transparent;
@@ -142,15 +160,18 @@ function ensureDatePickerStyles() {
     }
     .agv-calendar-popover,
     .agv-custom-select-dropdown {
-      background: var(--agv-bg-popup);
-      color: var(--agv-text-main);
-      border: 1px solid var(--agv-border);
-      border-radius: 6px;
-      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.22), 0 8px 10px -6px rgba(15, 23, 42, 0.12);
+      background: var(--popup-background);
+      color: var(--popover-foreground);
+      border: 1px solid var(--popup-border);
+      border-radius: var(--popup-radius);
+      box-shadow: var(--popup-shadow);
       padding: 8px 9px;
       width: 264px;
       max-width: 95vw;
       box-sizing: border-box;
+      font-family: var(--font-app-sans, 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif);
+      font-size: 12px;
+      line-height: 16px;
       user-select: none;
       will-change: transform, opacity;
       contain: layout style;
@@ -175,7 +196,7 @@ function ensureDatePickerStyles() {
     .agv-calendar-body-wrap {
       display: flex;
       flex-direction: column;
-      height: 220px;
+      height: 224px;
       width: 100%;
       box-sizing: border-box;
     }
@@ -195,13 +216,16 @@ function ensureDatePickerStyles() {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      min-width: 28px;
+      height: 28px;
+      min-height: 28px;
       border-radius: 6px;
       border: 1px solid transparent;
       background: transparent;
       color: var(--agv-text-main);
-      font-size: 15px;
+      font-family: inherit;
+      font-size: 12px;
       line-height: 1;
       cursor: pointer;
       transition: background-color 100ms ease;
@@ -215,12 +239,15 @@ function ensureDatePickerStyles() {
     }
     .agv-cal-title-btn {
       flex: 1;
-      height: 24px;
+      height: 28px;
+      min-height: 28px;
       border: none;
       background: transparent;
       color: var(--agv-text-main);
-      font-weight: 600;
+      font-family: inherit;
+      font-weight: 500;
       font-size: 12px;
+      line-height: 16px;
       border-radius: 6px;
       cursor: pointer;
       transition: background-color 100ms ease;
@@ -238,8 +265,9 @@ function ensureDatePickerStyles() {
     }
     .agv-calendar-weekday {
       text-align: center;
-      font-size: 10.5px;
-      font-weight: 600;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
       color: var(--agv-text-subtle);
     }
     .agv-calendar-weekday.is-weekend {
@@ -261,13 +289,15 @@ function ensureDatePickerStyles() {
       border-radius: 6px;
       background: transparent;
       color: var(--agv-text-main);
-      font-size: 11.5px;
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 16px;
+      font-variant-numeric: tabular-nums;
       font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background-color 80ms ease, color 80ms ease;
       position: relative;
     }
     .agv-cal-day-cell.is-weekend {
@@ -349,10 +379,11 @@ function ensureDatePickerStyles() {
       border-radius: 6px;
       background: transparent;
       color: var(--agv-text-main);
+      font-family: inherit;
       font-size: 12px;
+      line-height: 16px;
       font-weight: 500;
       cursor: pointer;
-      transition: background-color 100ms ease;
     }
     .agv-cal-matrix-cell:hover:not(.is-disabled):not(.is-selected):not(.is-in-range) {
       background: var(--agv-bg-item-hover);
@@ -405,7 +436,8 @@ function ensureDatePickerStyles() {
     }
     .agv-preset-group-title,
     .agv-preset-col-title {
-      font-size: 10px;
+      font-size: 12px;
+      line-height: 16px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -431,38 +463,44 @@ function ensureDatePickerStyles() {
       align-items: center;
       justify-content: space-between;
       gap: 5px;
-      padding: 3px 5px;
-      border-radius: 6px;
-      font-size: 11.5px;
+      min-height: 28px;
+      box-sizing: border-box;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 16px;
       color: var(--agv-text-main);
       cursor: pointer;
-      transition: background-color 80ms ease;
     }
-    .agv-preset-item:hover {
-      background: var(--agv-bg-item-hover);
+    .agv-preset-item:hover:not(.is-active) {
+      background: var(--popup-item-hover-bg, var(--surface-hover));
     }
     .agv-preset-item.is-active {
-      background: var(--agv-accent);
-      color: var(--agv-accent-text);
-      font-weight: 600;
+      background: var(--popup-item-selected-bg);
+      color: var(--popup-item-selected-fg);
+      box-shadow: none;
+      font-weight: 500;
     }
     .agv-preset-item-count {
-      font-size: 9.5px;
+      font-size: 12px;
+      line-height: 16px;
       padding: 1px 4px;
       border-radius: 6px;
-      background: var(--agv-bg-subtle);
-      color: var(--agv-text-subtle);
+      background: var(--muted);
+      color: var(--muted-foreground);
     }
     .agv-preset-item.is-active .agv-preset-item-count {
-      background: rgba(255, 255, 255, 0.2);
-      color: var(--agv-accent-text);
+      background: rgb(255 255 255 / 0.2);
+      color: var(--popup-item-selected-fg);
     }
     .agv-preset-expand-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 17px;
-      height: 17px;
+      width: 28px;
+      min-width: 28px;
+      height: 28px;
+      min-height: 28px;
       border-radius: 6px;
       border: none;
       background: transparent;
@@ -486,11 +524,12 @@ function ensureDatePickerStyles() {
       margin-bottom: 0;
     }
     .agv-preset-chips-label {
-      font-size: 10.5px;
-      font-weight: 600;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
       color: var(--agv-text-subtle);
-      min-width: 36px;
-      padding-top: 2px;
+      min-width: 42px;
+      padding-top: 6px;
     }
     .agv-preset-chips-list {
       display: flex;
@@ -498,26 +537,66 @@ function ensureDatePickerStyles() {
       gap: 3.5px;
       flex: 1;
     }
+    .agv-preset-week-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 4px;
+      padding: 0 4px;
+    }
+    .agv-preset-chip.is-week-chip {
+      min-width: 0;
+      width: 100%;
+      padding: 2px 0;
+      justify-content: center;
+    }
+    .agv-preset-week-expand-wrap {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid var(--agv-border);
+    }
+    .agv-preset-week-expand-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 14px;
+      min-height: 14px;
+      line-height: 1;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--agv-text-muted);
+      cursor: pointer;
+      transition: background-color 120ms ease, color 120ms ease;
+    }
+    .agv-preset-week-expand-btn:hover {
+      background: var(--popup-item-hover-bg, var(--surface-hover));
+      color: var(--agv-text-main);
+    }
     .agv-preset-chip {
       display: inline-flex;
       align-items: center;
-      gap: 2.5px;
-      padding: 1.5px 5px;
+      gap: 3px;
+      min-height: 28px;
+      box-sizing: border-box;
+      padding: 2px 7px;
       border-radius: 6px;
       border: 1px solid var(--agv-border);
       background: var(--agv-bg-control, var(--agv-bg-popup));
       color: var(--agv-text-main);
-      font-size: 10.5px;
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 16px;
       cursor: pointer;
-      transition: all 80ms ease;
     }
     .agv-preset-chip:hover {
       border-color: var(--agv-accent);
     }
     .agv-preset-chip.is-active {
-      background: var(--agv-accent);
-      border-color: var(--agv-accent);
-      color: var(--agv-accent-text);
+      background: var(--popup-item-selected-bg);
+      border-color: var(--popup-item-selected-bg);
+      color: var(--popup-item-selected-fg);
       font-weight: 600;
     }
     .agv-preset-chip.is-included {
@@ -527,7 +606,8 @@ function ensureDatePickerStyles() {
       font-weight: 500;
     }
     .agv-chip-count {
-      font-size: 9px;
+      font-size: 12px;
+      line-height: 16px;
       opacity: 0.75;
     }
     /* TIME PICKER FOOTER BAR - COMPACT 6PX CONTROLS */
@@ -564,7 +644,8 @@ function ensureDatePickerStyles() {
       display: flex;
       align-items: center;
       gap: 3px;
-      font-size: 11px;
+      font-size: 12px;
+      line-height: 16px;
       font-weight: 500;
       color: var(--agv-text-muted);
     }
@@ -572,68 +653,111 @@ function ensureDatePickerStyles() {
       display: inline-flex;
       align-items: center;
       background: var(--agv-bg-subtle);
-      border: 1px solid var(--agv-border);
+      border: 1px solid var(--control-border, var(--agv-border));
       border-radius: 6px;
-      padding: 1.5px 4px;
-      transition: border-color 120ms ease;
+      padding: 1.5px 5px;
+      min-height: 28px;
+      box-sizing: border-box;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .agv-time-input-wrap:hover:not(:focus-within) {
+      border-color: var(--control-border-hover, var(--agv-border-strong));
     }
     .agv-time-input-wrap:focus-within {
-      border-color: var(--agv-accent);
+      outline: none;
+      border-color: var(--brand, var(--agv-accent));
+      box-shadow: inset 0 0 0 1px var(--brand, var(--agv-accent));
     }
     .agv-time-num-input {
-      width: 18px;
+      width: 22px;
       border: none;
       outline: none;
       background: transparent;
       color: var(--agv-text-main);
-      font-size: 11px;
-      font-weight: 600;
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 16px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
       text-align: center;
       padding: 0;
     }
     .agv-time-sep {
       color: var(--agv-text-subtle);
-      font-weight: 700;
-      font-size: 10.5px;
+      font-weight: 500;
+      font-size: 12px;
+      line-height: 16px;
       user-select: none;
       padding: 0 1px;
     }
     .agv-quick-time-btn,
     .agv-time-quick-btn {
-      font-size: 10px;
-      padding: 2.5px 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 16px;
+      padding: 4px 8px;
       border-radius: 6px;
-      border: 1px solid var(--agv-border);
-      background: var(--agv-bg-subtle);
+      border: 1px solid transparent;
+      background: transparent;
       color: var(--agv-text-muted);
       cursor: pointer;
       white-space: nowrap;
-      transition: all 100ms ease;
+      transition: background-color 120ms ease, color 120ms ease;
     }
     .agv-quick-time-btn:hover,
     .agv-time-quick-btn:hover {
-      border-color: var(--agv-accent);
-      color: var(--agv-accent);
+      background: var(--agv-bg-item-hover, var(--agv-bg-hover));
+      color: var(--agv-text-main);
     }
     .agv-apply-btn {
-      background: var(--agv-accent);
-      color: var(--agv-accent-text);
-      font-size: 10.5px;
-      font-weight: 600;
-      padding: 3.5px 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      box-sizing: border-box;
+      background: var(--primary, var(--agv-accent));
+      color: var(--primary-foreground, var(--agv-accent-text, #ffffff));
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
+      padding: 4px 12px;
       border-radius: 6px;
-      border: none;
+      border: 1px solid var(--primary, var(--agv-accent));
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
       transition: opacity 100ms ease, transform 80ms ease;
     }
     .agv-apply-btn:hover {
-      opacity: 0.92;
+      opacity: 0.9;
     }
     .agv-apply-btn:active {
       transform: scale(0.98);
     }
   `;
+
+  let style = document.getElementById(FALLBACK_STYLE_ID) as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement('style');
+    style.id = FALLBACK_STYLE_ID;
+    if (document.head.firstChild) {
+      document.head.insertBefore(style, document.head.firstChild);
+    } else {
+      document.head.appendChild(style);
+    }
+  }
+  if (style.textContent !== cssText) {
+    style.textContent = cssText;
+  }
+}
+
+if (typeof document !== 'undefined') {
+  ensureDatePickerStyles();
 }
 export { ensureDatePickerStyles };

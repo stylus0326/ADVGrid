@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
-import { FilterOperation, FILTER_OPS, DATA_TYPES } from './types';
+import { FilterOperation, FILTER_OPS } from './types';
 
 interface IconProps {
   className?: string;
@@ -337,11 +337,15 @@ export const ALLOWED_OPS_BY_TYPE: Record<string, FilterOperation[]> = {
   ],
 };
 
-export const DEFAULT_OP_BY_TYPE: Record<string, FilterOperation> = {
-  text: FILTER_OPS.CONTAINS,
-  number: FILTER_OPS.CONTAINS,
-  date: FILTER_OPS.BETWEEN,
-  time: FILTER_OPS.BETWEEN,
+import {
+  DEFAULT_OP_BY_TYPE,
+  getColumnFilterType,
+  getDefaultFilterOpForColumn,
+} from './gridFormatUtils';
+export {
+  DEFAULT_OP_BY_TYPE,
+  getColumnFilterType,
+  getDefaultFilterOpForColumn,
 };
 
 export const FilterOpIcon: React.FC<{ op: FilterOperation; className?: string; size?: number }> = ({
@@ -354,24 +358,6 @@ export const FilterOpIcon: React.FC<{ op: FilterOperation; className?: string; s
   const Comp = meta.icon;
   return <Comp className={className} size={size} />;
 };
-
-/**
- * Lấy kiểu dữ liệu lọc chuẩn hóa của cột (text, number, date, time)
- * Dùng chung đồng bộ cho cả GridFilterRow và AdvGridQueryBuilderModal
- */
-export function getColumnFilterType(
-  colKey: string,
-  columns?: Array<{ key: string; dataType?: string; isCurrency?: boolean }>
-): typeof DATA_TYPES.TEXT | typeof DATA_TYPES.NUMBER | typeof DATA_TYPES.DATE | typeof DATA_TYPES.TIME {
-  const col = columns?.find((c) => c.key === colKey);
-  // Quyết định kiểu toán tử thuần túy 100% theo kiểu dữ liệu truyền vào (dataType / isCurrency)
-  // Tuyệt đối không dùng colKey để đoán mò chuỗi ký tự tránh gây sai lệch toán tử
-  if (col?.isCurrency) return DATA_TYPES.NUMBER;
-  if (col?.dataType === DATA_TYPES.DATE || col?.dataType === DATA_TYPES.TIME || col?.dataType === DATA_TYPES.NUMBER) {
-    return col.dataType;
-  }
-  return DATA_TYPES.TEXT;
-}
 
 /**
  * Hàm DUY NHẤT toàn hệ thống trả về danh sách toán tử lọc được phép cho một cột.
@@ -393,17 +379,5 @@ export function getAllowedFilterOpsForColumn(
     return rawOps.filter((op) => op !== FILTER_OPS.IS_EMPTY && op !== FILTER_OPS.IS_NOT_EMPTY);
   }
   return rawOps;
-}
-
-/**
- * Hàm DUY NHẤT toàn hệ thống trả về toán tử lọc mặc định cho một cột.
- * Đảm bảo đồng bộ 100% giữa GridFilterRow và AdvGridQueryBuilderModal.
- */
-export function getDefaultFilterOpForColumn(
-  colKey: string,
-  columns?: Array<{ key: string; dataType?: string }>
-): FilterOperation {
-  const colType = getColumnFilterType(colKey, columns);
-  return DEFAULT_OP_BY_TYPE[colType] || FILTER_OPS.CONTAINS;
 }
 

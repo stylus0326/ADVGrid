@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "outDir": "./dist-lib/types",
+    "rootDir": "./src",
+    "stripInternal": true,
+    "removeComments": true
+  },
+  "include": [
+    "src/lib/**/*",
+    "src/components/grid/**/*",
+    "src/components/ui/**/*",
+    "src/themes/**/*"
+  ],
+  "exclude": [
+    "src/pages/**/*",
+    "src/services/**/*",
+    "src/components/b2b/**/*",
+    "src/components/shared/**/*",
+    "src/components/grid/archive/**/*",
+    "src/App.tsx",
+    "src/main.tsx"
+  ]
+}

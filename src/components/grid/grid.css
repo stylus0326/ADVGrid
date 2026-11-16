@@ -1,0 +1,121 @@
+@import './gridCore.css';
+
+/* ==============================================================================
+   BACKDROP OVERLAY, FULLSCREEN, SPRING POPUPS & COLUMN RESIZE STYLES (DATAGRID)
+   ============================================================================== */
+.agv-grid-backdrop {
+  background: transparent;
+  cursor: default;
+}
+
+.agv-grid-root.agv-grid-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+@keyframes agv-spring-left {
+  0% {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-right {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes agv-spring-zoom {
+  0% {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.agv-spring-left {
+  animation: agv-spring-left 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: right center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-right {
+  animation: agv-spring-right 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.agv-spring-zoom {
+  animation: agv-spring-zoom 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top left;
+  will-change: transform, opacity;
+}
+
+.agv-grid-root [draggable="true"],
+[data-agv-popup="true"] [draggable="true"] {
+  -webkit-user-drag: element;
+}
+
+body.agv-resizing-column,
+body.agv-resizing-column .agv-grid-root,
+body.agv-resizing-column .agv-grid-root * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.agv-resizing-column .agv-grid-root * {
+  pointer-events: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+body.agv-resizing-column .agv-grid-root [draggable="true"] {
+  -webkit-user-drag: none !important;
+}
+
+.agv-col-resize-handle {
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+  touch-action: none;
+}
+
+html[data-agv-resizing="true"] .agv-grid-root,
+html[data-agv-resizing="true"] .agv-grid-root * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+html[data-agv-resizing="true"] .agv-grid-root [draggable="true"] {
+  -webkit-user-drag: none !important;
+}
+
+.agv-col-resize-handle[data-resizing-active="true"] > span {
+  background-color: var(--agv-accent) !important;
+}
+
+html[data-agv-resizing="true"] .agv-scroll-viewport {
+  pointer-events: none !important;
+}
+
+html[data-agv-resizing="true"] .agv-scroll-viewport * {
+  transition: none !important;
+}

@@ -1,32 +1,75 @@
 {
   "name": "gridv3",
-  "private": true,
   "version": "1.0.0",
+  "description": "High-performance React DataGrid library with opt-in modules, light Basic View / lazy Enterprise engines, theme tokens, and UI controls.",
   "type": "module",
+  "main": "./dist-lib/index.js",
+  "module": "./dist-lib/index.js",
+  "types": "./dist-lib/types/lib/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist-lib/types/lib/index.d.ts",
+      "import": "./dist-lib/index.js",
+      "default": "./dist-lib/index.js"
+    },
+    "./columns": {
+      "types": "./dist-lib/types/lib/columns.d.ts",
+      "import": "./dist-lib/columns.js",
+      "default": "./dist-lib/columns.js"
+    },
+    "./grid": {
+      "types": "./dist-lib/types/lib/grid.d.ts",
+      "import": "./dist-lib/grid.js",
+      "default": "./dist-lib/grid.js"
+    },
+    "./ui": {
+      "types": "./dist-lib/types/lib/ui.d.ts",
+      "import": "./dist-lib/ui.js",
+      "default": "./dist-lib/ui.js"
+    },
+    "./themes": {
+      "types": "./dist-lib/types/lib/themes.d.ts",
+      "import": "./dist-lib/themes.js",
+      "default": "./dist-lib/themes.js"
+    },
+    "./styles.css": "./dist-lib/styles.css",
+    "./style.css": "./dist-lib/styles.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist-lib",
+    "docs/API_GUIDE.md",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
+    "pack:lib": "npm run build:lib && npm pack",
     "preview": "vite preview",
     "test": "node test/run_tests.mjs"
   },
-  "dependencies": {
-    "@hugeicons/core-free-icons": "^4.3.5",
-    "@hugeicons/react": "^1.1.10",
-    "lucide": "^1.61.0",
-    "lucide-react": "^1.61.0",
-    "morphicons": "^2.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "lucide": "^1.61.0",
+    "lucide-react": "^1.61.0",
+    "morphicons": "^2.0.0",
     "postcss": "^8.4.49",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7",
-    "xlsx": "^0.18.5"
+    "vite": "^6.0.7"
   }
 }

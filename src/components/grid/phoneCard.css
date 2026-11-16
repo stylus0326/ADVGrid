@@ -1,0 +1,55 @@
+/* ==========================================================================
+   AGV PHONE CARD (Responsive Mobile State Matrix)
+   ========================================================================== */
+.agv-phone-card {
+  --agv-card-bg: var(--agv-bg-card, var(--agv-bg-root));
+  --agv-card-border: var(--agv-border);
+  background-color: var(--agv-card-bg);
+  border-color: var(--agv-card-border);
+}
+
+.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]) {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]) {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-phone-card[data-card-focused="true"][data-card-checked="true"] {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover,
+.agv-phone-card:not([data-card-focused="true"]):not([data-card-checked="true"]):hover {
+  --agv-card-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+  --agv-card-border: var(--agv-border-strong, var(--agv-border));
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover,
+.agv-phone-card[data-card-checked="true"]:not([data-card-focused="true"]):hover {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover,
+.agv-phone-card[data-card-focused="true"]:not([data-card-checked="true"]):hover {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover,
+.agv-phone-card[data-card-focused="true"][data-card-checked="true"]:hover {
+  --agv-card-bg: var(--surface-selected);
+  --agv-card-border: var(--brand-gold);
+}
+
+.agv-phone-card-title,
+.agv-phone-card-title .text-xs {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+}

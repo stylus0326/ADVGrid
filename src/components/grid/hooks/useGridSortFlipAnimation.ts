@@ -1,33 +1,54 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { SortConfig, GroupSortConfig } from '../types';
-import { computeSortRowFlipState } from '../gridUtils';
+
+type SortFlipMod = typeof import('./sortFlipEngine');
+let _flipMod: SortFlipMod | null = null;
+let _flipPromise: Promise<SortFlipMod> | null = null;
+
+export function preloadSortFlipEngine(): void {
+  if (_flipMod || _flipPromise) return;
+  _flipPromise = import('./sortFlipEngine').then((m) => {
+    _flipMod = m;
+    return m;
+  });
+}
 
 interface UseGridSortFlipAnimationParams<T> {
+  enabled?: boolean;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  virtualScrollTopRef?: React.RefObject<number>;
   sortConfig?: SortConfig | null;
+  sortRules?: SortConfig[];
   groupSortConfig?: GroupSortConfig | null;
-  visibleChunksMap: Map<number, T[]>;
-  chunkSize: number;
+  visibleRows?: Array<{ rowIndex: number; row: T }>;
+  visibleChunksMap?: Map<number, T[]>;
+  chunkSize?: number;
   actualRowHeight: number;
+  findRowIndexAtOffset?: (offsetY: number) => number;
   viewportHeight: number;
   getRowKey: (row: T, index: number) => string | number;
-  autoScrolling: boolean;
 }
 
 export function useGridSortFlipAnimation<T>({
+  enabled = true,
   scrollContainerRef,
+  virtualScrollTopRef,
   sortConfig,
+  sortRules,
   groupSortConfig,
+  visibleRows,
   visibleChunksMap,
-  chunkSize,
+  chunkSize = 20,
   actualRowHeight,
+  findRowIndexAtOffset,
   viewportHeight,
   getRowKey,
-  autoScrolling,
 }: UseGridSortFlipAnimationParams<T>) {
-  const sortSignature = `${sortConfig?.key ?? ''}:${sortConfig?.direction ?? ''}:${
-    sortConfig?.sortByMonth ?? ''
-  }|${groupSortConfig?.colKey ?? ''}:${groupSortConfig?.direction ?? ''}`;
+  const rulesSig =
+    sortRules && sortRules.length > 0
+      ? sortRules.map((r) => `${r.key}:${r.direction}:${r.sortByMonth ?? ''}`).join(',')
+      : `${sortConfig?.key ?? ''}:${sortConfig?.direction ?? ''}:${sortConfig?.sortByMonth ?? ''}`;
+  const sortSignature = `${rulesSig}|${groupSortConfig?.colKey ?? ''}:${groupSortConfig?.direction ?? ''}`;
   const prevSortSignatureRef = useRef<string | null>(null);
   const prevRowIndexMapRef = useRef<Map<string, number>>(new Map());
   const prevViewportRowRangeRef = useRef<{ startRow: number; centerRow: number }>({
@@ -39,133 +60,107 @@ export function useGridSortFlipAnimation<T>({
   const activeAnimatedRowsRef = useRef<HTMLElement[]>([]);
 
   useLayoutEffect(() => {
+    if (!enabled) return;
     const isSortChanged =
       prevSortSignatureRef.current !== null &&
       prevSortSignatureRef.current !== sortSignature;
     prevSortSignatureRef.current = sortSignature;
 
     const viewportEl = scrollContainerRef.current;
+    if (!isSortChanged || !viewportEl) return;
 
-    if (isSortChanged && viewportEl && !autoScrolling) {
-      if (sortAnimRafRef.current !== null) {
-        cancelAnimationFrame(sortAnimRafRef.current);
-        sortAnimRafRef.current = null;
-      }
-      if (sortAnimTimeoutRef.current !== null) {
-        window.clearTimeout(sortAnimTimeoutRef.current);
-        sortAnimTimeoutRef.current = null;
-      }
-      for (const el of activeAnimatedRowsRef.current) {
-        el.style.transition = '';
-        el.style.transform = '';
-        el.style.opacity = '';
-        el.style.zIndex = '';
-        el.style.willChange = '';
-      }
-      activeAnimatedRowsRef.current = [];
+    const prevMap = prevRowIndexMapRef.current;
+    const { startRow: prevStartRow, centerRow: viewportCenterRow } =
+      prevViewportRowRangeRef.current;
 
-      const prevMap = prevRowIndexMapRef.current;
-      const { startRow: prevStartRow, centerRow: viewportCenterRow } =
-        prevViewportRowRangeRef.current;
-      const rowNodes = viewportEl.querySelectorAll<HTMLElement>(
-        '.agv-rows-canvas [data-row-key]'
-      );
-      const animatedEls: HTMLElement[] = [];
-
-      rowNodes.forEach((rowEl) => {
-        const rKey = rowEl.getAttribute('data-row-key');
-        const rIdxAttr = rowEl.getAttribute('data-row-idx');
-        if (!rKey || rIdxAttr === null) return;
-        const newRowIdx = parseInt(rIdxAttr, 10);
-        if (Number.isNaN(newRowIdx) || newRowIdx < 0) return;
-
-        const oldRowIdx = prevMap.get(rKey);
-        const flip = computeSortRowFlipState({
-          rowKey: rKey,
-          newRowIndex: newRowIdx,
-          oldRowIndex: oldRowIdx,
-          rowHeight: actualRowHeight,
-          viewportCenterRow,
-          prevStartRow,
-        });
-
-        rowEl.style.animation = 'none';
-        if (!flip) return;
-
-        // Bước 1 (Invert): Đặt dòng ở vị trí cũ ngay trước khi trình duyệt paint
-        rowEl.style.transition = 'none';
-        rowEl.style.willChange = 'transform, opacity';
-        rowEl.style.transform = `translate3d(0px, ${flip.deltaY}px, 0px)`;
-        if (flip.initialOpacity < 1) {
-          rowEl.style.opacity = String(flip.initialOpacity);
-        }
-        rowEl.style.zIndex = String(flip.zIndex);
-        animatedEls.push(rowEl);
+    if (_flipMod) {
+      _flipMod.runSortFlipAnimation({
+        viewportEl,
+        prevMap,
+        prevStartRow,
+        viewportCenterRow,
+        actualRowHeight,
+        activeAnimatedRowsRef,
+        sortAnimRafRef,
+        sortAnimTimeoutRef,
       });
-
-      if (animatedEls.length > 0) {
-        viewportEl.setAttribute('data-agv-sorting', 'true');
-        activeAnimatedRowsRef.current = animatedEls;
-        void viewportEl.offsetHeight;
-
-        // Bước 2 (Play): Trượt mượt GPU 300ms về vị trí mới (0px)
-        sortAnimRafRef.current = requestAnimationFrame(() => {
-          sortAnimRafRef.current = null;
-          for (const el of animatedEls) {
-            el.style.transition =
-              'transform 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out';
-            el.style.transform = 'translate3d(0px, 0px, 0px)';
-            el.style.opacity = '1';
-          }
-        });
-
-        // Bước 3 (Cleanup): Xóa sạch inline styles sau 320ms để bảo toàn 100% position: sticky và contain: strict
-        sortAnimTimeoutRef.current = window.setTimeout(() => {
-          sortAnimTimeoutRef.current = null;
-          for (const el of activeAnimatedRowsRef.current) {
-            el.style.transition = '';
-            el.style.transform = '';
-            el.style.opacity = '';
-            el.style.zIndex = '';
-            el.style.willChange = '';
-          }
-          activeAnimatedRowsRef.current = [];
-          viewportEl.removeAttribute('data-agv-sorting');
-        }, 320);
-      }
+      return;
     }
 
-    // Cập nhật bản đồ tọa độ dòng hiện hành phục vụ lần Sort kế tiếp
+    if (!_flipPromise) {
+      _flipPromise = import('./sortFlipEngine').then((m) => {
+        _flipMod = m;
+        return m;
+      });
+    }
+    void _flipPromise.then((m) => {
+      m.runSortFlipAnimation({
+        viewportEl,
+        prevMap,
+        prevStartRow,
+        viewportCenterRow,
+        actualRowHeight,
+        activeAnimatedRowsRef,
+        sortAnimRafRef,
+        sortAnimTimeoutRef,
+      });
+    });
+  }, [enabled, scrollContainerRef, sortSignature, actualRowHeight]);
+
+  // Theo dõi tọa độ dòng hiện tại sau commit (passive useEffect, zero work khi !enabled)
+  useEffect(() => {
+    if (!enabled) return;
     const nextMap = new Map<string, number>();
-    for (const [cIdx, cRows] of visibleChunksMap.entries()) {
-      const baseIdx = cIdx * chunkSize;
-      for (let i = 0; i < cRows.length; i++) {
-        const r = cRows[i] as any;
-        const actualIdx = baseIdx + i;
+    if (visibleRows) {
+      for (let i = 0; i < visibleRows.length; i++) {
+        const item = visibleRows[i];
+        const r = item.row as any;
+        const actualIdx = item.rowIndex;
         const keyStr = r?._isGroupRow
           ? `group_${r.groupColumnKey || ''}_${r.groupValue ?? r.path ?? actualIdx}`
           : String(getRowKey(r, actualIdx));
         nextMap.set(keyStr, actualIdx);
       }
+    } else if (visibleChunksMap) {
+      for (const [cIdx, cRows] of visibleChunksMap.entries()) {
+        const baseIdx = cIdx * chunkSize;
+        for (let i = 0; i < cRows.length; i++) {
+          const r = cRows[i] as any;
+          const actualIdx = baseIdx + i;
+          const keyStr = r?._isGroupRow
+            ? `group_${r.groupColumnKey || ''}_${r.groupValue ?? r.path ?? actualIdx}`
+            : String(getRowKey(r, actualIdx));
+          nextMap.set(keyStr, actualIdx);
+        }
+      }
     }
     prevRowIndexMapRef.current = nextMap;
 
-    const curTop = viewportEl?.scrollTop || 0;
-    const startRow = Math.max(0, Math.floor(curTop / actualRowHeight));
-    const visibleCount = Math.max(1, Math.floor((viewportHeight || 600) / actualRowHeight));
+    const curTop =
+      virtualScrollTopRef?.current || scrollContainerRef.current?.scrollTop || 0;
+    const startRow = Math.max(
+      0,
+      findRowIndexAtOffset ? findRowIndexAtOffset(curTop) : Math.floor(curTop / actualRowHeight)
+    );
+    const endRow = findRowIndexAtOffset
+      ? findRowIndexAtOffset(curTop + (viewportHeight || 600))
+      : startRow + Math.max(1, Math.floor((viewportHeight || 600) / actualRowHeight));
+    const visibleCount = Math.max(1, endRow - startRow + 1);
     prevViewportRowRangeRef.current = {
       startRow,
       centerRow: startRow + Math.floor(visibleCount / 2),
     };
   }, [
+    enabled,
     scrollContainerRef,
-    sortSignature,
+    virtualScrollTopRef,
+    visibleRows,
     visibleChunksMap,
     chunkSize,
     actualRowHeight,
+    findRowIndexAtOffset,
     viewportHeight,
     getRowKey,
-    autoScrolling,
   ]);
 
   useEffect(() => {

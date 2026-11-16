@@ -1,28 +1,39 @@
 import React, { memo } from 'react';
-import { SurfaceTheme } from '../types';
-import { MorphCheckbox } from '../../ui/MorphIcons';
-import { formatGridNumber, getOrComputeMonthStats } from '../gridUtils';
-import { TwelveMonthChartCell } from '../../../demo/TwelveMonthChartCell';
+import { ALIGNMENTS, CellRenderParams, ColumnDef, SurfaceTheme } from '../types';
+import { MorphCheckbox } from '../../ui/MorphCheckbox';
+import { MorphChevronIcon } from '../../ui/MorphIcons';
+import {
+  compileTabletGroups,
+  computeTabletTrackMinWidth,
+  extractResponsiveRawValue,
+  renderResponsiveField,
+  type CompiledTabletGroup,
+} from './responsiveColumnUtils';
 
 export interface GridTabletRowProps<T = any> {
   row: T;
   rowIndex: number;
   rowKey: string | number;
+  columns: ColumnDef<T>[];
+  compiledGroups?: CompiledTabletGroup<T>[];
   rowHeight: number;
   isSelected: boolean;
   isChecked: boolean;
   showRowNumber?: boolean;
   showSelectionCol?: boolean;
-  onSelectRow?: (rowIndex: number, row: any) => void;
-  onToggleCheck?: (rowIndex: number, row: any, e: React.MouseEvent) => void;
+  onSelectRow?: (rowIndex: number, row: T) => void;
+  onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+  onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
   surfaceTheme: SurfaceTheme;
-  renderCell?: (params: any) => React.ReactNode;
+  renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
+  allowTextSelection?: boolean;
 }
 
-export const GridTabletRow = memo(<T extends any>({
+function GridTabletRowInner<T = any>({
   row,
   rowIndex,
-  rowKey,
+  columns,
+  compiledGroups,
   rowHeight,
   isSelected,
   isChecked,
@@ -30,47 +41,60 @@ export const GridTabletRow = memo(<T extends any>({
   showSelectionCol = true,
   onSelectRow,
   onToggleCheck,
-  surfaceTheme,
-}: GridTabletRowProps<T>) => {
+  onCellContextMenu,
+  renderCell,
+  allowTextSelection = false,
+}: GridTabletRowProps<T>) {
   const isEven = rowIndex % 2 === 0;
-
-  // Trích xuất dữ liệu thân thiện
   const r = row as any;
-  const nodeTitle = r.col_node || r.node || r.title || r.name || `NODE-${1000 + (rowIndex % 9000)}`;
-  const rowId = r.col_id || r.id || (typeof rowKey === 'string' && isNaN(Number(rowKey)) ? rowKey : undefined) || `ROW-${String(rowIndex + 1).padStart(6, '0')}`;
-  const region = r.col_region || r.region || 'US-East';
-  const status = (r.col_status || r.status || 'ONLINE').toUpperCase();
-  const cpu = typeof r.col_dec_cpu === 'number' ? r.col_dec_cpu : typeof r.cpu === 'number' ? r.cpu : 45.5;
-  const sla = typeof r.col_dec_sla === 'number' ? r.col_dec_sla : typeof r.sla === 'number' ? r.sla : 99.8;
-  const ngaygd = r.col_date || r.ngaygd || r.date || '28/10/2026';
-  const thoigian = r.col_time || r.thoigian || r.time || '15:30';
-  const formulaVal = r.col_formula !== undefined ? r.col_formula : 78.4;
+  const effectiveGroups =
+    compiledGroups && compiledGroups.length > 0
+      ? compiledGroups
+      : compileTabletGroups(columns);
+  const trackMinWidth = computeTabletTrackMinWidth(
+    effectiveGroups,
+    showRowNumber,
+    showSelectionCol
+  );
 
-  // Thống kê 12 tháng chuẩn hệ thống (tái sử dụng O(1) qua WeakMap)
-  const monthStats = getOrComputeMonthStats(row);
-
-  // Badge màu sắc theo status
-  let statusBadgeStyle: React.CSSProperties = {
-    backgroundColor: 'var(--agv-bg-subtle, rgba(16, 185, 129, 0.12))',
-    color: 'var(--agv-success, #10b981)',
-    border: '1px solid var(--agv-border-subtle, rgba(16, 185, 129, 0.25))',
-  };
-  if (status === 'DEGRADED') {
-    statusBadgeStyle = {
-      backgroundColor: 'var(--agv-bg-subtle, rgba(245, 158, 11, 0.12))',
-      color: 'var(--agv-warning, #f59e0b)',
-      border: '1px solid var(--agv-border-subtle, rgba(245, 158, 11, 0.25))',
-    };
-  } else if (status === 'OVERLOAD') {
-    statusBadgeStyle = {
-      backgroundColor: 'var(--agv-bg-subtle, rgba(239, 68, 68, 0.12))',
-      color: 'var(--agv-danger, #ef4444)',
-      border: '1px solid var(--agv-border-subtle, rgba(239, 68, 68, 0.25))',
-    };
+  if (r?._isGroupRow) {
+    return (
+      <div
+        onClick={() => r.onToggleCollapse?.()}
+        data-row-idx={rowIndex}
+        style={{
+          height: `${rowHeight}px`,
+          maxHeight: `${rowHeight}px`,
+          minWidth: trackMinWidth > 0 ? `${trackMinWidth}px` : undefined,
+          boxSizing: 'border-box',
+          borderColor: 'var(--agv-border)',
+          backgroundColor: 'var(--agv-bg-header, var(--agv-bg-row-alt))',
+        }}
+        className="agv-group-row w-full flex items-center justify-between border-b px-3 text-xs cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <MorphChevronIcon expanded={Boolean(r.isExpanded)} size={16} spring="snappy" />
+          <span className="font-semibold truncate" style={{ color: 'var(--agv-text-main)' }}>
+            {String(r.groupValue ?? '')}
+          </span>
+          <span className="text-xs shrink-0" style={{ color: 'var(--agv-text-muted)' }}>
+            ({r.count ?? 0})
+          </span>
+        </div>
+      </div>
+    );
   }
 
-  const isCpuHigh = Number(cpu) > 70;
-  const isSlaLow = Number(sla) < 98;
+  const renderField = (col: ColumnDef<T>, colIndex: number) =>
+    renderResponsiveField({
+      row,
+      rowIndex,
+      colIndex,
+      col,
+      isSelected,
+      isChecked,
+      renderCell,
+    });
 
   return (
     <div
@@ -82,22 +106,27 @@ export const GridTabletRow = memo(<T extends any>({
       style={{
         height: `${rowHeight}px`,
         maxHeight: `${rowHeight}px`,
+        minWidth: trackMinWidth > 0 ? `${trackMinWidth}px` : undefined,
         boxSizing: 'border-box',
         borderColor: 'var(--agv-border)',
         backgroundColor: 'var(--agv-row-data-bg)',
       }}
-      className="agv-grid-row flex items-center border-b px-3 text-xs cursor-default select-none transition-colors"
+      className={`agv-grid-row w-full flex items-center border-b px-3 text-xs cursor-default ${
+        allowTextSelection ? 'select-text' : 'select-none'
+      } transition-colors`}
     >
-      {/* 1. Ô Chọn & STT */}
+      {/* Ô STT & Chọn */}
       {(showRowNumber || showSelectionCol) && (
         <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-1 mr-2">
           {showRowNumber && (
             <span
               data-cell-role="stt"
-              className="text-[10px] tabular-nums font-mono font-medium px-1 rounded transition-colors"
+              className="text-xs leading-4 tabular-nums font-mono font-semibold px-1 rounded transition-colors"
               style={{
-                backgroundColor: isSelected ? 'var(--agv-accent)' : 'transparent',
-                color: isSelected ? 'var(--agv-accent-text, #ffffff)' : 'var(--agv-text-muted)',
+                backgroundColor: isSelected ? 'var(--surface-selected)' : 'transparent',
+                color: isSelected
+                  ? 'var(--brand-gold-on-light, var(--brand-gold))'
+                  : 'var(--agv-text-muted)',
               }}
             >
               {String(rowIndex + 1).padStart(2, '0')}
@@ -116,71 +145,125 @@ export const GridTabletRow = memo(<T extends any>({
         </div>
       )}
 
-      {/* 2. Cột 1: Thông tin Node & Định danh (Bỏ avatar tròn theo yêu cầu) */}
-      <div className="flex-1 min-w-[190px] pr-3 flex flex-col justify-center">
-        <div className="font-semibold text-[13px] truncate" style={{ color: 'var(--agv-text-main)' }}>
-          {nodeTitle}
-        </div>
-        <div className="text-[11px] truncate flex items-center gap-1.5 mt-0.5" style={{ color: 'var(--agv-text-muted)' }}>
-          <span className="font-mono">{rowId}</span>
-          <span>·</span>
-          <span>{ngaygd}</span>
-        </div>
-      </div>
+      {/* Siêu-cột xếp tối đa 3 dòng (không kẻ vạch dọc trong thân bảng) */}
+      {effectiveGroups.map((group, groupIdx) => {
+        const isFirst = groupIdx === 0;
+        const isLast = groupIdx === effectiveGroups.length - 1;
+        const padClass = isFirst ? 'pr-3' : isLast ? 'pl-3' : 'px-3';
+        const alignClass =
+          group.align === ALIGNMENTS.RIGHT
+            ? 'items-end text-right'
+            : group.align === ALIGNMENTS.CENTER
+              ? 'items-center text-center'
+              : 'items-start text-left';
 
-      {/* 3. Cột 2: Đo lường & Khu vực */}
-      <div className="flex-1 min-w-[170px] pr-3">
-        <div className="text-[11px] font-medium truncate" style={{ color: 'var(--agv-text-main)' }}>
-          Khu vực: <span className="font-semibold">{region}</span>
-        </div>
-        <div className="text-[11px] flex items-center gap-2 mt-0.5 tabular-nums">
-          <span style={{ color: isCpuHigh ? 'var(--agv-warning)' : 'var(--agv-text-muted)' }}>
-            CPU: <b className="font-semibold">{Number(cpu).toFixed(1)}%</b>
-          </span>
-          <span style={{ color: 'var(--agv-border)' }}>|</span>
-          <span style={{ color: isSlaLow ? 'var(--agv-danger)' : 'var(--agv-text-muted)' }}>
-            SLA: <b className="font-semibold">{Number(sla).toFixed(2)}%</b>
-          </span>
-        </div>
-      </div>
+        const sizeStyle: React.CSSProperties = group.width
+          ? { width: `${group.width}px` }
+          : { minWidth: `${group.minWidth}px` };
 
-      {/* 4. Cột 3: Biểu đồ 12T & Công thức */}
-      <div className="w-[150px] shrink-0 pr-3 flex flex-col justify-center gap-1">
-        <div className="w-full h-[22px] flex items-center overflow-hidden">
-          <TwelveMonthChartCell
-            values={monthStats.mVals}
-            minIdx={monthStats.minIdx}
-            maxIdx={monthStats.maxIdx}
-            minVal={monthStats.minVal}
-            maxVal={monthStats.maxVal}
-            avgVal={monthStats.avgVal}
-            surfaceTheme={surfaceTheme}
-            height={22}
-            width={140}
-          />
-        </div>
-        <div className="text-[11px] flex items-center justify-between tabular-nums" style={{ color: 'var(--agv-text-muted)' }}>
-          <span>
-            AVG: <b className="font-semibold text-[var(--agv-accent)]">{formatGridNumber(formulaVal !== undefined ? formulaVal : monthStats.avgVal)}</b>
-          </span>
-          <span className="font-mono text-[10px]">{thoigian}</span>
-        </div>
-      </div>
+        return (
+          <div
+            key={group.id}
+            style={sizeStyle}
+            className={`flex flex-col justify-center gap-1 min-w-0 ${
+              group.width ? 'shrink-0' : 'flex-1'
+            } ${padClass} ${alignClass}`}
+          >
+            {group.lines.map((line) => {
+              if (line.isChart) {
+                return (
+                  <div
+                    key={line.col.key}
+                    onContextMenu={
+                      onCellContextMenu
+                        ? (e) => onCellContextMenu(rowIndex, row, line.col.key, e)
+                        : undefined
+                    }
+                    className={`${
+                      group.hasStandaloneChart ? 'h-12' : 'h-9'
+                    } w-full flex items-center`}
+                  >
+                    {renderField(line.col, line.colIndex)}
+                  </div>
+                );
+              }
 
-      {/* 5. Cột 4: Trạng thái & Thao tác */}
-      <div className="w-[120px] shrink-0 flex flex-col items-end justify-center">
-        <span
-          className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-2xs"
-          style={statusBadgeStyle}
-        >
-          {status}
-        </span>
-        <div className="text-[10px] mt-1 text-right" style={{ color: 'var(--agv-text-muted)' }}>
-          Đã đồng bộ
-        </div>
-      </div>
+              const hasJoins = Boolean(line.joinCols && line.joinCols.length > 0);
+              const isStrong = line.emphasis === 'strong' || line.isPrimaryFirstLine;
+              const isMuted = line.emphasis === 'muted';
+              const valueColor = isMuted ? 'var(--agv-text-muted)' : 'var(--agv-text-main)';
+
+              const renderLineValue = () => {
+                if (!hasJoins) {
+                  return renderField(line.col, line.colIndex);
+                }
+                const candidateItems = [
+                  { col: line.col, colIndex: line.colIndex },
+                  ...line.joinCols!,
+                ].filter((item) => {
+                  const raw = extractResponsiveRawValue(row, item.col, rowIndex);
+                  return raw !== null && raw !== undefined && String(raw).trim() !== '';
+                });
+                if (candidateItems.length === 0) {
+                  return '—';
+                }
+                return candidateItems.map((item, idx) => (
+                  <React.Fragment key={item.col.key}>
+                    {idx > 0 && (
+                      <span className="mx-1" style={{ color: 'var(--agv-text-muted)' }}>
+                        {line.joinSeparator}
+                      </span>
+                    )}
+                    {renderField(item.col, item.colIndex)}
+                  </React.Fragment>
+                ));
+              };
+
+              const effectiveLabel = line.labelGetter
+                ? line.labelGetter(((row as any)?._baseRecord ?? row) as T, rowIndex)
+                : line.label;
+
+              return (
+                <div
+                  key={line.col.key}
+                  onContextMenu={
+                    onCellContextMenu
+                      ? (e) => onCellContextMenu(rowIndex, row, line.col.key, e)
+                      : undefined
+                  }
+                  className={`max-w-full truncate text-xs leading-4 ${
+                    isStrong ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    color: isStrong ? 'var(--agv-text-main)' : 'var(--agv-text-muted)',
+                  }}
+                >
+                  {effectiveLabel && (
+                    <span style={{ color: 'var(--agv-text-muted)' }}>{effectiveLabel}: </span>
+                  )}
+                  <span
+                    className={
+                      [
+                        isStrong ? 'font-semibold' : '',
+                        isMuted ? '[&_span]:!text-[var(--agv-text-muted)]' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
+                    style={{ color: valueColor }}
+                  >
+                    {renderLineValue()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
-});
+}
 
-GridTabletRow.displayName = 'GridTabletRow';
+export const GridTabletRow = memo(GridTabletRowInner) as <T = any>(
+  props: GridTabletRowProps<T>
+) => React.ReactElement | null;

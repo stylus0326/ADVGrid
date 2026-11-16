@@ -2,6 +2,8 @@ import { SurfaceTheme } from './types';
 
 export const DEFAULT_CHUNK_SIZE = 20;
 export const DEFAULT_ROW_HEIGHT = 32;
+export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE_OPTIONS = [20, 50, 100, 200] as const;
 
 /**
  * Bộ 9 thuộc tính chặn triệt để popup gợi ý tự động (Autofill/Autocomplete) của trình duyệt và tiện ích mở rộng (1Password, Bitwarden, LastPass, v.v.)
@@ -27,10 +29,11 @@ export const POPUP_SELECTORS = [
   '.agv-lookup-op-menu',
   '.agv-context-menu',
   '.agv-modal-portal',
+  '.agv-drawer-portal',
   '.agv-filter-dropdown-menu',
-  '.agv-settings-popup',
   '.agv-column-chooser',
   '.agv-query-builder-modal',
+  '.agv-multi-sort-popup',
   '[data-agv-popup="true"]',
 ].join(', ');
 
@@ -47,22 +50,22 @@ export const GRID_CONTROL_RADIUS_CLASS = 'rounded-md';
 export const getGridControlRadiusClass = (): string => GRID_CONTROL_RADIUS_CLASS;
 
 export const getPinnedDividerClass = (_theme?: SurfaceTheme) =>
-  'border-r-2 border-r-agv-accent';
+  'border-r-2 border-r-[var(--agv-border)]';
 
 export const getRightPinnedDividerClass = (_theme?: SurfaceTheme) =>
-  'border-l-2 border-l-agv-accent';
+  'border-l-2 border-l-[var(--agv-border)]';
 
 export const getThemeClasses = (_theme?: SurfaceTheme) => {
   return {
     viewportBg: 'bg-[var(--agv-bg-root)]',
     headerBg: 'bg-[var(--agv-bg-header)] text-[var(--agv-text-header)]',
     headerBorderBottom: 'border-b border-b-[var(--agv-border)]',
-    systemBorderBottom: 'border-b-2 border-b-[var(--agv-border-strong)]',
-    filterBorderBottom: 'border-b-2 border-b-[var(--agv-border-strong)]',
+    systemBorderBottom: 'border-b-2 border-b-[var(--agv-border)]',
+    filterBorderBottom: 'border-b-2 border-b-[var(--agv-border)]',
     headerBorderRight: 'border-r border-r-[var(--agv-border)]',
     headerHoverBg: 'hover:bg-[var(--agv-bg-hover)]',
     tier1Bg: 'bg-[var(--agv-bg-header)] text-[var(--agv-text-header)]',
-    tier1Border: 'border-r-[var(--agv-border)] border-b-[var(--agv-border-strong)]',
+    tier1Border: 'border-r-[var(--agv-border)] border-b-[var(--agv-border)]',
     chunkBg: 'bg-[var(--agv-bg-root)]',
     borderBottom: 'border-b border-b-[var(--agv-border)]',
     borderRight: 'border-r border-r-[var(--agv-border)]',

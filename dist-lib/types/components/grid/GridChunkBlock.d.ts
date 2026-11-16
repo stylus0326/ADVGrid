@@ -1,0 +1,58 @@
+import React from 'react';
+import { ColumnDef, PinPosition, CenterDockStatus, SurfaceTheme, CellRenderParams, GridEditMode } from './types';
+import { type GridLayoutSnapshot } from './colRenderMeta';
+import { type CompiledPhoneCard, type CompiledTabletGroup } from './responsive/responsiveColumnUtils';
+export interface GridChunkBlockProps<T = any> {
+    chunkIndex: number;
+    rows: T[];
+    startRowIndex: number;
+    columns: ColumnDef<T>[];
+    colWidths: Record<string, number>;
+    layoutSnapshot?: GridLayoutSnapshot<T>;
+    delegatedEvents?: boolean;
+    rowHeight: number;
+    chunkSize: number;
+    topOffset?: number;
+    chunkHeight?: number;
+    phoneExpandedRows?: Map<string | number, number>;
+    onToggleExpandPhoneCard?: (rowKey: string | number, rowIndex: number) => void;
+    showRowNumber?: boolean;
+    showSelectionCol?: boolean;
+    selectedRowIndex: number | null;
+    selectedRowKey?: string | number | null;
+    checkedRowIndices?: Set<number | string>;
+    onSelectRow?: (rowIndex: number, row: T) => void;
+    onRowDetail?: (row: T, rowIndex: number) => void;
+    onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+    onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
+    onGroupContextMenu?: (groupRow: any, e: React.MouseEvent) => void;
+    antiGhostMode?: boolean;
+    surfaceTheme: SurfaceTheme;
+    columnPins: Record<string, PinPosition>;
+    leftOffsets: Record<string, number>;
+    rightOffsets: Record<string, number>;
+    lastEffectiveLeftColKey: string | null;
+    firstEffectiveRightColKey: string | null;
+    centerDockStatus: Record<string, CenterDockStatus>;
+    centerLeftOffsets: Record<string, number>;
+    centerRightOffsets: Record<string, number>;
+    getRowId?: (row: T, index: number) => string | number;
+    renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
+    editMode?: GridEditMode;
+    editingCell?: {
+        rowIndex: number;
+        colKey: string;
+    } | null;
+    onStartEditCell?: (rowIndex: number, colKey: string) => void;
+    onEndEditCell?: () => void;
+    onCellChange?: (rowIndex: number, row: T, colKey: string, newValue: any) => void;
+    getColumnDateBounds?: (colKey: string) => {
+        min: string;
+        max: string;
+    };
+    emptyColKeys?: Set<string>;
+    activeMode?: 'pc' | 'tablet' | 'phone';
+    compiledTabletGroups?: CompiledTabletGroup<T>[];
+    compiledPhoneCard?: CompiledPhoneCard<T>;
+}
+export declare const GridChunkBlock: <T = any>(props: GridChunkBlockProps<T>) => React.ReactElement | null;

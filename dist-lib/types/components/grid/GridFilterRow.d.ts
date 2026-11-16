@@ -1,0 +1,51 @@
+import React from 'react';
+import { ColumnDef, ColumnFilterValue, PinPosition, CenterDockStatus, SurfaceTheme, SortConfig, GroupSortConfig } from './types';
+import './filterRow.css';
+export interface GridFilterRowProps<T = any> {
+    totalGridWidth: number;
+    columns: ColumnDef<T>[];
+    colWidths: Record<string, number>;
+    columnPins: Record<string, PinPosition>;
+    leftOffsets: Record<string, number>;
+    rightOffsets: Record<string, number>;
+    centerDockStatus?: Record<string, CenterDockStatus>;
+    centerLeftOffsets?: Record<string, number>;
+    centerRightOffsets?: Record<string, number>;
+    lastEffectiveLeftColKey?: string | null;
+    firstEffectiveRightColKey?: string | null;
+    surfaceTheme?: SurfaceTheme;
+    columnFilters?: Record<string, ColumnFilterValue>;
+    onColumnFilterChange?: (colKey: string, filter: ColumnFilterValue) => void;
+    onClearAllColumnFilters?: () => void;
+    onClearAllCriteria?: () => void;
+    activeFilterCount?: number;
+    hasColumnEmptyCells?: (colKey: string) => boolean;
+    getColumnDateBounds?: (colKey: string) => {
+        min: string;
+        max: string;
+    };
+    headerTopOffset?: number;
+    columnSums?: Record<string, number>;
+    hasCheckedRows?: boolean;
+    emptyColKeys?: Set<string>;
+    groupByColumnKey?: string | null;
+    quickFilterText?: string;
+    sortConfig?: SortConfig | null;
+    sortRules?: SortConfig[];
+    groupSortConfig?: GroupSortConfig | null;
+    appliedQueryTree?: any;
+    pinnedRows?: Array<{
+        rowKey: string | number;
+        rowIndex: number;
+        row: any;
+    }>;
+    onUngroup?: () => void;
+    onSortChange?: (sort: SortConfig | null) => void;
+    onRemoveSortRule?: (colKey: string) => void;
+    onToggleGroupSort?: (colKey: string) => void;
+    onQuickFilterTextChange?: (text: string) => void;
+    onApplyQueryTree?: (tree: any) => void;
+    onUnpinRow?: (rowKey: string | number) => void;
+    onClearPinnedRows?: () => void;
+}
+export declare const GridFilterRow: React.FC<GridFilterRowProps>;

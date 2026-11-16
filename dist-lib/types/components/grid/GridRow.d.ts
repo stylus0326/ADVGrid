@@ -1,0 +1,56 @@
+import React from 'react';
+import { ColumnDef, PinPosition, CenterDockStatus, SurfaceTheme, CellRenderParams, GridEditMode } from './types';
+import { type ColRenderMeta, type GridLayoutSnapshot } from './colRenderMeta';
+import type { RowSpanPlan } from './gridCellSpanEngine';
+export interface GridRowProps<T = any> {
+    row: T;
+    rowIndex: number;
+    rowKey?: string | number;
+    columns: ColumnDef<T>[];
+    colWidths: Record<string, number>;
+    colRenderMetas?: ColRenderMeta<T>[];
+    layoutSnapshot?: GridLayoutSnapshot<T>;
+    delegatedEvents?: boolean;
+    totalRowWidth?: number;
+    rowHeight: number;
+    isSelected: boolean;
+    isChecked: boolean;
+    onSelectRow?: (rowIndex: number, row: T) => void;
+    onToggleCheck?: (rowIndex: number, row: T, e: React.MouseEvent) => void;
+    onCellContextMenu?: (rowIndex: number, row: T, colKey: string, e: React.MouseEvent) => void;
+    onGroupContextMenu?: (groupRow: any, e: React.MouseEvent) => void;
+    surfaceTheme: SurfaceTheme;
+    columnPins: Record<string, PinPosition>;
+    leftOffsets: Record<string, number>;
+    rightOffsets: Record<string, number>;
+    lastEffectiveLeftColKey: string | null;
+    firstEffectiveRightColKey: string | null;
+    centerDockStatus: Record<string, CenterDockStatus>;
+    centerLeftOffsets: Record<string, number>;
+    centerRightOffsets: Record<string, number>;
+    renderCell?: (params: CellRenderParams<T>) => React.ReactNode;
+    editMode?: GridEditMode;
+    editingCell?: {
+        rowIndex: number;
+        colKey: string;
+    } | null;
+    onStartEditCell?: (rowIndex: number, colKey: string) => void;
+    onEndEditCell?: () => void;
+    onCellChange?: (rowIndex: number, row: T, colKey: string, newValue: any) => void;
+    getColumnDateBounds?: (colKey: string) => {
+        min: string;
+        max: string;
+    };
+    emptyColKeys?: Set<string>;
+    dynamicRowHeight?: boolean;
+    rowSpanPlan?: RowSpanPlan;
+    treeColumnKey?: string;
+    treeIndentSize?: number;
+    onToggleTreeExpand?: (rowKey: string | number, row: any) => void;
+    detailExpandColKey?: string;
+    isDetailExpanded?: boolean;
+    canExpandDetail?: boolean;
+    onToggleRowDetail?: (rowKey: string | number, row: any) => void;
+    renderDetailRow?: (row: T) => React.ReactNode;
+}
+export declare const GridRow: <T = any>(props: GridRowProps<T>) => React.ReactElement | null;

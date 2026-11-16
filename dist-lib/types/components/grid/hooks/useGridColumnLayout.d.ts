@@ -1,0 +1,62 @@
+import React from 'react';
+import { BaseGroupDef, CenterDockStatus, ColumnDef, PinPosition, ResolvedGridFeatures } from '../types';
+export type GridMiddleElement<T = any> = {
+    type: 'standalone';
+    col: ColumnDef<T>;
+    isCenterPinned?: boolean;
+} | {
+    type: 'group';
+    def: BaseGroupDef;
+    segmentKey: string;
+    children: ColumnDef<T>[];
+};
+interface UseGridColumnLayoutParams<T> {
+    columns: ColumnDef<T>[];
+    columnGroups?: BaseGroupDef[];
+    totalRows: number;
+    features: ResolvedGridFeatures;
+    controlledWidths?: Record<string, number>;
+    defaultColWidths?: Record<string, number>;
+    onColWidthsChange?: (widths: Record<string, number>) => void;
+    controlledPins?: Record<string, PinPosition>;
+    defaultColumnPins?: Record<string, PinPosition>;
+    onColumnPinsChange?: (pins: Record<string, PinPosition>) => void;
+    controlledHiddenColKeys?: Set<string>;
+    defaultHiddenColKeys?: Set<string>;
+    onHiddenColKeysChange?: (hidden: Set<string>) => void;
+    controlledOnResetColumns?: () => void;
+    scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+}
+export declare function useGridColumnLayout<T>({ columns, columnGroups, totalRows, features, controlledWidths, defaultColWidths, onColWidthsChange, controlledPins, defaultColumnPins, onColumnPinsChange, controlledHiddenColKeys, defaultHiddenColKeys, onHiddenColKeysChange, controlledOnResetColumns, scrollContainerRef, }: UseGridColumnLayoutParams<T>): {
+    colMap: Record<string, ColumnDef<T>>;
+    colWidths: Record<string, number>;
+    setColWidth: (key: string, width: number) => void;
+    setMultipleColWidths: (updates: Record<string, number>) => void;
+    columnPins: Record<string, PinPosition>;
+    setColumnPin: (colKey: string, pin: PinPosition) => void;
+    hiddenColKeys: Set<string>;
+    setHiddenColKeys: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+    effectiveColumns: ColumnDef<T>[];
+    columnDataTypes: Record<string, string>;
+    effectiveColumnGroups: BaseGroupDef[] | undefined;
+    visibleColKeys: string[];
+    handleVisibleColKeysChange: (keys: string[]) => void;
+    handleResetColumns: () => void;
+    leftColumns: ColumnDef<T>[];
+    middleColumns: ColumnDef<T>[];
+    rightColumns: ColumnDef<T>[];
+    flatColumns: ColumnDef<T>[];
+    leftOffsets: Record<string, number>;
+    rightOffsets: Record<string, number>;
+    centerPinnedColKeys: string[];
+    centerDockStatus: Record<string, CenterDockStatus>;
+    computeCenterDock: (scrollLeft: number, clientWidth: number) => void;
+    centerLeftOffsets: Record<string, number>;
+    centerRightOffsets: Record<string, number>;
+    lastEffectiveLeftColKey: string | null;
+    firstEffectiveRightColKey: string | null;
+    totalGridWidth: number;
+    middleElements: GridMiddleElement<T>[];
+    gridColVars: React.CSSProperties;
+};
+export {};

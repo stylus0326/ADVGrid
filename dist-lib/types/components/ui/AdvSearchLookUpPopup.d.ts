@@ -1,0 +1,40 @@
+import React from 'react';
+import { EditorCoords } from './enterpriseEditorUtils';
+import type { AdvLookUpColumn, LookUpColumnFilterState, LookUpFilterOp } from './AdvSearchLookUpEdit';
+export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> {
+    theme: string;
+    themeClass: string;
+    coords: EditorCoords;
+    multiSelect: boolean;
+    columns: AdvLookUpColumn<T>[];
+    hasAnySelection: boolean;
+    isAllFilteredSelected: boolean;
+    isFilterRowVisible: boolean;
+    filterStates: Record<string, LookUpColumnFilterState>;
+    filterOperators: {
+        id: LookUpFilterOp;
+        label: string;
+    }[];
+    filteredData: T[];
+    valueMember: keyof T | string;
+    selectedKeysSet: Set<string>;
+    isKeyboardNav: boolean;
+    highlightedIndex: number;
+    activeOpMenuCol: string | null;
+    dropdownRef: React.RefObject<HTMLDivElement | null>;
+    opMenuRef: React.RefObject<HTMLDivElement | null>;
+    tableBodyRef: React.RefObject<HTMLDivElement | null>;
+    theadRef: React.RefObject<HTMLTableSectionElement | null>;
+    isKeyboardNavRef: React.MutableRefObject<boolean>;
+    navSourceRef: React.MutableRefObject<'pointer' | 'keyboard' | 'init'>;
+    setKeyboardNavActive: (active: boolean) => void;
+    setActiveOpMenuCol: React.Dispatch<React.SetStateAction<string | null>>;
+    handleListNavigationKeyDown: (e: React.KeyboardEvent) => void;
+    handleClearMultiAll: (e: React.MouseEvent) => void;
+    handleFilterRowChange: (key: string, val: string) => void;
+    handleFilterOpChange: (key: string, op: LookUpFilterOp) => void;
+    handleToggleMultiRow: (item: T, e?: React.MouseEvent) => void;
+    handleSelectSingleRow: (item: T) => void;
+}
+export declare function AdvSearchLookUpPopup<T extends Record<string, any> = any>({ theme, themeClass, coords, multiSelect, columns, hasAnySelection, isAllFilteredSelected, isFilterRowVisible, filterStates, filterOperators, filteredData, valueMember, selectedKeysSet, isKeyboardNav, highlightedIndex, activeOpMenuCol, dropdownRef, opMenuRef, tableBodyRef, theadRef, isKeyboardNavRef, navSourceRef, setKeyboardNavActive, setActiveOpMenuCol, handleListNavigationKeyDown, handleClearMultiAll, handleFilterRowChange, handleFilterOpChange, handleToggleMultiRow, handleSelectSingleRow, }: AdvSearchLookUpPopupProps<T>): React.JSX.Element;
+export default AdvSearchLookUpPopup;

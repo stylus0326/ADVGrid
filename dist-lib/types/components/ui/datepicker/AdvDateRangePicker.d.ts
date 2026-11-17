@@ -1,6 +1,8 @@
 import React from 'react';
+import { type ControlVariant } from '../controlFocus';
 import { GridTheme } from '../../../themes';
 export interface AdvDateRangePickerProps {
+    id?: string;
     from?: string;
     to?: string;
     onChange?: (range: {
@@ -16,6 +18,8 @@ export interface AdvDateRangePickerProps {
     dateAnalysis?: any;
     bounds?: any;
     size?: 'xs' | 'sm' | 'default' | 'md';
+    variant?: ControlVariant;
+    leadingIcon?: React.ReactNode;
     preset?: string;
     showPreset?: boolean;
     dualMonth?: boolean;
@@ -25,5 +29,9 @@ export interface AdvDateRangePickerProps {
     onClose?: () => void;
     allowClear?: boolean;
     className?: string;
+    invalid?: boolean;
+    'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+    'aria-describedby'?: string;
+    'aria-errormessage'?: string;
 }
 export declare const AdvDateRangePicker: React.NamedExoticComponent<AdvDateRangePickerProps>;

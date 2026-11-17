@@ -1,5 +1,6 @@
 import React from 'react';
 import { FilterOperation, ColumnAlign } from '../grid/types';
+import { ControlVariant } from './controlFocus';
 export type LookUpFilterOp = FilterOperation;
 export interface LookUpColumnFilterState {
     val: string;
@@ -17,6 +18,7 @@ export interface AdvLookUpColumn<T = any> {
     className?: string;
 }
 export interface AdvSearchLookUpEditProps<T = any> {
+    id?: string;
     value?: any;
     defaultValue?: any;
     onChange?: (val: any, itemOrItems?: any) => void;
@@ -26,11 +28,17 @@ export interface AdvSearchLookUpEditProps<T = any> {
     columns: AdvLookUpColumn<T>[];
     placeholder?: string;
     size?: 'sm' | 'md';
+    variant?: ControlVariant;
+    leadingIcon?: React.ReactNode;
     disabled?: boolean;
     dropdownWidth?: number;
     className?: string;
     style?: React.CSSProperties;
     theme?: string;
+    invalid?: boolean;
+    'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+    'aria-describedby'?: string;
+    'aria-errormessage'?: string;
     searchPlaceholder?: string;
     searchFields?: (keyof T | string)[];
     showFooterCount?: boolean;
@@ -40,5 +48,5 @@ export interface AdvSearchLookUpEditProps<T = any> {
     autoFocus?: boolean;
     onClose?: () => void;
 }
-export declare function AdvSearchLookUpEdit<T extends Record<string, any> = any>({ value, defaultValue, onChange, dataSource, valueMember, displayMember, columns, placeholder, size, disabled, dropdownWidth, className, style, theme, searchPlaceholder, searchFields, showFooterCount, showFilterRow, multiSelect, defaultOpen, autoFocus, onClose, }: AdvSearchLookUpEditProps<T>): React.JSX.Element;
+export declare function AdvSearchLookUpEdit<T extends Record<string, any> = any>({ id, value, defaultValue, onChange, dataSource, valueMember, displayMember, columns, placeholder, size, variant, leadingIcon, disabled, dropdownWidth, className, style, theme, invalid, 'aria-invalid': ariaInvalidProp, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, searchPlaceholder, searchFields, showFooterCount, showFilterRow, multiSelect, defaultOpen, autoFocus, onClose, }: AdvSearchLookUpEditProps<T>): React.JSX.Element;
 export default AdvSearchLookUpEdit;

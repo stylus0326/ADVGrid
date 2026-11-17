@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Clock, Check, ChevronRight, ChevronDown, ChevronLeft, ArrowRight } from 'lucide-react';
+import { type ControlVariant } from './controlFocus';
 import { GridTheme } from '../../themes';
 import { getThemeClass, MONTH_LABELS, MONTH_SHORT_LABELS, CALENDAR_WEEKDAYS, formatDateToYMD, parseDateToTimestamp, formatDisplayDate, formatGridDateValue, parseDMYToDate, computePresetDateRange, normalizePresetList, getPresetLabel, isDateDisabledHelper, shiftMonth, CalendarCellItem, buildCalendarCells, usePopupDismiss, computeDropdownMenuCoords, computeCalendarCoords } from './datepicker/datePickerUtils';
 import { TimePickerBlock, TimePickerBlockProps, AdvDevExpressCalendarBody, AdvDevExpressCalendarBodyProps } from './datepicker/AdvCalendarPrimitives';
@@ -8,6 +9,7 @@ import { AdvDateRangePicker, AdvDateRangePickerProps } from './datepicker/AdvDat
 export { Calendar, Clock, Check, ChevronRight, ChevronDown, ChevronLeft, ArrowRight, getThemeClass, MONTH_LABELS, MONTH_SHORT_LABELS, CALENDAR_WEEKDAYS, formatDateToYMD, parseDateToTimestamp, formatDisplayDate, formatGridDateValue, parseDMYToDate, computePresetDateRange, normalizePresetList, getPresetLabel, isDateDisabledHelper, shiftMonth, buildCalendarCells, usePopupDismiss, computeDropdownMenuCoords, computeCalendarCoords, TimePickerBlock, AdvDevExpressCalendarBody, AdvDatePresetSelect, AdvDateRangePicker, };
 export type { CalendarCellItem, TimePickerBlockProps, AdvDevExpressCalendarBodyProps, AdvDatePresetSelectProps, AdvDateRangePickerProps, };
 export interface AdvDatePickerProps {
+    id?: string;
     value?: string;
     preset?: string;
     onChange?: (val: string, range?: {
@@ -23,6 +25,8 @@ export interface AdvDatePickerProps {
     onDoubleClick?: (e: React.MouseEvent) => void;
     theme?: GridTheme;
     size?: 'xs' | 'sm' | 'default' | 'md';
+    variant?: ControlVariant;
+    leadingIcon?: React.ReactNode;
     showPreset?: boolean;
     showTime?: boolean;
     autoFocus?: boolean;
@@ -32,6 +36,10 @@ export interface AdvDatePickerProps {
     bounds?: any;
     showCalendarIcon?: boolean;
     allowClear?: boolean;
+    invalid?: boolean;
+    'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+    'aria-describedby'?: string;
+    'aria-errormessage'?: string;
 }
 export declare const AdvDatePicker: React.NamedExoticComponent<AdvDatePickerProps>;
 export { AdvDatePicker as DatePicker, AdvDateRangePicker as DateRangePicker, AdvDatePresetSelect as DatePresetSelect, AdvDatePicker as App, };

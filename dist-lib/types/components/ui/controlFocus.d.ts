@@ -1,4 +1,5 @@
 export type ControlSize = 'sm' | 'md';
+export type ControlVariant = 'default' | 'auth';
 export type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'default' | 'md' | 'icon-sm' | 'icon';
 export declare const CONTROL_FOCUS_CLASS = "outline-none";
@@ -9,6 +10,14 @@ export declare const CONTROL_SURFACE_CLASS = "agv-control";
 export declare const CONTROL_BOX_CLASS = "agv-control agv-control-box";
 export declare const CONTROL_SIZE_CLASS: Record<ControlSize, string>;
 export declare const getControlSizeClass: (size?: ControlSize) => string;
+export interface ControlSurfaceClassesOptions {
+    size?: ControlSize;
+    variant?: ControlVariant;
+    box?: boolean;
+    defaultRadiusClass?: string;
+    className?: string;
+}
+export declare function getControlSurfaceClasses({ size, variant, box, defaultRadiusClass, className, }?: ControlSurfaceClassesOptions): string;
 export declare const CONTROL_INPUT_MD_CLASS: string;
 export declare const CONTROL_INPUT_SM_CLASS: string;
 export declare const CONTROL_BOX_MD_CLASS: string;

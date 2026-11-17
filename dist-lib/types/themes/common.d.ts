@@ -1,6 +1,8 @@
 export declare const SURFACE_THEMES: {
     readonly LIGHT: "light";
     readonly DARK: "dark";
+    readonly LIQUID_LIGHT: "liquid-light";
+    readonly LIQUID_DARK: "liquid-dark";
 };
 export type GridTheme = (typeof SURFACE_THEMES)[keyof typeof SURFACE_THEMES] | string;
 export interface GridThemeTokens {
@@ -64,6 +66,7 @@ export interface ThemeMeta {
 }
 export declare const REGISTERED_THEMES: ThemeMeta[];
 export declare const THEME_CLASS_MAP: Record<string, string>;
+export declare function isLiquidTheme(theme?: string | null): boolean;
 export declare function normalizeThemeId(theme?: string | null): 'light' | 'dark';
 export declare function getThemeClass(theme?: string | null, _fallback?: string): string;
 export declare function getThemeMeta(theme?: string | null): ThemeMeta;

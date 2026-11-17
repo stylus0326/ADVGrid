@@ -1,5 +1,5 @@
-import { S as e, n as c } from "./chunks/common-Bjggt86Z.js";
-import { R as u, T as l, a as S, g as p, b as x, c as v } from "./chunks/common-Bjggt86Z.js";
+import { S as e, n as c } from "./chunks/common-29M8PlVv.js";
+import { R as u, T as l, a as S, g as p, b as x, c as D, i as v } from "./chunks/common-29M8PlVv.js";
 const f = {
   bgRoot: "#f4f7f8",
   bgHeader: "#f0f6f8",
@@ -99,14 +99,18 @@ const f = {
   badgePendingText: "#fcd34d",
   badgeLockedBg: "#450a0a"
 }, g = t, o = {
-  [e.LIGHT]: f
-}, d = {
-  [e.DARK]: t
-}, s = {
   [e.LIGHT]: f,
-  [e.DARK]: t
+  [e.LIQUID_LIGHT]: f
+}, d = {
+  [e.DARK]: t,
+  [e.LIQUID_DARK]: t
+}, T = {
+  [e.LIGHT]: f,
+  [e.DARK]: t,
+  [e.LIQUID_LIGHT]: f,
+  [e.LIQUID_DARK]: t
 };
-function T(n = e.LIGHT, a) {
+function s(n = e.LIGHT, a) {
   return typeof a == "boolean" ? a ? t : f : c(n) === e.DARK ? t : f;
 }
 function i() {
@@ -122,12 +126,13 @@ export {
   u as REGISTERED_THEMES,
   e as SURFACE_THEMES,
   l as THEME_CLASS_MAP,
-  s as THEME_TOKENS,
+  T as THEME_TOKENS,
   i as generateThemeCssVariables,
   S as getNextTheme,
   p as getThemeClass,
   x as getThemeMeta,
-  v as getThemeName,
-  T as getThemeTokens,
+  D as getThemeName,
+  s as getThemeTokens,
+  v as isLiquidTheme,
   c as normalizeThemeId
 };

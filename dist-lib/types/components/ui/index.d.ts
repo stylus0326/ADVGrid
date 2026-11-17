@@ -2,6 +2,10 @@ export { getPortalThemeVars, computeEditorCoords, useClickOutside, normalizeSear
 export type { EditorCoords } from './enterpriseEditorUtils';
 export { AdvButton, Button, getButtonClass, buttonVariants, } from './AdvButton';
 export type { AdvButtonProps, ButtonVariant, ButtonSize } from './AdvButton';
+export { AdvInput } from './AdvInput';
+export type { AdvInputProps } from './AdvInput';
+export { AdvFormField, FormField, AdvFormFieldOverlayScope, } from './AdvFormField';
+export type { AdvFormFieldProps, AdvFormFieldOverlayScopeProps, FormFieldLabelPosition, } from './AdvFormField';
 export { AdvComboBoxEdit } from './AdvComboBoxEdit';
 export type { AdvComboBoxEditOption, AdvComboBoxEditProps } from './AdvComboBoxEdit';
 export { AdvSearchLookUpEdit, LOOKUP_FILTER_OPERATORS, } from './AdvSearchLookUpEdit';

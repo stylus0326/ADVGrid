@@ -64,8 +64,8 @@ export const LoginPanel: React.FC<LoginPanelProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-background text-foreground">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6">
+    <div className="relative z-10 flex-1 flex items-center justify-center p-4 bg-background text-foreground">
+      <div className="agv-login-card w-full max-w-md rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6">
         <div className="mb-5">
           <h1 className="text-section-title font-semibold text-foreground tracking-tight">
             Kết nối dữ liệu B2B-PNT

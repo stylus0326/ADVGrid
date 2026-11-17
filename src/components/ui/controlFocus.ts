@@ -2,6 +2,8 @@
 
 export type ControlSize = 'sm' | 'md';
 
+export type ControlVariant = 'default' | 'auth';
+
 /** 4 phân loại nút chuẩn duy nhất toàn hệ thống (tham chiếu shadcn/ui Base Button) */
 export type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive';
 
@@ -34,6 +36,45 @@ export const CONTROL_SIZE_CLASS: Record<ControlSize, string> = {
 
 export const getControlSizeClass = (size: ControlSize = 'sm'): string =>
   CONTROL_SIZE_CLASS[size];
+
+export interface ControlSurfaceClassesOptions {
+  size?: ControlSize;
+  variant?: ControlVariant;
+  box?: boolean;
+  defaultRadiusClass?: string;
+  className?: string;
+}
+
+/** Nguồn đơn tạo class cho input/select/combobox/lookup hỗ trợ dáng chuẩn & auth (h-12, đồng bộ bo 8px) */
+export function getControlSurfaceClasses({
+  size = 'sm',
+  variant = 'default',
+  box = false,
+  defaultRadiusClass = 'rounded-md',
+  className = '',
+}: ControlSurfaceClassesOptions = {}): string {
+  const hasH = /(?:^|\s)!?h-/.test(className);
+  const hasRadius = /\brounded(?:-[^\s]+)?\b/.test(className);
+  const hasText = /\btext-(?:xs|sm|base|lg|xl|\[)/.test(className);
+
+  const surfaceBase = box ? CONTROL_BOX_CLASS : CONTROL_SURFACE_CLASS;
+  const radiusCls = hasRadius ? '' : defaultRadiusClass;
+
+  let sizeCls = '';
+  if (!hasH) {
+    if (variant === 'auth') {
+      sizeCls = hasText ? 'h-12 min-h-[48px]' : 'h-12 min-h-[48px] text-sm';
+    } else {
+      const fallbackText = hasText ? '' : size === 'md' ? ' text-sm' : ' text-xs';
+      sizeCls =
+        size === 'md'
+          ? `h-control min-h-[28px]${fallbackText}`
+          : `h-7 min-h-[28px]${fallbackText}`;
+    }
+  }
+
+  return [surfaceBase, radiusCls, sizeCls, className].filter(Boolean).join(' ');
+}
 
 export const CONTROL_INPUT_MD_CLASS =
   `${CONTROL_SURFACE_CLASS} ${CONTROL_SIZE_CLASS.md} px-2.5 py-1 placeholder:text-muted-foreground`;

@@ -158,31 +158,31 @@
 
 .agv-grid-row[data-row-parity="even"] {
   --agv-row-data-bg: var(--agv-bg-row);
-  --agv-row-sticky-bg: var(--agv-bg-header);
+  --agv-row-sticky-bg: var(--agv-row-sticky-surface, var(--agv-bg-header));
 }
 
 .agv-grid-row[data-row-parity="odd"] {
   --agv-row-data-bg: var(--agv-bg-row-alt);
-  --agv-row-sticky-bg: var(--agv-bg-header);
+  --agv-row-sticky-bg: var(--agv-row-sticky-surface, var(--agv-bg-header));
 }
 
 .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) {
   --agv-row-data-bg: var(--agv-bg-selected);
-  --agv-row-sticky-bg: var(--agv-bg-selected);
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-selected));
 }
 
 .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]) > [data-cell-role="stt"] {
-  background-color: var(--agv-bg-header);
+  background-color: var(--agv-row-sticky-surface, var(--agv-bg-header));
 }
 
 .agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]) {
   --agv-row-data-bg: var(--agv-bg-focused);
-  --agv-row-sticky-bg: var(--agv-bg-focused);
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-focused));
 }
 
 .agv-grid-row[data-row-focused="true"][data-row-checked="true"] {
   --agv-row-data-bg: var(--agv-bg-checked-focused);
-  --agv-row-sticky-bg: var(--agv-bg-checked-focused);
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-checked-focused));
 }
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-group-row:hover {
@@ -191,26 +191,26 @@
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row:not([data-row-focused="true"]):not([data-row-checked="true"]):hover {
   --agv-row-data-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
-  --agv-row-sticky-bg: var(--agv-bg-row-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-row-sticky-hover, var(--agv-bg-row-hover, var(--agv-bg-hover)));
 }
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover {
   --agv-row-data-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
-  --agv-row-sticky-bg: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-selected-hover, var(--agv-bg-hover)));
 }
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-checked="true"]:not([data-row-focused="true"]):hover > [data-cell-role="stt"] {
-  background-color: var(--agv-bg-selected-hover, var(--agv-bg-hover));
+  background-color: var(--agv-row-sticky-selected, var(--agv-bg-selected-hover, var(--agv-bg-hover)));
 }
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"]:not([data-row-checked="true"]):hover {
   --agv-row-data-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
-  --agv-row-sticky-bg: var(--agv-bg-focused-hover, var(--agv-bg-focused));
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-focused-hover, var(--agv-bg-focused)));
 }
 
 .agv-scroll-viewport:not([data-agv-scrolling="true"]) .agv-grid-row[data-row-focused="true"][data-row-checked="true"]:hover {
   --agv-row-data-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
-  --agv-row-sticky-bg: var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused));
+  --agv-row-sticky-bg: var(--agv-row-sticky-selected, var(--agv-bg-checked-focused-hover, var(--agv-bg-checked-focused)));
 }
 
 .agv-grid-row[data-row-focused="true"] > [data-cell-role="stt"] {

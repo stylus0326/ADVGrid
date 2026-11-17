@@ -293,3 +293,256 @@
   --scrollbar-thumb-hover: rgb(252 204 108 / 0.55);
   --scrollbar-track: transparent;
 }
+
+/* ==============================================================================
+   CHẾ ĐỘ GIAO DIỆN LIQUID GLASS (NGÀY & ĐÊM — ĐỒNG BỘ WAYFARE / PNT ONE)
+   ============================================================================== */
+.agv-liquid:not(.dark),
+[data-theme="liquid-light"] {
+  --liquid-sky-base: #034e7b;
+  --background: transparent;
+  --foreground: #0b2538;
+  --card: rgb(255 255 255 / 0.56);
+  --card-foreground: #0b2538;
+  --popover: rgb(245 251 255 / 0.86);
+  --popover-foreground: #0b2538;
+  --primary: #13647e;
+  --primary-foreground: #ffffff;
+  --secondary: rgb(224 242 254 / 0.72);
+  --secondary-foreground: #0c4a6e;
+  --muted: rgb(232 245 253 / 0.62);
+  --muted-foreground: #466173;
+  --accent: rgb(214 238 252 / 0.76);
+  --accent-foreground: #0c4a6e;
+  --border: rgb(255 255 255 / 0.72);
+  --input: rgb(110 142 162 / 0.56);
+  --control-border: rgb(110 142 162 / 0.56);
+  --control-border-hover: #13647e;
+  --control-background: rgb(255 255 255 / 0.76);
+  --control-focus-background: rgb(255 255 255 / 0.94);
+  --ring: #13647e;
+
+  --brand-teal: #13647e;
+  --brand-shell: #0e4f65;
+  --brand: #13647e;
+  --brand-foreground: #ffffff;
+
+  --surface-ground: rgb(240 249 255 / 0.22);
+  --surface-hover: rgb(255 255 255 / 0.82);
+  --surface-selected: rgb(186 230 253 / 0.68);
+  --table-header: rgb(232 246 254 / 0.72);
+  --surface-subtle: rgb(234 246 253 / 0.54);
+  --surface-raised: rgb(255 255 255 / 0.74);
+
+  --popup-background: rgb(245 251 255 / 0.86);
+  --popup-border: rgb(255 255 255 / 0.90);
+  --popup-shadow:
+    0 24px 52px -10px rgb(2 42 68 / 0.28),
+    0 8px 20px -4px rgb(3 60 84 / 0.14),
+    inset 0 1.5px 2px rgb(255 255 255 / 0.95);
+  --popup-item-hover-bg: rgb(212 238 252 / 0.76);
+  --popup-item-selected-bg: #13647e;
+  --popup-item-selected-fg: #ffffff;
+
+  --liquid-notched-label-bg: rgb(244 250 254 / 0.96);
+  --liquid-sheet-bg: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.72) 0%,
+    rgb(242 250 255 / 0.60) 52%,
+    rgb(230 245 252 / 0.68) 100%
+  );
+  --liquid-sheet-border: rgb(255 255 255 / 0.80);
+  --liquid-sheet-border-top: rgb(255 255 255 / 0.96);
+  --liquid-sheet-shadow:
+    0 24px 56px -12px rgb(2 42 68 / 0.28),
+    0 8px 24px -4px rgb(3 60 84 / 0.14),
+    inset 0 1.5px 3px rgb(255 255 255 / 0.95),
+    inset 0 -6px 16px rgb(20 184 204 / 0.10);
+  --liquid-header-bg: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.76) 0%,
+    rgb(240 249 255 / 0.64) 100%
+  );
+  --liquid-header-border: rgb(255 255 255 / 0.78);
+  --liquid-header-shadow:
+    0 4px 18px rgb(3 45 66 / 0.14),
+    inset 0 1px 1.5px rgb(255 255 255 / 0.88);
+  --liquid-demo-card-bg: linear-gradient(
+    165deg,
+    rgb(255 255 255 / 0.60) 0%,
+    rgb(240 249 255 / 0.46) 100%
+  );
+  --liquid-demo-card-border: rgb(255 255 255 / 0.82);
+  --liquid-demo-card-shadow:
+    0 10px 24px -8px rgb(3 52 78 / 0.12),
+    inset 0 1px 2px rgb(255 255 255 / 0.90);
+  --liquid-btn-outline-bg: rgb(255 255 255 / 0.72);
+  --liquid-btn-outline-border: rgb(120 152 172 / 0.44);
+  --liquid-btn-outline-hover: rgb(255 255 255 / 0.90);
+  --liquid-btn-outline-shadow:
+    0 4px 12px -3px rgb(8 65 92 / 0.10),
+    inset 0 1px 1.5px rgb(255 255 255 / 0.95);
+
+  --agv-row-sticky-surface: rgb(235 246 253 / 0.95);
+  --agv-row-sticky-hover: rgb(216 240 252 / 0.96);
+  --agv-row-sticky-selected: rgb(194 231 250 / 0.96);
+  --agv-border-grid: rgb(132 170 194 / 0.36);
+
+  --agv-bg-row: rgb(255 255 255 / 0.44);
+  --agv-bg-row-alt: rgb(242 250 255 / 0.44);
+  --agv-accent-hover: color-mix(in srgb, var(--primary) 88%, #000000);
+  --agv-accent-hover-border: #0b2538;
+  --agv-backdrop-bg: rgb(15 23 42 / 0.42);
+  --agv-pinned-shadow: 4px 0 14px -4px rgb(3 45 66 / 0.14);
+  --agv-shadow-pinned: 4px 0 14px -4px rgb(3 45 66 / 0.14);
+}
+
+.dark.agv-liquid,
+[data-theme="liquid-dark"] {
+  --liquid-sky-base: #041218;
+  --background: transparent;
+  --foreground: #f1f7f8;
+  --card: rgb(13 39 49 / 0.62);
+  --card-foreground: #f1f7f8;
+  --popover: rgb(13 39 49 / 0.88);
+  --popover-foreground: #f1f7f8;
+  --primary: #70bdd2;
+  --primary-foreground: #062a36;
+  --secondary: rgb(23 56 67 / 0.68);
+  --secondary-foreground: #d8e8ec;
+  --muted: rgb(20 47 56 / 0.66);
+  --muted-foreground: #aec0c6;
+  --accent: rgb(21 54 64 / 0.78);
+  --accent-foreground: #d8e8ec;
+  --border: rgb(112 189 210 / 0.24);
+  --input: rgb(95 127 137 / 0.65);
+  --control-border: rgb(95 127 137 / 0.72);
+  --control-border-hover: #ffffff;
+  --control-background: rgb(10 31 39 / 0.66);
+  --control-focus-background: rgb(13 39 49 / 0.88);
+  --ring: #70bdd2;
+
+  --brand-teal: #70bdd2;
+  --brand-shell: #0f5266;
+  --brand: #70bdd2;
+  --brand-foreground: #062a36;
+  --brand-gold-on-light: #d6a55d;
+  --brand-gold-on-dark: #fccc6c;
+
+  --surface-ground: rgb(7 28 36 / 0.34);
+  --surface-hover: rgb(21 54 64 / 0.74);
+  --surface-selected: rgb(23 61 73 / 0.66);
+  --table-header: rgb(18 49 59 / 0.74);
+  --surface-subtle: rgb(20 47 56 / 0.58);
+  --surface-raised: rgb(13 39 49 / 0.74);
+
+  --popup-background: rgb(13 39 49 / 0.88);
+  --popup-border: rgb(112 189 210 / 0.28);
+  --popup-shadow:
+    0 28px 60px -10px rgb(2 10 14 / 0.72),
+    inset 0 1.5px 2px rgb(255 255 255 / 0.18),
+    inset 0 -6px 16px rgb(112 189 210 / 0.10);
+  --popup-item-hover-bg: rgb(21 54 64 / 0.82);
+  --popup-item-selected-bg: #1c6987;
+  --popup-item-selected-fg: #ffffff;
+
+  --liquid-notched-label-bg: rgb(13 39 49 / 0.96);
+  --liquid-sheet-bg: linear-gradient(
+    165deg,
+    rgb(13 39 49 / 0.76) 0%,
+    rgb(7 28 36 / 0.68) 55%,
+    rgb(15 44 54 / 0.76) 100%
+  );
+  --liquid-sheet-border: rgb(112 189 210 / 0.24);
+  --liquid-sheet-border-top: rgb(216 232 236 / 0.34);
+  --liquid-sheet-shadow:
+    0 28px 64px -12px rgb(2 10 14 / 0.70),
+    inset 0 1.5px 3px rgb(255 255 255 / 0.18),
+    inset 0 -8px 20px rgb(112 189 210 / 0.10);
+  --liquid-header-bg: linear-gradient(
+    180deg,
+    rgb(13 39 49 / 0.78) 0%,
+    rgb(7 28 36 / 0.66) 100%
+  );
+  --liquid-header-border: rgb(112 189 210 / 0.22);
+  --liquid-header-shadow:
+    0 6px 20px rgb(2 10 14 / 0.45),
+    inset 0 1px 1.5px rgb(255 255 255 / 0.16);
+  --liquid-demo-card-bg: linear-gradient(
+    165deg,
+    rgb(13 39 49 / 0.62) 0%,
+    rgb(7 28 36 / 0.50) 100%
+  );
+  --liquid-demo-card-border: rgb(112 189 210 / 0.22);
+  --liquid-demo-card-shadow:
+    0 12px 28px -8px rgb(2 10 14 / 0.46),
+    inset 0 1px 2px rgb(255 255 255 / 0.14);
+  --liquid-btn-outline-bg: rgb(13 39 49 / 0.62);
+  --liquid-btn-outline-border: rgb(95 127 137 / 0.60);
+  --liquid-btn-outline-hover: rgb(21 54 64 / 0.84);
+  --liquid-btn-outline-shadow:
+    0 6px 16px -4px rgb(2 10 14 / 0.38),
+    inset 0 1px 1.5px rgb(255 255 255 / 0.14);
+
+  --agv-row-sticky-surface: rgb(18 49 59 / 0.96);
+  --agv-row-sticky-hover: rgb(21 54 64 / 0.98);
+  --agv-row-sticky-selected: rgb(23 61 73 / 0.98);
+  --agv-border-grid: rgb(41 69 78 / 0.72);
+
+  --agv-bg-row: rgb(13 39 49 / 0.48);
+  --agv-bg-row-alt: rgb(16 44 54 / 0.48);
+  --agv-accent-hover: color-mix(in srgb, var(--primary) 90%, #ffffff);
+  --agv-accent-hover-border: #ffffff;
+  --agv-backdrop-bg: rgb(2 10 14 / 0.68);
+  --agv-pinned-shadow: 4px 0 16px -4px rgb(0 0 0 / 0.50);
+  --agv-shadow-pinned: 4px 0 16px -4px rgb(0 0 0 / 0.50);
+}
+
+.agv-liquid,
+[data-theme="liquid-light"],
+[data-theme="liquid-dark"] {
+  --agv-bg-root: var(--surface-ground);
+  --agv-bg-surface: var(--card);
+  --agv-bg-card: var(--card);
+  --agv-bg-panel: var(--card);
+  --agv-bg-header: var(--table-header);
+  --agv-bg-row-hover: var(--surface-hover);
+  --agv-bg-hover: var(--surface-hover);
+  --agv-bg-selected: var(--surface-selected);
+  --agv-bg-selected-hover: var(--surface-selected);
+  --agv-bg-focused: var(--surface-selected);
+  --agv-bg-focused-hover: var(--surface-selected);
+  --agv-bg-checked-focused: var(--surface-selected);
+  --agv-bg-checked-focused-hover: var(--surface-selected);
+  --agv-bg-popup: var(--popup-background);
+  --agv-bg-subtle: var(--muted);
+  --agv-bg-control: var(--form-field-label-background, var(--control-background));
+  --agv-bg-control-hover: var(--surface-hover);
+  --agv-bg-item-hover: var(--accent);
+  --agv-bg-item-active: var(--surface-selected);
+  --agv-btn-default-bg: var(--liquid-btn-outline-bg);
+  --agv-btn-default-border: var(--liquid-btn-outline-border);
+  --agv-btn-default-text: var(--foreground);
+  --agv-btn-default-hover: var(--liquid-btn-outline-hover);
+  --agv-btn-default-active: var(--secondary);
+  --agv-card-bg: var(--card);
+  --agv-card-border: var(--agv-border-grid);
+  --agv-group-row-bg: var(--table-header);
+  --agv-row-data-bg: var(--agv-bg-row);
+  --agv-row-sticky-bg: var(--agv-row-sticky-surface);
+  --agv-border: var(--agv-border-grid);
+  --agv-border-subtle: var(--agv-border-grid);
+  --agv-border-strong: var(--control-border);
+  --agv-border-popup: var(--popup-border);
+  --agv-accent: var(--primary);
+  --agv-accent-active: var(--brand-shell);
+  --agv-accent-text: var(--primary-foreground);
+  --agv-text-main: var(--foreground);
+  --agv-text-header: var(--foreground);
+  --agv-text-muted: var(--muted-foreground);
+  --agv-text-subtle: var(--muted-foreground);
+  --agv-text-active: var(--brand);
+  --agv-stt-cell-text: var(--muted-foreground);
+  --agv-focus-ring: var(--ring);
+  --agv-focus-halo: color-mix(in srgb, var(--ring) 25%, transparent);
+}

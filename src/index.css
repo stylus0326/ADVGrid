@@ -437,7 +437,7 @@ button.agv-control:not([data-agv-trigger="true"]):hover:not(:disabled):not([aria
 .agv-btn[data-active="true"] {
   background-color: var(--agv-accent);
   border-color: var(--agv-accent);
-  color: var(--popup-item-selected-fg, #ffffff);
+  color: var(--agv-accent-text, var(--popup-item-selected-fg, #ffffff));
 }
 
 .agv-btn-destructive.agv-focus-ring:focus-visible,
@@ -519,6 +519,79 @@ button.agv-control:not([data-agv-trigger="true"]):focus-visible {
   max-height: 30px;
 }
 
+.agv-field-border:not([data-invalid="true"]):not(:has([aria-invalid="true"])):focus-within > .agv-field-label,
+.agv-field-border:not([data-invalid="true"]):not(:has([aria-invalid="true"])):has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused) > .agv-field-label {
+  color: var(--brand);
+}
+
+.agv-field-border > .agv-field-notch-frame {
+  display: none;
+}
+
+.agv-field-border[data-notch-ready="true"] > .agv-field-label {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.agv-field-border[data-notch-ready="true"] .agv-control:not(.agv-btn),
+.agv-field-border[data-notch-ready="true"] .agv-datepicker-input-box,
+.agv-field-border[data-notch-ready="true"] .agv-daterange-bar {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.agv-field-border[data-notch-ready="true"] > .agv-field-notch-frame {
+  display: block;
+  position: absolute;
+  top: 8px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 15;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: transparent;
+  box-sizing: border-box;
+  transition:
+    border-color var(--motion-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-fast) var(--motion-ease-standard);
+  clip-path: polygon(
+    -6px -6px,
+    12px -6px,
+    12px 10px,
+    calc(12px + var(--agv-notch-w, 0px)) 10px,
+    calc(12px + var(--agv-notch-w, 0px)) -6px,
+    calc(100% + 6px) -6px,
+    calc(100% + 6px) calc(100% + 6px),
+    -6px calc(100% + 6px)
+  );
+}
+
+.agv-field-border[data-notch-ready="true"]:not([data-invalid="true"]):not(:has([aria-invalid="true"])):not(:has(input.agv-control:disabled, button.agv-control:disabled, select.agv-control:disabled, textarea.agv-control:disabled, .agv-control[aria-disabled="true"], .agv-datepicker-input-box input:disabled)):not(:focus-within):not(:has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused)):hover > .agv-field-notch-frame {
+  border-color: var(--control-border-hover);
+}
+
+.agv-field-border[data-notch-ready="true"]:not([data-invalid="true"]):not(:has([aria-invalid="true"])):focus-within > .agv-field-notch-frame,
+.agv-field-border[data-notch-ready="true"]:not([data-invalid="true"]):not(:has([aria-invalid="true"])):has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused) > .agv-field-notch-frame {
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.agv-field-border[data-notch-ready="true"][data-invalid="true"] > .agv-field-notch-frame,
+.agv-field-border[data-notch-ready="true"]:has([aria-invalid="true"]) > .agv-field-notch-frame {
+  border-color: var(--destructive);
+}
+
+.agv-field-border[data-notch-ready="true"][data-invalid="true"]:focus-within > .agv-field-notch-frame,
+.agv-field-border[data-notch-ready="true"]:has([aria-invalid="true"]):focus-within > .agv-field-notch-frame,
+.agv-field-border[data-notch-ready="true"][data-invalid="true"]:has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused) > .agv-field-notch-frame,
+.agv-field-border[data-notch-ready="true"]:has([aria-invalid="true"]):has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused) > .agv-field-notch-frame {
+  border-color: var(--destructive);
+  box-shadow: inset 0 0 0 1px var(--destructive);
+}
+
 /* Bảo vệ tối thiểu mọi icon SVG trong button/control không bao giờ bị ép nhỏ hơn 8x8 */
 button svg,
 [role="button"] svg,
@@ -526,4 +599,168 @@ button svg,
   min-width: 8px;
   min-height: 8px;
   flex-shrink: 0;
+}
+
+/* ==============================================================================
+   LIQUID GLASS SURFACE SYSTEM (CHẾ ĐỘ KÍNH LỎNG NGÀY & ĐÊM)
+   ============================================================================== */
+html.agv-liquid,
+body.agv-liquid {
+  background-color: var(--liquid-sky-base);
+}
+
+@keyframes agv-liquid-plane-cruise {
+  0%, 100% {
+    transform: translate3d(-10px, 0px, 0) rotate(-0.4deg);
+  }
+  50% {
+    transform: translate3d(12px, -6px, 0) rotate(0.6deg);
+  }
+}
+
+@keyframes agv-liquid-cloud-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scaleY(1);
+    opacity: 0.90;
+  }
+  50% {
+    transform: translate3d(-12px, 4px, 0) scaleY(1.04);
+    opacity: 0.98;
+  }
+}
+
+@keyframes agv-liquid-contrail-pulse {
+  0%, 100% {
+    opacity: 0.68;
+    transform: scaleX(0.96);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scaleX(1.04);
+  }
+}
+
+.agv-liquid-plane {
+  animation: agv-liquid-plane-cruise 5.8s ease-in-out infinite;
+  transform-origin: 258px 245px;
+  will-change: transform;
+}
+
+.agv-liquid-cloud {
+  animation: agv-liquid-cloud-drift 7s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.agv-liquid-contrail {
+  animation: agv-liquid-contrail-pulse 3.6s ease-in-out infinite;
+  transform-origin: 258px 280px;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agv-liquid-plane,
+  .agv-liquid-cloud,
+  .agv-liquid-contrail {
+    animation: none;
+  }
+}
+
+.agv-liquid .agv-app-header {
+  background: var(--liquid-header-bg);
+  backdrop-filter: blur(22px) saturate(195%);
+  -webkit-backdrop-filter: blur(22px) saturate(195%);
+  border-bottom-color: var(--liquid-header-border);
+  box-shadow: var(--liquid-header-shadow);
+}
+
+.agv-liquid .agv-list-page-panel,
+.agv-liquid .agv-login-card {
+  background: var(--liquid-sheet-bg);
+  backdrop-filter: blur(32px) saturate(205%);
+  -webkit-backdrop-filter: blur(32px) saturate(205%);
+  border-color: var(--liquid-sheet-border);
+  border-top-color: var(--liquid-sheet-border-top);
+  box-shadow: var(--liquid-sheet-shadow);
+}
+
+.agv-liquid .agv-ui-page-scroll,
+.agv-liquid .agv-list-page-panel > div.bg-card {
+  background: transparent;
+}
+
+.agv-liquid .agv-demo-card {
+  background: var(--liquid-demo-card-bg);
+  border-color: var(--liquid-demo-card-border);
+  box-shadow: var(--liquid-demo-card-shadow);
+}
+
+.agv-liquid .agv-popup-panel,
+.agv-liquid.agv-popup-panel,
+.agv-liquid .agv-portal-dropdown,
+.agv-liquid .agv-comboboxedit-dropdown,
+.agv-liquid .agv-searchlookupedit-dropdown,
+.agv-liquid .agv-lookup-op-menu,
+.agv-liquid .agv-filter-dropdown-menu,
+.agv-liquid .agv-context-menu,
+.agv-liquid .agv-column-chooser,
+.agv-liquid .agv-query-builder-modal,
+.agv-liquid .agv-query-dropdown,
+.agv-liquid .agv-multi-sort-popup,
+.agv-liquid .agv-multi-filter-popup,
+.agv-liquid .agv-multi-filter-op-menu,
+.agv-liquid .agv-criteria-summary-popup,
+.agv-liquid .agv-checklist-filter-popup,
+.agv-liquid .agv-calendar-popover,
+.agv-liquid.agv-calendar-popover,
+.agv-liquid .agv-preset-dropdown-menu,
+.agv-liquid .agv-custom-select-dropdown,
+.agv-liquid .agv-drawer-content {
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+}
+
+.agv-liquid .agv-btn-default {
+  box-shadow:
+    0 6px 16px -4px color-mix(in srgb, var(--primary) 45%, transparent),
+    inset 0 1px 1.5px rgb(255 255 255 / 0.38);
+}
+
+.agv-liquid .agv-btn-outline:not([data-active="true"]) {
+  background-color: var(--liquid-btn-outline-bg);
+  border-color: var(--liquid-btn-outline-border);
+  box-shadow: var(--liquid-btn-outline-shadow);
+}
+
+.agv-liquid .agv-btn-outline:not([data-active="true"]):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--liquid-btn-outline-hover);
+  border-color: var(--control-border-hover);
+}
+
+.agv-liquid input.agv-control:not([aria-invalid="true"]):focus,
+.agv-liquid textarea.agv-control:not([aria-invalid="true"]):focus,
+.agv-liquid .agv-control-box:not([aria-invalid="true"]):focus-within,
+.agv-liquid .agv-control[data-agv-trigger="true"]:not([aria-invalid="true"]):focus,
+.agv-liquid .agv-control:not([aria-invalid="true"])[data-state="open"],
+.agv-liquid .agv-control:not([aria-invalid="true"])[aria-expanded="true"],
+.agv-liquid .agv-control:not([aria-invalid="true"]).is-open,
+.agv-liquid .agv-control:not([aria-invalid="true"]).is-focused {
+  background-color: var(--control-focus-background, var(--control-background));
+  box-shadow:
+    inset 0 0 0 1px var(--brand),
+    0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.agv-liquid .agv-field-border[data-notch-ready="true"]:not([data-invalid="true"]):not(:has([aria-invalid="true"])):focus-within > .agv-field-notch-frame,
+.agv-liquid .agv-field-border[data-notch-ready="true"]:not([data-invalid="true"]):not(:has([aria-invalid="true"])):has(.agv-control[data-state="open"], .agv-control[aria-expanded="true"], .agv-control.is-open, .agv-control.is-focused, .is-focused) > .agv-field-notch-frame {
+  border-color: var(--brand);
+  box-shadow:
+    inset 0 0 0 1px var(--brand),
+    0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.agv-liquid .agv-field-border:not([data-notch-ready="true"]) .agv-field-label {
+  background-color: var(--liquid-notched-label-bg);
+  border-radius: 4px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }

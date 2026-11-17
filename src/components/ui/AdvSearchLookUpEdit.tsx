@@ -25,8 +25,8 @@ import { FilterOperation, FILTER_OPS, ColumnAlign } from '../grid/types';
 import { isNoInputFilterOp } from '../grid/gridFormatUtils';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../grid/constants';
 import {
-  CONTROL_BOX_CLASS,
-  getControlSizeClass,
+  ControlVariant,
+  getControlSurfaceClasses,
 } from './controlFocus';
 import type { AdvSearchLookUpPopupProps } from './AdvSearchLookUpPopup';
 
@@ -71,6 +71,7 @@ export interface AdvLookUpColumn<T = any> {
 }
 
 export interface AdvSearchLookUpEditProps<T = any> {
+  id?: string;
   value?: any; // Đơn giá trị nếu single-select, hoặc mảng giá trị (any[]) nếu multiSelect=true
   defaultValue?: any;
   onChange?: (val: any, itemOrItems?: any) => void;
@@ -80,11 +81,17 @@ export interface AdvSearchLookUpEditProps<T = any> {
   columns: AdvLookUpColumn<T>[];
   placeholder?: string;
   size?: 'sm' | 'md';
+  variant?: ControlVariant;
+  leadingIcon?: React.ReactNode;
   disabled?: boolean;
   dropdownWidth?: number;
   className?: string;
   style?: React.CSSProperties;
   theme?: string;
+  invalid?: boolean;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
+  'aria-errormessage'?: string;
 
   // Ô tìm kiếm nhanh trên đầu
   searchPlaceholder?: string;
@@ -102,6 +109,7 @@ export interface AdvSearchLookUpEditProps<T = any> {
 }
 
 export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
+  id,
   value,
   defaultValue,
   onChange,
@@ -111,11 +119,17 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   columns = [],
   placeholder = 'Tìm kiếm hoặc chọn...',
   size = 'sm',
+  variant = 'default',
+  leadingIcon,
   disabled = false,
   dropdownWidth = 460,
   className = '',
   style = {},
   theme = SURFACE_THEMES.LIGHT,
+  invalid,
+  'aria-invalid': ariaInvalidProp,
+  'aria-describedby': ariaDescribedBy,
+  'aria-errormessage': ariaErrorMessage,
   searchPlaceholder = 'Tìm kiếm nhanh trong danh mục...',
   searchFields,
   showFooterCount = true,
@@ -125,6 +139,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   autoFocus = false,
   onClose,
 }: AdvSearchLookUpEditProps<T>) {
+  const isInvalid = Boolean(invalid || ariaInvalidProp);
   const isControlled = value !== undefined;
   const [internalVal, setInternalVal] = useState<any>(
     isControlled ? value : defaultValue !== undefined ? defaultValue : multiSelect ? [] : undefined
@@ -607,7 +622,9 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   }, [multiSelect, selectedItems, displayMember]);
 
   const showMultiClear = multiSelect && selectedItems.length > 0 && !disabled;
-  const textSizeClass = size === 'md' ? 'text-sm' : 'text-xs';
+  const textSizeClass = variant === 'auth' || size === 'md' ? 'text-sm' : 'text-xs';
+  const inputLeftPad = leadingIcon ? 'pl-0' : variant === 'auth' ? 'pl-3' : 'pl-2.5';
+  const inputRightPad = showMultiClear ? 'pr-0.5' : variant === 'auth' ? 'pr-3' : 'pr-2.5';
 
   return (
     <div
@@ -616,6 +633,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
       data-theme={theme || undefined}
       data-state={isOpen ? 'open' : 'closed'}
       aria-expanded={isOpen}
+      aria-invalid={isInvalid || undefined}
       aria-disabled={disabled || undefined}
       style={{
         ...getPortalThemeVars(theme),
@@ -624,24 +642,38 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
       onMouseEnter={preloadAdvSearchLookUpPopup}
       onFocus={preloadAdvSearchLookUpPopup}
       onClick={handleTriggerClick}
-      className={`agv-searchlookupedit-wrapper relative inline-flex items-center ${CONTROL_BOX_CLASS} ${getGridControlRadiusClass()} ${getControlSizeClass(
-        size
-      )} w-full ${isOpen ? 'is-open' : ''} ${
-        disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'
-      } ${themeClass} ${className}`.trim()}
+      className={getControlSurfaceClasses({
+        size,
+        variant,
+        box: true,
+        defaultRadiusClass: getGridControlRadiusClass(),
+        className: `agv-searchlookupedit-wrapper relative inline-flex items-center w-full ${
+          isOpen ? 'is-open' : ''
+        } ${disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'} ${themeClass} ${className}`.trim(),
+      })}
     >
+      {leadingIcon ? (
+        <span
+          aria-hidden="true"
+          className="pl-3 pr-2 shrink-0 inline-flex items-center text-[var(--agv-text-muted)] pointer-events-none"
+        >
+          {leadingIcon}
+        </span>
+      ) : null}
       <input
         ref={searchInputRef}
+        id={id}
         type="text"
         disabled={disabled}
         value={isOpen ? searchText : selectedDisplayText}
         onChange={handleSearchChange}
         onKeyDown={handleSearchKeyDown}
         placeholder={isOpen ? searchPlaceholder : placeholder}
+        aria-invalid={isInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
+        aria-errormessage={ariaErrorMessage}
         {...NO_AUTOFILL_PROPS}
-        className={`agv-searchlookupedit-input flex-1 min-w-0 h-full bg-transparent border-0 pl-2.5 ${
-          showMultiClear ? 'pr-0.5' : 'pr-2.5'
-        } text-foreground outline-none truncate placeholder:text-muted-foreground ${textSizeClass} ${
+        className={`agv-searchlookupedit-input flex-1 min-w-0 h-full bg-transparent border-0 ${inputLeftPad} ${inputRightPad} text-foreground outline-none truncate placeholder:text-muted-foreground ${textSizeClass} ${
           disabled ? '' : isOpen ? 'cursor-text' : 'cursor-pointer'
         }`}
       />

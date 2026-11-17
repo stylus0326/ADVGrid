@@ -6,6 +6,8 @@
 export const SURFACE_THEMES = {
   LIGHT: 'light',
   DARK: 'dark',
+  LIQUID_LIGHT: 'liquid-light',
+  LIQUID_DARK: 'liquid-dark',
 } as const;
 
 export type GridTheme = (typeof SURFACE_THEMES)[keyof typeof SURFACE_THEMES] | string;
@@ -91,7 +93,18 @@ export const REGISTERED_THEMES: ThemeMeta[] = [
 export const THEME_CLASS_MAP: Record<string, string> = {
   [SURFACE_THEMES.LIGHT]: '',
   [SURFACE_THEMES.DARK]: 'dark',
+  [SURFACE_THEMES.LIQUID_LIGHT]: 'agv-liquid',
+  [SURFACE_THEMES.LIQUID_DARK]: 'dark agv-liquid',
 };
+
+/**
+ * Kiểm tra theme có thuộc chế độ kính lỏng (Liquid Glass) hay không.
+ */
+export function isLiquidTheme(theme?: string | null): boolean {
+  if (!theme) return false;
+  const v = theme.trim().toLowerCase();
+  return v === 'liquid' || v === 'liquid-light' || v === 'liquid-dark' || v === 'glass';
+}
 
 /**
  * Chuẩn hóa tên theme về 'light' hoặc 'dark' theo b2b-pnt.
@@ -99,17 +112,24 @@ export const THEME_CLASS_MAP: Record<string, string> = {
 export function normalizeThemeId(theme?: string | null): 'light' | 'dark' {
   if (!theme) return SURFACE_THEMES.LIGHT;
   const v = theme.trim().toLowerCase();
-  if (v === 'dark' || v === 'calibrated-dark' || v === 'deep-dark') {
+  if (
+    v === 'dark' ||
+    v === 'calibrated-dark' ||
+    v === 'deep-dark' ||
+    v === 'liquid-dark'
+  ) {
     return SURFACE_THEMES.DARK;
   }
   return SURFACE_THEMES.LIGHT;
 }
 
 /**
- * Trả về class theme chuẩn Tailwind dark mode ('dark' hoặc '') cho Grid và Portal.
+ * Trả về class theme chuẩn Tailwind dark mode ('dark' / 'agv-liquid') cho Grid và Portal.
  */
 export function getThemeClass(theme?: string | null, _fallback = ''): string {
-  return normalizeThemeId(theme) === SURFACE_THEMES.DARK ? 'dark' : '';
+  const dark = normalizeThemeId(theme) === SURFACE_THEMES.DARK;
+  const liquid = isLiquidTheme(theme);
+  return [dark ? 'dark' : '', liquid ? 'agv-liquid' : ''].filter(Boolean).join(' ');
 }
 
 export function getThemeMeta(theme?: string | null): ThemeMeta {

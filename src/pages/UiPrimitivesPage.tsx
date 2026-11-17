@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import {
   DATA_TYPES,
   PIN_POSITIONS,
@@ -14,7 +15,9 @@ import {
   formatDisplayDate,
   getPresetLabel,
 } from '../components/ui/AdvDatePicker';
+import { AdvFormField, type FormFieldLabelPosition } from '../components/ui/AdvFormField';
 import { AdvHoverCard } from '../components/ui/AdvHoverCard';
+import { AdvInput } from '../components/ui/AdvInput';
 import { AdvPopover } from '../components/ui/AdvPopover';
 import { AdvSelect } from '../components/ui/AdvSelect';
 import { AdvComboBoxEdit } from '../components/ui/AdvComboBoxEdit';
@@ -22,6 +25,7 @@ import { AdvSearchLookUpEdit } from '../components/ui/AdvSearchLookUpEdit';
 import { AdvTooltip } from '../components/ui/AdvTooltip';
 import { MorphCheckbox } from '../components/ui/MorphCheckbox';
 import { AdvButton } from '../components/ui/AdvButton';
+import { type ControlVariant } from '../components/ui/controlFocus';
 import { GridTableV2FeaturesDemo } from './GridTableV2FeaturesDemo';
 
 export interface UiPrimitivesPageProps {
@@ -32,6 +36,31 @@ type DatePickerDemoMode = 'single' | 'range';
 type DatePickerDemoSize = 'sm' | 'md';
 
 const REGION_OPTIONS = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
+const AIRLINE_OPTIONS = [
+  'Vietnam Airlines',
+  'VietJet Air',
+  'Bamboo Airways',
+  'Pacific Airlines',
+];
+const FIELD_COUNTRY_ROWS = [
+  { code: 'VN', name: 'Việt Nam', group: 'Đông Nam Á' },
+  { code: 'JP', name: 'Nhật Bản', group: 'Đông Á' },
+  { code: 'KR', name: 'Hàn Quốc', group: 'Đông Á' },
+  { code: 'US', name: 'Hoa Kỳ', group: 'Bắc Mỹ' },
+];
+const FIELD_COUNTRY_COLS = [
+  { key: 'code', title: 'Mã', width: 72 },
+  { key: 'name', title: 'Tên quốc gia', width: 180 },
+  { key: 'group', title: 'Khu vực', width: 132 },
+];
+const VARIANT_OPTIONS: Array<{ value: ControlVariant; label: string }> = [
+  { value: 'auth', label: 'Auth 48px' },
+  { value: 'default', label: 'Chuẩn 36px' },
+];
+const LABEL_POS_OPTIONS: Array<{ value: FormFieldLabelPosition; label: string }> = [
+  { value: 'border', label: 'Cắt viền' },
+  { value: 'top', label: 'Nhãn trên' },
+];
 
 const MODE_OPTIONS: Array<{ value: DatePickerDemoMode; label: string }> = [
   { value: 'single', label: 'Một ngày' },
@@ -57,7 +86,7 @@ const DemoCard: React.FC<DemoCardProps> = ({
   children,
 }) => (
   <section
-    className={`rounded-lg border border-[var(--agv-border)] bg-[var(--agv-bg-card)] p-4 flex flex-col gap-3 ${className}`.trim()}
+    className={`agv-demo-card rounded-lg border border-[var(--agv-border)] bg-[var(--agv-bg-card)] p-4 flex flex-col gap-3 ${className}`.trim()}
   >
     <div className="space-y-1">
       <h2 className="text-sm font-semibold text-[var(--agv-text-main)]">{title}</h2>
@@ -139,6 +168,24 @@ const OptionToggleRow: React.FC<OptionToggleRowProps> = ({ label, checked, onTog
 
 export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme }) => {
   const [selectedRegion, setSelectedRegion] = useState<string>('Miền Bắc');
+
+  // State thử nghiệm Trường nhập nhãn cắt viền (Border-Label Inputs)
+  const [fieldVariant, setFieldVariant] = useState<ControlVariant>('auth');
+  const [fieldLabelPos, setFieldLabelPos] = useState<FormFieldLabelPosition>('border');
+  const [simulateFieldError, setSimulateFieldError] = useState<boolean>(false);
+  const [usernameVal, setUsernameVal] = useState<string>('tttt');
+  const [passwordVal, setPasswordVal] = useState<string>('123456');
+  const [showFieldPassword, setShowFieldPassword] = useState<boolean>(false);
+  const [fieldRegion, setFieldRegion] = useState<string>('Miền Nam');
+  const [fieldAirline, setFieldAirline] = useState<string>('Vietnam Airlines');
+  const [fieldCountry, setFieldCountry] = useState<string>('VN');
+  const [fieldDate, setFieldDate] = useState<string>('2026-11-16');
+  const [fieldRange, setFieldRange] = useState<{ from: string; to: string; preset: string }>({
+    from: '2026-11-01',
+    to: '2026-11-16',
+    preset: '',
+  });
+  const [fieldNote, setFieldNote] = useState<string>('Phương Nam Travel');
 
   // Dữ liệu 10.000 mục thử nghiệm ảo hóa danh sách và thanh cuộn nổi
   const largeSelectOptions = useMemo(
@@ -375,7 +422,7 @@ export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-[var(--agv-bg-card)] text-[var(--agv-text-main)]">
+    <div className="agv-ui-page-scroll h-full w-full overflow-y-auto bg-[var(--agv-bg-card)] text-[var(--agv-text-main)]">
       <div className="p-4 sm:p-5 space-y-4">
         <header className="pb-3 border-b border-[var(--agv-border)] space-y-1">
           <h1 className="text-base font-semibold text-[var(--agv-text-main)]">
@@ -387,6 +434,191 @@ export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DemoCard
+            title="Trường nhập nhãn cắt viền (Border-Label Inputs — đồng bộ b2b-pnt)"
+            description="Thử nghiệm AdvFormField kết hợp AdvInput và toàn bộ control chọn/ngày sẵn có ở 2 dáng Auth (48px) và Chuẩn (36px) đồng bộ bo 8px, cùng trạng thái Focus & Lỗi theo theme Sáng/Tối."
+            className="md:col-span-2"
+          >
+            <div className="flex flex-wrap items-end gap-4 w-full">
+              <SegmentedToggle
+                label="Kiểu dáng control"
+                value={fieldVariant}
+                options={VARIANT_OPTIONS}
+                onChange={setFieldVariant}
+              />
+              <SegmentedToggle
+                label="Vị trí nhãn"
+                value={fieldLabelPos}
+                options={LABEL_POS_OPTIONS}
+                onChange={setFieldLabelPos}
+              />
+              <OptionToggleRow
+                label="Mô phỏng trạng thái lỗi"
+                checked={simulateFieldError}
+                onToggle={() => setSimulateFieldError((v) => !v)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+              <AdvFormField
+                label="Tên đăng nhập/email"
+                labelPosition={fieldLabelPos}
+                required
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Vui lòng nhập tên đăng nhập.' : undefined}
+              >
+                <AdvInput
+                  value={usernameVal}
+                  onChange={(e) => setUsernameVal(e.target.value)}
+                  placeholder="Nhập tài khoản hoặc email..."
+                  variant={fieldVariant}
+                  size="md"
+                  leadingIcon={<User className="size-4" />}
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Mật khẩu"
+                labelPosition={fieldLabelPos}
+                required
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Mật khẩu chưa đúng định dạng.' : undefined}
+              >
+                <AdvInput
+                  type={showFieldPassword ? 'text' : 'password'}
+                  value={passwordVal}
+                  onChange={(e) => setPasswordVal(e.target.value)}
+                  placeholder="Nhập mật khẩu..."
+                  variant={fieldVariant}
+                  size="md"
+                  leadingIcon={<Lock className="size-4" />}
+                  endAdornment={
+                    <AdvButton
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setShowFieldPassword((v) => !v)}
+                      aria-label={showFieldPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showFieldPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </AdvButton>
+                  }
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Tên công ty (không icon)"
+                labelPosition={fieldLabelPos}
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Không được để trống tên công ty.' : undefined}
+              >
+                <AdvInput
+                  value={fieldNote}
+                  onChange={(e) => setFieldNote(e.target.value)}
+                  placeholder="Nhập tên công ty..."
+                  variant={fieldVariant}
+                  size="md"
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Khu vực (AdvSelect)"
+                labelPosition={fieldLabelPos}
+                required
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Vui lòng chọn khu vực.' : undefined}
+              >
+                <AdvSelect
+                  value={fieldRegion}
+                  onChange={setFieldRegion}
+                  options={REGION_OPTIONS}
+                  placeholder="Chọn khu vực..."
+                  variant={fieldVariant}
+                  size="md"
+                  theme={surfaceTheme}
+                  width="100%"
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Hãng bay (AdvComboBoxEdit)"
+                labelPosition={fieldLabelPos}
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Hãng bay không hợp lệ.' : undefined}
+              >
+                <AdvComboBoxEdit
+                  value={fieldAirline}
+                  onChange={setFieldAirline}
+                  options={AIRLINE_OPTIONS}
+                  placeholder="Chọn hoặc nhập hãng..."
+                  variant={fieldVariant}
+                  size="md"
+                  theme={surfaceTheme}
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Quốc gia (AdvSearchLookUpEdit)"
+                labelPosition={fieldLabelPos}
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Chưa chọn quốc gia.' : undefined}
+              >
+                <AdvSearchLookUpEdit
+                  value={fieldCountry}
+                  onChange={(val) => setFieldCountry(val ?? '')}
+                  dataSource={FIELD_COUNTRY_ROWS}
+                  valueMember="code"
+                  displayMember="name"
+                  columns={FIELD_COUNTRY_COLS}
+                  searchFields={['code', 'name', 'group']}
+                  placeholder="Tìm kiếm quốc gia..."
+                  variant={fieldVariant}
+                  size="md"
+                  theme={surfaceTheme}
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Ngày khởi hành (AdvDatePicker)"
+                labelPosition={fieldLabelPos}
+                required
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Ngày khởi hành không hợp lệ.' : undefined}
+              >
+                <AdvDatePicker
+                  value={fieldDate}
+                  onChange={(val) => setFieldDate(val)}
+                  variant={fieldVariant}
+                  size="md"
+                  theme={surfaceTheme}
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Khoảng thời gian (AdvDateRangePicker)"
+                labelPosition={fieldLabelPos}
+                theme={surfaceTheme}
+                className="md:col-span-2 lg:col-span-2"
+                error={simulateFieldError ? 'Vui lòng chọn khoảng ngày hợp lệ.' : undefined}
+              >
+                <AdvDateRangePicker
+                  from={fieldRange.from}
+                  to={fieldRange.to}
+                  preset={fieldRange.preset}
+                  onChange={(next) =>
+                    setFieldRange({
+                      from: next.from || '',
+                      to: next.to || '',
+                      preset: next.preset || '',
+                    })
+                  }
+                  variant={fieldVariant}
+                  size="md"
+                  theme={surfaceTheme}
+                />
+              </AdvFormField>
+            </div>
+          </DemoCard>
+
           <DemoCard
             title="Hộp thoại nổi"
             description="Nhấn nút để mở khung nổi và kiểm tra tự đóng khi nhấn ra ngoài."

@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { ArrowRight } from 'lucide-react';
 import { ensureDatePickerStyles } from './datePickerStyles';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../../grid/constants';
+import { type ControlVariant } from '../controlFocus';
 import { SURFACE_THEMES, GridTheme } from '../../../themes';
 import {
   getThemeClass,
@@ -33,6 +34,7 @@ import { TimePickerBlock, AdvDevExpressCalendarBody } from './AdvCalendarPrimiti
 import { AdvDatePresetSelect } from './AdvDatePresetSelect';
 
 export interface AdvDateRangePickerProps {
+  id?: string;
   from?: string;
   to?: string;
   onChange?: (range: { from: string; to: string; preset?: string }) => void;
@@ -44,6 +46,8 @@ export interface AdvDateRangePickerProps {
   dateAnalysis?: any;
   bounds?: any;
   size?: 'xs' | 'sm' | 'default' | 'md';
+  variant?: ControlVariant;
+  leadingIcon?: React.ReactNode;
   preset?: string;
   showPreset?: boolean;
   dualMonth?: boolean;
@@ -53,9 +57,14 @@ export interface AdvDateRangePickerProps {
   onClose?: () => void;
   allowClear?: boolean;
   className?: string;
+  invalid?: boolean;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
+  'aria-errormessage'?: string;
 }
 
 export const AdvDateRangePicker = memo(function AdvDateRangePicker({
+  id,
   from: propFrom,
   to: propTo,
   preset: propPreset,
@@ -69,6 +78,8 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
   dateAnalysis,
   bounds,
   size = 'default',
+  variant = 'default',
+  leadingIcon,
   showPreset = true,
   dualMonth = true,
   showTime = false,
@@ -76,7 +87,12 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
   defaultOpen = false,
   allowClear = true,
   className = '',
+  invalid,
+  'aria-invalid': ariaInvalidProp,
+  'aria-describedby': ariaDescribedBy,
+  'aria-errormessage': ariaErrorMessage,
 }: AdvDateRangePickerProps) {
+  const isInvalid = Boolean(invalid || ariaInvalidProp);
   useEffect(() => {
     ensureDatePickerStyles();
   }, []);
@@ -708,14 +724,26 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
     ]
   );
 
-  const sizeClass = size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
+  const sizeClass =
+    variant === 'auth' ? 'is-auth' : size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
 
   return (
     <div className={`agv-daterange-picker-wrap ${className}`} ref={triggerRef}>
       <div
-        className={`agv-daterange-bar ${getGridControlRadiusClass()} ${isOpen ? 'is-focused' : ''} ${sizeClass}`}
+        aria-invalid={isInvalid || undefined}
+        className={`agv-daterange-bar ${getGridControlRadiusClass()} ${
+          isOpen ? 'is-focused' : ''
+        } ${sizeClass}`}
         onClick={() => (isOpen ? closePopover() : openCalendar())}
       >
+        {leadingIcon ? (
+          <span
+            aria-hidden="true"
+            className="shrink-0 inline-flex items-center text-[var(--agv-text-muted)] pointer-events-none mr-1"
+          >
+            {leadingIcon}
+          </span>
+        ) : null}
         {presetValue ? (
           <div className="agv-daterange-segment flex w-full items-center justify-center overflow-hidden px-1">
             <span
@@ -727,6 +755,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
         ) : isSameDate ? (
           <div className="agv-daterange-segment">
             <input
+              id={id}
               type="text"
               name="agv_daterange_single"
               {...NO_AUTOFILL_PROPS}
@@ -742,6 +771,9 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
               onBlur={handleSingleBlur}
               onKeyDown={(e) => e.key === 'Enter' && handleSingleBlur()}
               placeholder={showTime ? "DD/MM/YYYY HH:mm" : "DD/MM/YYYY"}
+              aria-invalid={isInvalid || undefined}
+              aria-describedby={ariaDescribedBy}
+              aria-errormessage={ariaErrorMessage}
               className="agv-daterange-text text-center font-normal"
             />
           </div>
@@ -749,6 +781,7 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
           <>
             <div className="agv-daterange-segment">
               <input
+                id={id}
                 type="text"
                 name="agv_daterange_from"
                 {...NO_AUTOFILL_PROPS}
@@ -761,6 +794,9 @@ export const AdvDateRangePicker = memo(function AdvDateRangePicker({
                 onBlur={handleFromBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleFromBlur()}
                 placeholder={effPlaceholderFrom}
+                aria-invalid={isInvalid || undefined}
+                aria-describedby={ariaDescribedBy}
+                aria-errormessage={ariaErrorMessage}
                 className="agv-daterange-text text-center font-normal"
               />
             </div>

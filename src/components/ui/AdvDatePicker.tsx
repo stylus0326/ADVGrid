@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ensureDatePickerStyles } from './datepicker/datePickerStyles';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../grid/constants';
+import { type ControlVariant } from './controlFocus';
 import { SURFACE_THEMES, GridTheme } from '../../themes';
 import {
   getThemeClass,
@@ -98,6 +99,7 @@ export type {
 };
 
 export interface AdvDatePickerProps {
+  id?: string;
   value?: string;
   preset?: string;
   onChange?: (
@@ -112,6 +114,8 @@ export interface AdvDatePickerProps {
   onDoubleClick?: (e: React.MouseEvent) => void;
   theme?: GridTheme;
   size?: 'xs' | 'sm' | 'default' | 'md';
+  variant?: ControlVariant;
+  leadingIcon?: React.ReactNode;
   showPreset?: boolean;
   showTime?: boolean;
   autoFocus?: boolean;
@@ -121,9 +125,14 @@ export interface AdvDatePickerProps {
   bounds?: any;
   showCalendarIcon?: boolean;
   allowClear?: boolean;
+  invalid?: boolean;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
+  'aria-errormessage'?: string;
 }
 
 export const AdvDatePicker = memo(function AdvDatePicker({
+  id,
   value: propValue,
   preset: propPreset,
   onChange,
@@ -136,6 +145,8 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   onDoubleClick,
   theme = '',
   size = 'default',
+  variant = 'default',
+  leadingIcon,
   showPreset = false,
   showTime = false,
   autoFocus = false,
@@ -144,7 +155,12 @@ export const AdvDatePicker = memo(function AdvDatePicker({
   bounds,
   showCalendarIcon = false,
   allowClear = true,
+  invalid,
+  'aria-invalid': ariaInvalidProp,
+  'aria-describedby': ariaDescribedBy,
+  'aria-errormessage': ariaErrorMessage,
 }: AdvDatePickerProps) {
+  const isInvalid = Boolean(invalid || ariaInvalidProp);
   useEffect(() => {
     ensureDatePickerStyles();
   }, []);
@@ -535,19 +551,29 @@ export const AdvDatePicker = memo(function AdvDatePicker({
     [minTs, maxTs, todayTs, discreteRanges, parsedTs, handleSelectDate]
   );
 
-  const sizeClass = size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
+  const sizeClass =
+    variant === 'auth' ? 'is-auth' : size === 'xs' ? 'is-xs' : size === 'md' ? 'is-md' : 'is-sm';
 
   return (
     <div className={`agv-datepicker-container ${className}`} ref={triggerRef}>
       <div
+        aria-invalid={isInvalid || undefined}
         className={`agv-datepicker-input-box ${getGridControlRadiusClass()} ${
           isOpen ? 'is-focused' : ''
         } ${sizeClass}`}
       >
-        {showCalendarIcon && (
+        {leadingIcon ? (
+          <span
+            aria-hidden="true"
+            className="shrink-0 inline-flex items-center text-[var(--agv-text-muted)] pointer-events-none mr-1"
+          >
+            {leadingIcon}
+          </span>
+        ) : showCalendarIcon ? (
           <Calendar className="pointer-events-none h-3 w-3 shrink-0 text-[var(--agv-text-subtle)]" />
-        )}
+        ) : null}
         <input
+          id={id}
           type="text"
           name="agv_date_picker"
           {...NO_AUTOFILL_PROPS}
@@ -559,6 +585,9 @@ export const AdvDatePicker = memo(function AdvDatePicker({
           onClick={() => (isOpen ? closeCalendar() : openCalendar())}
           onDoubleClick={onDoubleClick}
           placeholder={showTime ? "DD/MM/YYYY HH:mm" : placeholder}
+          aria-invalid={isInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
+          aria-errormessage={ariaErrorMessage}
           className="agv-datepicker-text"
         />
         {allowClear && (value || presetValue) && !disabled && (

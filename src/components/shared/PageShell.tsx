@@ -16,7 +16,7 @@ export const PageShell: React.FC<PageShellProps> = ({
 }) => {
   return (
     <div
-      className={`w-full bg-background text-foreground ${
+      className={`relative z-10 w-full bg-background text-foreground ${
         viewportLocked
           ? 'flex-1 flex flex-col min-h-0 px-0 sm:px-4 sm:py-3 overflow-hidden'
           : 'px-0 sm:px-4 py-3 space-y-4'

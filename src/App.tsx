@@ -12,6 +12,7 @@ import {
 } from './services/b2bAuth';
 import { PageShell } from './components/shared/PageShell';
 import { ListPagePanel } from './components/shared/ListPagePanel';
+import { LiquidGlassBackdrop } from './components/shared/LiquidGlassBackdrop';
 import { AdvButton } from './components/ui/AdvButton';
 import {
   BUTTON_FOCUS_VISIBLE_CLASS,
@@ -49,6 +50,7 @@ const PAGE_TABS: { key: ActivePageKey; label: string }[] = [
 
 const THEME_STORAGE_KEY = 'agv_b2b_surface_theme';
 const COLOR_SCHEME_STORAGE_KEY = 'agv_color_scheme';
+const VISUAL_MODE_STORAGE_KEY = 'agv_b2b_visual_mode';
 const ACTIVE_PAGE_STORAGE_KEY = 'agv_b2b_active_page';
 
 function isActivePageKey(value: string | null): value is ActivePageKey {
@@ -96,9 +98,24 @@ function readInitialDarkMode(): boolean {
       return savedScheme === 'dark';
     }
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    return savedTheme === 'dark';
+    return savedTheme === 'dark' || savedTheme === 'liquid-dark';
   } catch {
     return false;
+  }
+}
+
+function readInitialLiquidMode(): boolean {
+  try {
+    const savedVisual = localStorage.getItem(VISUAL_MODE_STORAGE_KEY);
+    if (savedVisual === 'flat') return false;
+    if (savedVisual === 'liquid') return true;
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      return false;
+    }
+    return true;
+  } catch {
+    return true;
   }
 }
 
@@ -106,8 +123,15 @@ export function App() {
   const [activePage, setActivePage] = useState<ActivePageKey>(readInitialPage);
   const [session, setSession] = useState<AuthSession | null>(() => getAuthSession());
   const [isDark, setIsDark] = useState<boolean>(readInitialDarkMode);
+  const [isLiquid, setIsLiquid] = useState<boolean>(readInitialLiquidMode);
 
-  const surfaceTheme: SurfaceTheme = isDark ? SURFACE_THEMES.DARK : SURFACE_THEMES.LIGHT;
+  const surfaceTheme: SurfaceTheme = isLiquid
+    ? isDark
+      ? SURFACE_THEMES.LIQUID_DARK
+      : SURFACE_THEMES.LIQUID_LIGHT
+    : isDark
+    ? SURFACE_THEMES.DARK
+    : SURFACE_THEMES.LIGHT;
 
   useEffect(() => {
     return subscribeAuthSession(() => {
@@ -138,24 +162,53 @@ export function App() {
     }
   }, []);
 
-  const handleToggleColorScheme = useCallback((dark: boolean) => {
-    setIsDark(dark);
-    try {
-      localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, dark ? 'dark' : 'light');
-      localStorage.setItem(THEME_STORAGE_KEY, dark ? SURFACE_THEMES.DARK : SURFACE_THEMES.LIGHT);
-    } catch {
-      // ignore
-    }
-  }, []);
+  const handleToggleColorScheme = useCallback(
+    (dark: boolean) => {
+      setIsDark(dark);
+      try {
+        localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, dark ? 'dark' : 'light');
+        const nextTheme = isLiquid
+          ? dark
+            ? SURFACE_THEMES.LIQUID_DARK
+            : SURFACE_THEMES.LIQUID_LIGHT
+          : dark
+          ? SURFACE_THEMES.DARK
+          : SURFACE_THEMES.LIGHT;
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch {
+        // ignore
+      }
+    },
+    [isLiquid]
+  );
 
-  // Đồng bộ class `.dark` và `data-theme` lên `html` & `body` cho toàn bộ ứng dụng và Portal
+  const handleToggleLiquidMode = useCallback(
+    (liquid: boolean) => {
+      setIsLiquid(liquid);
+      try {
+        localStorage.setItem(VISUAL_MODE_STORAGE_KEY, liquid ? 'liquid' : 'flat');
+        const nextTheme = liquid
+          ? isDark
+            ? SURFACE_THEMES.LIQUID_DARK
+            : SURFACE_THEMES.LIQUID_LIGHT
+          : isDark
+          ? SURFACE_THEMES.DARK
+          : SURFACE_THEMES.LIGHT;
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch {
+        // ignore
+      }
+    },
+    [isDark]
+  );
+
+  // Đồng bộ class `.dark`, `.agv-liquid` và `data-theme` lên `html` & `body` cho toàn bộ ứng dụng và Portal
   useEffect(() => {
     const rootEl = document.documentElement;
     const bodyEl = document.body;
-    const nextThemeAttr = isDark ? SURFACE_THEMES.DARK : SURFACE_THEMES.LIGHT;
 
-    rootEl.setAttribute('data-theme', nextThemeAttr);
-    if (bodyEl) bodyEl.setAttribute('data-theme', nextThemeAttr);
+    rootEl.setAttribute('data-theme', surfaceTheme);
+    if (bodyEl) bodyEl.setAttribute('data-theme', surfaceTheme);
 
     const legacyClasses = [
       'agv-light',
@@ -175,7 +228,15 @@ export function App() {
       rootEl.classList.remove('dark');
       if (bodyEl) bodyEl.classList.remove('dark');
     }
-  }, [isDark]);
+
+    if (isLiquid) {
+      rootEl.classList.add('agv-liquid');
+      if (bodyEl) bodyEl.classList.add('agv-liquid');
+    } else {
+      rootEl.classList.remove('agv-liquid');
+      if (bodyEl) bodyEl.classList.remove('agv-liquid');
+    }
+  }, [isDark, isLiquid, surfaceTheme]);
 
   const themeClass = getThemeClass(surfaceTheme);
   const displayUser =
@@ -186,11 +247,13 @@ export function App() {
 
   return (
     <div
-      className={`agv-app-container h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground ${themeClass}`}
+      className={`agv-app-container relative isolate h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground ${themeClass}`}
       data-theme={surfaceTheme}
     >
+      {isLiquid ? <LiquidGlassBackdrop isDark={isDark} /> : null}
+
       {/* Top Navigation & Connection Bar (PNT B2B AppHeaderFrame + Gold active underline) */}
-      <header className="z-shell shrink-0 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 text-card-foreground px-4 h-12 flex items-center justify-between gap-4 select-none">
+      <header className="agv-app-header relative z-shell shrink-0 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 text-card-foreground px-4 h-12 flex items-center justify-between gap-4 select-none">
         <nav className="flex items-center gap-1 h-full overflow-x-auto overflow-y-hidden" aria-label="Điều hướng danh mục">
           {PAGE_TABS.map((tab) => {
             const isActive = activePage === tab.key;
@@ -230,6 +293,17 @@ export function App() {
           ) : (
             <span className="text-muted-foreground">Chưa đăng nhập</span>
           )}
+
+          <AdvButton
+            variant="outline"
+            size="sm"
+            active={isLiquid}
+            onClick={() => handleToggleLiquidMode(!isLiquid)}
+            aria-pressed={isLiquid}
+            className="h-8"
+          >
+            Liquid Glass
+          </AdvButton>
 
           <AdvButton
             variant="outline"

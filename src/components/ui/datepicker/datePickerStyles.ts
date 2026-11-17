@@ -60,6 +60,17 @@ function ensureDatePickerStyles() {
       padding: 0 10px;
       box-sizing: border-box;
     }
+    .agv-datepicker-input-box.is-auth,
+    .agv-daterange-bar.is-auth,
+    .agv-custom-select-trigger.is-auth {
+      height: 48px;
+      min-height: 48px;
+      border-radius: var(--control-radius);
+      font-size: var(--font-size-body, 14px);
+      line-height: 20px;
+      padding: 0 12px;
+      box-sizing: border-box;
+    }
     .agv-datepicker-input-box.is-focused,
     .agv-datepicker-input-box:focus-within,
     .agv-daterange-bar.is-focused,
@@ -69,6 +80,23 @@ function ensureDatePickerStyles() {
       outline: none;
       border-color: var(--brand);
       box-shadow: inset 0 0 0 1px var(--brand);
+    }
+    .agv-datepicker-input-box[aria-invalid="true"],
+    .agv-daterange-bar[aria-invalid="true"],
+    .agv-custom-select-trigger[aria-invalid="true"],
+    .agv-datepicker-input-box[aria-invalid="true"]:hover:not(.is-focused):not(:focus-within),
+    .agv-daterange-bar[aria-invalid="true"]:hover:not(.is-focused):not(:focus-within),
+    .agv-custom-select-trigger[aria-invalid="true"]:hover:not(.is-open) {
+      border-color: var(--destructive);
+    }
+    .agv-datepicker-input-box[aria-invalid="true"].is-focused,
+    .agv-datepicker-input-box[aria-invalid="true"]:focus-within,
+    .agv-daterange-bar[aria-invalid="true"].is-focused,
+    .agv-daterange-bar[aria-invalid="true"]:focus-within,
+    .agv-custom-select-trigger[aria-invalid="true"].is-open,
+    .agv-custom-select-trigger[aria-invalid="true"]:focus-visible {
+      border-color: var(--destructive);
+      box-shadow: inset 0 0 0 1px var(--destructive);
     }
     .agv-datepicker-text,
     .agv-daterange-text {
@@ -739,6 +767,19 @@ function ensureDatePickerStyles() {
     }
     .agv-apply-btn:active {
       transform: scale(0.98);
+    }
+    .agv-liquid .agv-datepicker-input-box:not([aria-invalid="true"]).is-focused,
+    .agv-liquid .agv-datepicker-input-box:not([aria-invalid="true"]):focus-within,
+    .agv-liquid .agv-daterange-bar:not([aria-invalid="true"]).is-focused,
+    .agv-liquid .agv-daterange-bar:not([aria-invalid="true"]):focus-within {
+      background: var(--control-focus-background, var(--control-background));
+      box-shadow: inset 0 0 0 1px var(--brand), 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+    }
+    .agv-liquid .agv-calendar-popover,
+    .agv-calendar-popover.agv-liquid,
+    .agv-liquid .agv-custom-select-dropdown {
+      backdrop-filter: blur(28px) saturate(200%);
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
     }
   `;
 

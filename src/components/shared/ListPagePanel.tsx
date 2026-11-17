@@ -16,7 +16,7 @@ export const ListPagePanel: React.FC<ListPagePanelProps> = ({
 }) => {
   return (
     <div
-      className={`border-y bg-card text-card-foreground sm:rounded-xl sm:border sm:shadow-sm ${
+      className={`agv-list-page-panel border-y bg-card text-card-foreground sm:rounded-xl sm:border sm:shadow-sm ${
         fillHeight ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : ''
       } ${className}`}
       {...rest}

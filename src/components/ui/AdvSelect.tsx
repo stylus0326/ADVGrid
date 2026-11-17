@@ -14,9 +14,9 @@ import {
 } from './enterpriseEditorUtils';
 import { getGridControlRadiusClass } from '../grid/constants';
 import {
-  CONTROL_SURFACE_CLASS,
   POPUP_PANEL_CLASS,
-  getControlSizeClass,
+  ControlVariant,
+  getControlSurfaceClasses,
 } from './controlFocus';
 import { AdvOverlayScroll } from './AdvOverlayScroll';
 import { useVirtualList } from './useVirtualList';
@@ -31,6 +31,7 @@ export interface AdvSelectOption {
 }
 
 export interface AdvSelectProps {
+  id?: string;
   value?: string;
   defaultValue?: string;
   onChange?: (val: string) => void;
@@ -41,10 +42,17 @@ export interface AdvSelectProps {
   style?: React.CSSProperties;
   theme?: string;
   size?: 'sm' | 'md';
+  variant?: ControlVariant;
+  leadingIcon?: React.ReactNode;
   width?: number | string;
+  invalid?: boolean;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
+  'aria-errormessage'?: string;
 }
 
 export const AdvSelect: React.FC<AdvSelectProps> = ({
+  id,
   value: controlledVal,
   defaultValue = '',
   onChange,
@@ -55,8 +63,15 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
   style = {},
   theme = SURFACE_THEMES.LIGHT,
   size = 'sm',
+  variant = 'default',
+  leadingIcon,
   width = '100%',
+  invalid,
+  'aria-invalid': ariaInvalidProp,
+  'aria-describedby': ariaDescribedBy,
+  'aria-errormessage': ariaErrorMessage,
 }) => {
+  const isInvalid = Boolean(invalid || ariaInvalidProp);
   const isControlled = controlledVal !== undefined;
   const [internalVal, setInternalVal] = useState<string>(isControlled ? controlledVal : defaultValue);
   const curVal = isControlled ? controlledVal : internalVal;
@@ -258,21 +273,36 @@ export const AdvSelect: React.FC<AdvSelectProps> = ({
     >
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         disabled={disabled}
         data-agv-trigger="true"
         data-state={isOpen ? 'open' : 'closed'}
         aria-expanded={isOpen}
+        aria-invalid={isInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
+        aria-errormessage={ariaErrorMessage}
         onClick={toggleDropdown}
         onKeyDown={handleKeyDown}
-        className={`w-full flex items-center justify-between gap-2 px-2.5 font-normal cursor-pointer outline-none ${CONTROL_SURFACE_CLASS} ${getGridControlRadiusClass()} ${getControlSizeClass(
-          size
-        )} ${
-          selectedOption ? 'text-foreground' : 'text-muted-foreground'
-        } ${
-          disabled ? 'opacity-50 cursor-not-allowed' : ''
-        }`.trim()}
+        className={getControlSurfaceClasses({
+          size,
+          variant,
+          defaultRadiusClass: getGridControlRadiusClass(),
+          className: `w-full flex items-center justify-between gap-2 ${
+            variant === 'auth' ? 'px-3' : 'px-2.5'
+          } font-normal cursor-pointer outline-none ${
+            selectedOption ? 'text-foreground' : 'text-muted-foreground'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`.trim(),
+        })}
       >
+        {leadingIcon ? (
+          <span
+            aria-hidden="true"
+            className="shrink-0 inline-flex items-center text-[var(--agv-text-muted)]"
+          >
+            {leadingIcon}
+          </span>
+        ) : null}
         <span className="truncate text-left flex-1">
           {selectedOption ? selectedOption.label : placeholder}
         </span>

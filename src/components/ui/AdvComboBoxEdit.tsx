@@ -15,9 +15,9 @@ import {
 } from './enterpriseEditorUtils';
 import { NO_AUTOFILL_PROPS, getGridControlRadiusClass } from '../grid/constants';
 import {
-  CONTROL_BOX_CLASS,
   POPUP_PANEL_CLASS,
-  getControlSizeClass,
+  ControlVariant,
+  getControlSurfaceClasses,
 } from './controlFocus';
 import { AdvOverlayScroll } from './AdvOverlayScroll';
 import { useVirtualList } from './useVirtualList';
@@ -35,6 +35,7 @@ export interface AdvComboBoxEditOption {
 }
 
 export interface AdvComboBoxEditProps {
+  id?: string;
   value?: string;
   defaultValue?: string;
   onChange?: (val: string) => void;
@@ -44,14 +45,21 @@ export interface AdvComboBoxEditProps {
   autoFocus?: boolean;
   placeholder?: string;
   size?: 'sm' | 'md';
+  variant?: ControlVariant;
+  leadingIcon?: React.ReactNode;
   disabled?: boolean;
   className?: string;
   style?: React.CSSProperties;
   theme?: string;
   onClose?: () => void;
+  invalid?: boolean;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-describedby'?: string;
+  'aria-errormessage'?: string;
 }
 
 export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
+  id,
   value,
   defaultValue = '',
   onChange,
@@ -61,12 +69,19 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
   autoFocus = false,
   placeholder = 'Nhập hoặc chọn...',
   size = 'sm',
+  variant = 'default',
+  leadingIcon,
   disabled = false,
   className = '',
   style = {},
   theme = '',
   onClose,
+  invalid,
+  'aria-invalid': ariaInvalidProp,
+  'aria-describedby': ariaDescribedBy,
+  'aria-errormessage': ariaErrorMessage,
 }) => {
+  const isInvalid = Boolean(invalid || ariaInvalidProp);
   const isControlled = value !== undefined;
   const [internalVal, setInternalVal] = useState<string>(isControlled ? value : defaultValue);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -430,21 +445,34 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
       data-theme={theme || undefined}
       data-state={isOpen ? 'open' : 'closed'}
       aria-expanded={isOpen}
+      aria-invalid={isInvalid || undefined}
       aria-disabled={disabled || undefined}
       style={{
         ...getPortalThemeVars(theme),
         ...style,
       }}
       onClick={handleTriggerClick}
-      className={`agv-comboboxedit-wrapper relative inline-flex items-center ${CONTROL_BOX_CLASS} ${getGridControlRadiusClass()} ${getControlSizeClass(
-        size
-      )} w-full ${isOpen ? 'is-open' : ''} ${
-        disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'
-      } ${themeClass} ${className}`.trim()}
+      className={getControlSurfaceClasses({
+        size,
+        variant,
+        box: true,
+        defaultRadiusClass: getGridControlRadiusClass(),
+        className: `agv-comboboxedit-wrapper relative inline-flex items-center w-full ${
+          isOpen ? 'is-open' : ''
+        } ${disabled ? 'opacity-50 pointer-events-none' : 'cursor-text'} ${themeClass} ${className}`.trim(),
+      })}
     >
-      {/* Ô nhập thuần túy, tràn viền 100%, không chứa icon phụ theo đúng yêu cầu */}
+      {leadingIcon ? (
+        <span
+          aria-hidden="true"
+          className="pl-3 pr-2 shrink-0 inline-flex items-center text-[var(--agv-text-muted)] pointer-events-none"
+        >
+          {leadingIcon}
+        </span>
+      ) : null}
       <input
         ref={inputRef}
+        id={id}
         type="text"
         disabled={disabled}
         value={displayVal}
@@ -452,9 +480,14 @@ export const AdvComboBoxEdit: React.FC<AdvComboBoxEditProps> = ({
         onBlur={handleInputBlur}
         onKeyDown={handleKeyDown}
         placeholder={activePlaceholder}
+        aria-invalid={isInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
+        aria-errormessage={ariaErrorMessage}
         {...NO_AUTOFILL_PROPS}
-        className={`agv-comboboxedit-input w-full h-full bg-transparent border-0 px-2.5 text-foreground outline-none placeholder:text-muted-foreground ${
-          size === 'md' ? 'text-sm' : 'text-xs'
+        className={`agv-comboboxedit-input w-full min-w-0 h-full bg-transparent border-0 ${
+          leadingIcon ? 'pl-0 pr-3' : variant === 'auth' ? 'px-3' : 'px-2.5'
+        } text-foreground outline-none placeholder:text-muted-foreground ${
+          variant === 'auth' || size === 'md' ? 'text-sm' : 'text-xs'
         }`}
       />
 

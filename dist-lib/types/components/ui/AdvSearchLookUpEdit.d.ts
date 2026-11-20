@@ -2,6 +2,13 @@ import React from 'react';
 import { FilterOperation, ColumnAlign } from '../grid/types';
 import { ControlVariant } from './controlFocus';
 export type LookUpFilterOp = FilterOperation;
+export type AdvLookUpSelectionMode = 'row' | 'cell';
+export interface AdvLookUpSelectedCell<T = any> {
+    row: T;
+    rowKey: string | number;
+    colKey: keyof T | string;
+    value: any;
+}
 export interface LookUpColumnFilterState {
     val: string;
     op: LookUpFilterOp;
@@ -43,10 +50,11 @@ export interface AdvSearchLookUpEditProps<T = any> {
     searchFields?: (keyof T | string)[];
     showFooterCount?: boolean;
     showFilterRow?: boolean;
+    selectionMode?: AdvLookUpSelectionMode;
     multiSelect?: boolean;
     defaultOpen?: boolean;
     autoFocus?: boolean;
     onClose?: () => void;
 }
-export declare function AdvSearchLookUpEdit<T extends Record<string, any> = any>({ id, value, defaultValue, onChange, dataSource, valueMember, displayMember, columns, placeholder, size, variant, leadingIcon, disabled, dropdownWidth, className, style, theme, invalid, 'aria-invalid': ariaInvalidProp, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, searchPlaceholder, searchFields, showFooterCount, showFilterRow, multiSelect, defaultOpen, autoFocus, onClose, }: AdvSearchLookUpEditProps<T>): React.JSX.Element;
+export declare function AdvSearchLookUpEdit<T extends Record<string, any> = any>({ id, value, defaultValue, onChange, dataSource, valueMember, displayMember, columns, placeholder, size, variant, leadingIcon, disabled, dropdownWidth, className, style, theme, invalid, 'aria-invalid': ariaInvalidProp, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, searchPlaceholder, searchFields, showFooterCount, showFilterRow, selectionMode, multiSelect, defaultOpen, autoFocus, onClose, }: AdvSearchLookUpEditProps<T>): React.JSX.Element;
 export default AdvSearchLookUpEdit;

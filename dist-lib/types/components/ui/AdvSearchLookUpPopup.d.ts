@@ -1,10 +1,11 @@
 import React from 'react';
 import { EditorCoords } from './enterpriseEditorUtils';
-import type { AdvLookUpColumn, LookUpColumnFilterState, LookUpFilterOp } from './AdvSearchLookUpEdit';
+import type { AdvLookUpColumn, LookUpColumnFilterState, LookUpFilterOp, AdvLookUpSelectionMode } from './AdvSearchLookUpEdit';
 export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> {
     theme: string;
     themeClass: string;
     coords: EditorCoords;
+    selectionMode?: AdvLookUpSelectionMode;
     multiSelect: boolean;
     columns: AdvLookUpColumn<T>[];
     hasAnySelection: boolean;
@@ -18,6 +19,7 @@ export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> 
     filteredData: T[];
     valueMember: keyof T | string;
     selectedKeysSet: Set<string>;
+    selectedCellKeysSet?: Set<string>;
     isKeyboardNav: boolean;
     highlightedIndex: number;
     activeOpMenuCol: string | null;
@@ -35,6 +37,8 @@ export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> 
     handleFilterOpChange: (key: string, op: LookUpFilterOp) => void;
     handleToggleMultiRow: (item: T, e?: React.MouseEvent) => void;
     handleSelectSingleRow: (item: T) => void;
+    handleSelectCell?: (item: T, colKey: keyof T | string, e?: React.MouseEvent) => void;
+    handleApplyMulti?: () => void;
 }
-export declare function AdvSearchLookUpPopup<T extends Record<string, any> = any>({ theme, themeClass, coords, multiSelect, columns, hasAnySelection, isAllFilteredSelected, isFilterRowVisible, filterStates, filterOperators, filteredData, valueMember, selectedKeysSet, isKeyboardNav, highlightedIndex, activeOpMenuCol, dropdownRef, opMenuRef, tableBodyRef, theadRef, isKeyboardNavRef, navSourceRef, setKeyboardNavActive, setActiveOpMenuCol, handleListNavigationKeyDown, handleClearMultiAll, handleFilterRowChange, handleFilterOpChange, handleToggleMultiRow, handleSelectSingleRow, }: AdvSearchLookUpPopupProps<T>): React.JSX.Element;
+export declare function AdvSearchLookUpPopup<T extends Record<string, any> = any>({ theme, themeClass, coords, selectionMode, multiSelect, columns, hasAnySelection, isAllFilteredSelected, isFilterRowVisible, filterStates, filterOperators, filteredData, valueMember, selectedKeysSet, selectedCellKeysSet, isKeyboardNav, highlightedIndex, activeOpMenuCol, dropdownRef, opMenuRef, tableBodyRef, theadRef, isKeyboardNavRef, navSourceRef, setKeyboardNavActive, setActiveOpMenuCol, handleListNavigationKeyDown, handleClearMultiAll, handleFilterRowChange, handleFilterOpChange, handleToggleMultiRow, handleSelectSingleRow, handleSelectCell, handleApplyMulti, }: AdvSearchLookUpPopupProps<T>): React.JSX.Element;
 export default AdvSearchLookUpPopup;

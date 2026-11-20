@@ -4,7 +4,7 @@ import { A as dt } from "./AdvPopover-CVmyHBzb.js";
 import { P as J, C as Q, F as Z, D as x, s as ut, a as m, u as ct, j as pt, m as ae, g as Ce, l as mt, b as ht, q as ft } from "./gridFormatUtils-wCKPmlrt.js";
 import { a as _, F as Ee, g as vt } from "./FilterIcons-nsUh2HLg.js";
 import { A as Ne, g as le, C as gt, N as yt, e as kt, f as xt } from "./AdvButton-Ck5SixaL.js";
-import { h as bt, G as Ct } from "./DataGridEnterprise-DyOy-gAv.js";
+import { h as bt, G as Ct } from "./DataGridEnterprise-CT8bZb68.js";
 import { X as ie } from "./x-CdrDtutQ.js";
 import { S as Et } from "./common-29M8PlVv.js";
 import { C as Nt } from "./check-KNrOhvEC.js";
@@ -17,11 +17,11 @@ const wt = c.lazy(
 ), Lt = c.lazy(
   () => import("./GridTimeFilterInputs-VIGIdPv1.js").then((o) => ({ default: o.TimeFilterInput }))
 ), St = c.lazy(
-  () => import("./GridDateFilterCell-BkzTIaU-.js").then((o) => ({ default: o.GridDateFilterCell }))
+  () => import("./GridDateFilterCell-B3kZZU8v.js").then((o) => ({ default: o.GridDateFilterCell }))
 ), Tt = c.lazy(
-  () => import("./AdvMultiFilterPopup-TSRsTZTt.js").then((o) => ({ default: o.AdvMultiFilterPopup }))
+  () => import("./AdvMultiFilterPopup-BuF_xtxz.js").then((o) => ({ default: o.AdvMultiFilterPopup }))
 ), Ot = c.lazy(
-  () => import("./AdvCriteriaSummaryPopup-Csa8pebj.js").then((o) => ({ default: o.AdvCriteriaSummaryPopup }))
+  () => import("./AdvCriteriaSummaryPopup-BPJXpRE0.js").then((o) => ({ default: o.AdvCriteriaSummaryPopup }))
 ), jt = c.memo(({
   totalGridWidth: o,
   columns: S,
@@ -135,6 +135,7 @@ const wt = c.lazy(
       "div",
       {
         "data-agv-fullwidth": "true",
+        "data-agv-filter-row": "true",
         style: {
           width: `var(--agv-total-grid-w, ${o}px)`,
           minWidth: `var(--agv-total-grid-w, ${o}px)`,

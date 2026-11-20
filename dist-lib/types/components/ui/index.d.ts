@@ -9,7 +9,7 @@ export type { AdvFormFieldProps, AdvFormFieldOverlayScopeProps, FormFieldLabelPo
 export { AdvComboBoxEdit } from './AdvComboBoxEdit';
 export type { AdvComboBoxEditOption, AdvComboBoxEditProps } from './AdvComboBoxEdit';
 export { AdvSearchLookUpEdit, LOOKUP_FILTER_OPERATORS, } from './AdvSearchLookUpEdit';
-export type { AdvSearchLookUpEditProps, AdvLookUpColumn, LookUpFilterOp, LookUpColumnFilterState, } from './AdvSearchLookUpEdit';
+export type { AdvSearchLookUpEditProps, AdvLookUpColumn, LookUpFilterOp, LookUpColumnFilterState, AdvLookUpSelectionMode, AdvLookUpSelectedCell, } from './AdvSearchLookUpEdit';
 export { AdvDatePicker, AdvDateRangePicker, AdvDatePresetSelect, formatGridDateValue, } from './AdvDatePicker';
 export type { AdvDatePickerProps, AdvDateRangePickerProps, AdvDatePresetSelectProps, } from './AdvDatePicker';
 export { MorphCheckbox } from './MorphCheckbox';

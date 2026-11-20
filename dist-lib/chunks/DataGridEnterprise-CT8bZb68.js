@@ -4,7 +4,7 @@ import { D as ce, s as Rt, P as Se, C as vt, F as lr, S as bt, E as Gi, r as Ta,
 import { e as Qi, f as Yi, h as xo, A as qr, c as Gl, D as Fl, a as Fi, b as Da } from "./AdvButton-Ck5SixaL.js";
 import { c as Pa } from "./createLucideIcon-BCMt_G8a.js";
 import { a as _a, b as Aa, f as Na } from "./gridTreeDataEngine-Bn1JDPXI.js";
-import { t as Hl, v as Ba, w as Ia, x as Hi } from "./DataGrid-m9TvRP_P.js";
+import { t as Hl, v as Ba, w as Ia, x as Hi } from "./DataGrid-CKASHfIe.js";
 import { S as qi, g as $a } from "./common-29M8PlVv.js";
 import { M as La } from "./MorphCheckbox-S5ZNer1R.js";
 import { n as Ga } from "./normalizeColumns-2pLF_8Qh.js";
@@ -592,7 +592,7 @@ function Ya(e) {
 const zi = vn(
   () => import("./GridMorphPrimitives-C4lfAub2.js").then((e) => ({ default: e.RowGroupChevronMorphIcon }))
 ), ja = vn(
-  () => import("./GridInCellEditor-CcamRG37.js")
+  () => import("./GridInCellEditor-C0zW2OBA.js")
 ), qa = vn(
   () => import("./GridGroupHeaderRow-wtyCtDAJ.js").then((e) => ({ default: e.GridGroupHeaderRow }))
 ), Xa = vn(
@@ -1012,7 +1012,7 @@ const zi = vn(
     return (f || s) && (e.editingCell?.colKey !== t.editingCell?.colKey || e.editingCell?.rowIndex !== t.editingCell?.rowIndex) || e.editMode !== t.editMode || e.delegatedEvents !== t.delegatedEvents || e.row !== t.row || e.rowIndex !== t.rowIndex || e.isSelected !== t.isSelected || e.isChecked !== t.isChecked || e.renderCell !== t.renderCell || e.onGroupContextMenu !== t.onGroupContextMenu || e.rowSpanPlan !== t.rowSpanPlan || e.treeColumnKey !== t.treeColumnKey || e.treeIndentSize !== t.treeIndentSize || e.onToggleTreeExpand !== t.onToggleTreeExpand || e.detailExpandColKey !== t.detailExpandColKey || e.isDetailExpanded !== t.isDetailExpanded || e.canExpandDetail !== t.canExpandDetail || e.onToggleRowDetail !== t.onToggleRowDetail || e.renderDetailRow !== t.renderDetailRow ? !1 : e.layoutSnapshot || t.layoutSnapshot ? e.layoutSnapshot !== t.layoutSnapshot ? !1 : t.delegatedEvents ? !0 : e.onStartEditCell === t.onStartEditCell && e.onCellContextMenu === t.onCellContextMenu : e.rowHeight === t.rowHeight && e.surfaceTheme === t.surfaceTheme && e.colRenderMetas === t.colRenderMetas && e.totalRowWidth === t.totalRowWidth && e.colWidths === t.colWidths && e.columns === t.columns && e.columnPins === t.columnPins && e.leftOffsets === t.leftOffsets && e.rightOffsets === t.rightOffsets && e.lastEffectiveLeftColKey === t.lastEffectiveLeftColKey && e.firstEffectiveRightColKey === t.firstEffectiveRightColKey && e.centerDockStatus === t.centerDockStatus && e.centerLeftOffsets === t.centerLeftOffsets && e.centerRightOffsets === t.centerRightOffsets && e.onStartEditCell === t.onStartEditCell && e.emptyColKeys === t.emptyColKeys && e.onCellContextMenu === t.onCellContextMenu;
   }
 ), Za = vn(
-  () => import("./ResponsiveChunkRow-CAIAB6FJ.js")
+  () => import("./ResponsiveChunkRow-DMX4mMg5.js")
 ), es = ({
   row: e,
   rowIndex: t,
@@ -2787,19 +2787,19 @@ function xs({
   }, [e, f, g, m]);
 }
 const Ss = vn(
-  () => import("./GridFilterRow-Bn1cvLlO.js").then((e) => ({ default: e.GridFilterRow }))
+  () => import("./GridFilterRow-C97xV06l.js").then((e) => ({ default: e.GridFilterRow }))
 ), ws = vn(
   () => import("./ColumnContextMenu-Cmgll0Ao.js").then((e) => ({ default: e.ColumnContextMenu }))
 ), ks = vn(
   () => import("./AdvChecklistFilterPopup-1gdPDCKD.js").then((e) => ({ default: e.AdvChecklistFilterPopup }))
 ), Es = vn(
-  () => import("./GridExternalPopupHost-kU7GDB-P.js").then((e) => ({ default: e.GridExternalPopupHost }))
+  () => import("./GridExternalPopupHost-l2bR3Pot.js").then((e) => ({ default: e.GridExternalPopupHost }))
 ), Ts = vn(
-  () => import("./GridResponsiveHeader-DYnpcVW2.js").then((e) => ({
+  () => import("./GridResponsiveHeader-BNwkEHFB.js").then((e) => ({
     default: e.GridResponsiveHeader
   }))
 ), Rs = vn(
-  () => import("./ResponsiveSortFilterModal-DkAReVVe.js").then((e) => ({
+  () => import("./ResponsiveSortFilterModal-SG6KfL0V.js").then((e) => ({
     default: e.ResponsiveSortFilterModal
   }))
 ), jl = ka(
@@ -4168,6 +4168,7 @@ const Ss = vn(
                             fallback: /* @__PURE__ */ T(
                               "div",
                               {
+                                "data-agv-filter-row": "true",
                                 style: {
                                   height: "34px",
                                   width: `var(--agv-total-grid-w, ${Bt}px)`,
@@ -4230,13 +4231,14 @@ const Ss = vn(
                         {
                           ref: ol,
                           "data-agv-fullwidth": "true",
+                          "data-agv-pinned-rows": "true",
                           style: {
                             position: "sticky",
                             top: `${Ur}px`,
                             width: `var(--agv-total-grid-w, ${Bt}px)`,
                             minWidth: `var(--agv-total-grid-w, ${Bt}px)`,
                             zIndex: 19,
-                            backgroundColor: "var(--agv-bg-root)"
+                            backgroundColor: "var(--agv-row-sticky-surface, var(--agv-bg-header))"
                           },
                           className: "border-b-2 border-b-[var(--agv-border-strong)] select-none",
                           children: oe.map((r, a) => {
@@ -4286,6 +4288,7 @@ const Ss = vn(
                         "div",
                         {
                           "data-agv-fullwidth": "true",
+                          "data-agv-sticky-group": "true",
                           style: {
                             position: "sticky",
                             top: `${Ur + Bi}px`,
@@ -5004,7 +5007,7 @@ function Xl({
   Be(() => {
     if (xn || !$.enableQueryBuilder && !Co(jt)) return;
     let n = !0;
-    return import("./queryUtils-DpX12s9D.js").then((o) => o.q).then((o) => {
+    return import("./queryUtils-8YODRuOW.js").then((o) => o.q).then((o) => {
       n && ci(() => o.evaluateQueryTreeNode);
     }), () => {
       n = !1;

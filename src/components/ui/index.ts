@@ -41,6 +41,8 @@ export type {
   AdvLookUpColumn,
   LookUpFilterOp,
   LookUpColumnFilterState,
+  AdvLookUpSelectionMode,
+  AdvLookUpSelectedCell,
 } from './AdvSearchLookUpEdit';
 
 export {

@@ -45,6 +45,7 @@ export const GridResponsiveHeader = memo(({
     );
     return (
       <div
+        data-agv-responsive-header="true"
         className="sticky top-0 z-30 w-full"
         style={{
           minWidth: trackMinWidth > 0 ? `${trackMinWidth}px` : undefined,
@@ -66,6 +67,7 @@ export const GridResponsiveHeader = memo(({
 
   return (
     <div
+      data-agv-responsive-header="true"
       className="sticky top-0 z-30 min-h-[44px] px-3 py-2 border-b flex items-center justify-between gap-2 text-xs font-semibold select-none"
       style={{
         backgroundColor: 'var(--agv-bg-header, var(--agv-bg-root))',

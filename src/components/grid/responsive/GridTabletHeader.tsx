@@ -40,6 +40,7 @@ export const GridTabletHeader = memo(({
 
   return (
     <div
+      data-agv-responsive-header="true"
       style={{
         minHeight: '44px',
         minWidth: trackMinWidth > 0 ? `${trackMinWidth}px` : undefined,

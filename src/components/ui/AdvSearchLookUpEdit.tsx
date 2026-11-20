@@ -46,6 +46,15 @@ const preloadAdvSearchLookUpPopup = () => {
 
 export type LookUpFilterOp = FilterOperation;
 
+export type AdvLookUpSelectionMode = 'row' | 'cell';
+
+export interface AdvLookUpSelectedCell<T = any> {
+  row: T;
+  rowKey: string | number;
+  colKey: keyof T | string;
+  value: any;
+}
+
 export interface LookUpColumnFilterState {
   val: string;
   op: LookUpFilterOp;
@@ -101,6 +110,9 @@ export interface AdvSearchLookUpEditProps<T = any> {
   // Hàng lọc từng cột (Filter Row)
   showFilterRow?: boolean;
 
+  // Chế độ chọn dòng ('row' - mặc định) hoặc chọn ô ('cell')
+  selectionMode?: AdvLookUpSelectionMode;
+
   // Chế độ chọn nhiều giá trị
   multiSelect?: boolean;
   defaultOpen?: boolean;
@@ -134,6 +146,7 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   searchFields,
   showFooterCount = true,
   showFilterRow = false,
+  selectionMode = 'row',
   multiSelect = false,
   defaultOpen = false,
   autoFocus = false,
@@ -170,8 +183,14 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
     setIsKeyboardNav(active);
   };
 
-  // Set các keys đang được chọn (dành cho multiSelect và highlight)
+  // Danh sách các ô đã chọn (khi selectionMode === 'cell')
+  const [selectedCells, setSelectedCells] = useState<AdvLookUpSelectedCell<T>[]>([]);
+
+  // Set các keys đang được chọn (dành cho multiSelect và highlight dòng)
   const selectedKeysSet = useMemo(() => {
+    if (selectionMode === 'cell') {
+      return new Set<string>();
+    }
     if (multiSelect) {
       const arr = Array.isArray(curVal)
         ? curVal
@@ -181,7 +200,76 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
       return new Set(arr.map(String));
     }
     return new Set(curVal !== undefined && curVal !== null && curVal !== '' ? [String(curVal)] : []);
-  }, [curVal, multiSelect]);
+  }, [curVal, multiSelect, selectionMode]);
+
+  // Set các keys của ô đang chọn theo định dạng `${rowKey}:::${colKey}`
+  const selectedCellKeysSet = useMemo(() => {
+    if (selectionMode !== 'cell') return new Set<string>();
+    if (selectedCells.length > 0) {
+      return new Set(selectedCells.map((c) => `${String(c.rowKey)}:::${String(c.colKey)}`));
+    }
+    if (curVal !== undefined && curVal !== null && curVal !== '') {
+      const keys = new Set<string>();
+      const valsToCheck = Array.isArray(curVal) ? curVal : [curVal];
+      for (const v of valsToCheck) {
+        if (v && typeof v === 'object' && 'rowKey' in v && 'colKey' in v) {
+          keys.add(`${String(v.rowKey)}:::${String(v.colKey)}`);
+        } else {
+          for (let r = 0; r < dataSource.length; r++) {
+            const row = dataSource[r];
+            let matched = false;
+            for (let c = 0; c < columns.length; c++) {
+              const col = columns[c];
+              if (row[col.key] === v || String(row[col.key]) === String(v)) {
+                keys.add(`${String(row[valueMember])}:::${String(col.key)}`);
+                matched = true;
+                break;
+              }
+            }
+            if (matched) break;
+          }
+        }
+      }
+      return keys;
+    }
+    return new Set<string>();
+  }, [selectionMode, selectedCells, curVal, dataSource, columns, valueMember]);
+
+  // Đồng bộ selectedCells khi curVal thay đổi từ bên ngoài (controlled / initial)
+  useEffect(() => {
+    if (selectionMode !== 'cell') return;
+    if (curVal === undefined || curVal === null || (Array.isArray(curVal) && curVal.length === 0)) {
+      setSelectedCells([]);
+      return;
+    }
+    const valsToCheck = Array.isArray(curVal) ? curVal : [curVal];
+    const resolved: AdvLookUpSelectedCell<T>[] = [];
+    for (const v of valsToCheck) {
+      if (v && typeof v === 'object' && 'rowKey' in v && 'colKey' in v) {
+        resolved.push(v as AdvLookUpSelectedCell<T>);
+      } else {
+        let found = false;
+        for (let r = 0; r < dataSource.length; r++) {
+          const row = dataSource[r];
+          for (let c = 0; c < columns.length; c++) {
+            const col = columns[c];
+            if (row[col.key] === v || String(row[col.key]) === String(v)) {
+              resolved.push({
+                row,
+                rowKey: row[valueMember],
+                colKey: col.key,
+                value: row[col.key],
+              });
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+      }
+    }
+    setSelectedCells(resolved);
+  }, [curVal, selectionMode, dataSource, columns, valueMember]);
 
   // Snapshot các key đã chọn tại thời điểm mở popup để ghim lên đầu danh sách (không nhảy dòng khi đang thao tác)
   const [pinnedOpenKeys, setPinnedOpenKeys] = useState<Set<string>>(() =>
@@ -424,8 +512,12 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
 
   // Danh sách tự đồng bộ cuộn theo highlightedIndex bên trong AdvSearchLookUpPopup (kể cả khi ảo hóa)
 
-  // Trạng thái checkbox trên Header (chỉ cho phép Hủy chọn tất cả khi đang có mục chọn, không cho Chọn tất cả)
-  const hasAnySelection = selectedKeysSet.size > 0;
+  // Trạng thái checkbox trên Header / Footer (chỉ cho phép Hủy chọn tất cả khi đang có mục chọn)
+  const hasAnySelection =
+    selectionMode === 'cell'
+      ? (selectedCellKeysSet?.size ?? 0) > 0
+      : selectedKeysSet.size > 0;
+
   const isAllFilteredSelected = useMemo(() => {
     if (!multiSelect || filteredData.length === 0 || selectedKeysSet.size < filteredData.length) {
       return false;
@@ -473,12 +565,65 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
     onChange?.(nextArr, nextItems);
   };
 
+  // Chọn ô (Cell Selection)
+  const handleSelectCell = (item: T, colKey: keyof T | string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const rowK = item[valueMember];
+    const cellVal = item[colKey];
+    const cellObj: AdvLookUpSelectedCell<T> = {
+      row: item,
+      rowKey: rowK,
+      colKey,
+      value: cellVal,
+    };
+    const cellId = `${String(rowK)}:::${String(colKey)}`;
+
+    if (!multiSelect) {
+      if (!isControlled) setInternalVal(cellVal);
+      setSelectedCells([cellObj]);
+      onChange?.(cellVal, cellObj);
+      setSearchText('');
+      setKeyboardNavActive(false);
+      setActiveOpMenuCol(null);
+      setIsOpen(false);
+      onClose?.();
+      return;
+    }
+
+    // Nhiều ô (Multi-Cell)
+    const exists = selectedCells.some(
+      (c) => `${String(c.rowKey)}:::${String(c.colKey)}` === cellId
+    );
+    const nextCells = exists
+      ? selectedCells.filter((c) => `${String(c.rowKey)}:::${String(c.colKey)}` !== cellId)
+      : [...selectedCells, cellObj];
+
+    const nextValues = nextCells.map((c) => c.value);
+    if (!isControlled) setInternalVal(nextValues);
+    setSelectedCells(nextCells);
+    onChange?.(nextValues, nextCells);
+  };
+
   // Xóa toàn bộ lựa chọn (Multi-Select)
   const handleClearMultiAll = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!hasAnySelection) return;
     if (!isControlled) setInternalVal([]);
-    onChange?.([], []);
+    if (selectionMode === 'cell') {
+      setSelectedCells([]);
+      onChange?.([], []);
+    } else {
+      onChange?.([], []);
+    }
+  };
+
+  // Chốt áp dụng lựa chọn nhiều ô/dòng và đóng popup
+  const handleApplyMulti = () => {
+    setSearchText('');
+    setKeyboardNavActive(false);
+    setActiveOpMenuCol(null);
+    setIsOpen(false);
+    onClose?.();
   };
 
   const scrollTableToTop = () => {
@@ -600,7 +745,11 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
         const targetIdx =
           highlightedIndex >= 0 && highlightedIndex < filteredData.length ? highlightedIndex : 0;
         const targetItem = filteredData[targetIdx];
-        if (multiSelect) {
+        if (selectionMode === 'cell') {
+          if (columns.length > 0) {
+            handleSelectCell(targetItem, columns[0].key);
+          }
+        } else if (multiSelect) {
           handleToggleMultiRow(targetItem);
         } else {
           handleSelectSingleRow(targetItem);
@@ -613,15 +762,29 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
   const themeClass = getThemeClass(theme);
 
   const selectedDisplayText = useMemo(() => {
+    if (selectionMode === 'cell') {
+      if (multiSelect) {
+        if (selectedCells.length === 0) return '';
+        return selectedCells.map((c) => String(c.value ?? '')).join(', ');
+      }
+      if (selectedCells.length > 0) {
+        return String(selectedCells[0].value ?? '');
+      }
+      return curVal !== undefined && curVal !== null && curVal !== '' ? String(curVal) : '';
+    }
+
     if (multiSelect) {
       if (selectedItems.length === 0) return '';
       if (selectedItems.length === 1) return String(selectedItems[0][displayMember] ?? '');
       return `Đã chọn ${selectedItems.length} mục`;
     }
     return selectedItems.length > 0 ? String(selectedItems[0][displayMember] ?? '') : '';
-  }, [multiSelect, selectedItems, displayMember]);
+  }, [selectionMode, multiSelect, selectedCells, curVal, selectedItems, displayMember]);
 
-  const showMultiClear = multiSelect && selectedItems.length > 0 && !disabled;
+  const showMultiClear =
+    multiSelect &&
+    (selectionMode === 'cell' ? selectedCells.length > 0 : selectedItems.length > 0) &&
+    !disabled;
   const textSizeClass = variant === 'auth' || size === 'md' ? 'text-sm' : 'text-xs';
   const inputLeftPad = leadingIcon ? 'pl-0' : variant === 'auth' ? 'pl-3' : 'pl-2.5';
   const inputRightPad = showMultiClear ? 'pr-0.5' : variant === 'auth' ? 'pr-3' : 'pr-2.5';
@@ -723,6 +886,10 @@ export function AdvSearchLookUpEdit<T extends Record<string, any> = any>({
             handleFilterOpChange={handleFilterOpChange}
             handleToggleMultiRow={handleToggleMultiRow}
             handleSelectSingleRow={handleSelectSingleRow}
+            selectionMode={selectionMode}
+            selectedCellKeysSet={selectedCellKeysSet}
+            handleSelectCell={handleSelectCell}
+            handleApplyMulti={handleApplyMulti}
           />
         </Suspense>
       )}

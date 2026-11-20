@@ -304,6 +304,7 @@ export const GridFilterRow: React.FC<GridFilterRowProps> = React.memo(({
     <>
       <div
         data-agv-fullwidth="true"
+        data-agv-filter-row="true"
         style={{
           width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
           minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,

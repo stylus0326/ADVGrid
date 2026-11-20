@@ -2153,6 +2153,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
                 <Suspense
                   fallback={
                     <div
+                      data-agv-filter-row="true"
                       style={{
                         height: '34px',
                         width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
@@ -2219,13 +2220,14 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
             <div
               ref={pinnedRowsContainerRef}
               data-agv-fullwidth="true"
+              data-agv-pinned-rows="true"
               style={{
                 position: 'sticky',
                 top: `${stickyHeaderTotalHeight}px`,
                 width: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 minWidth: `var(--agv-total-grid-w, ${totalGridWidth}px)`,
                 zIndex: 19,
-                backgroundColor: 'var(--agv-bg-root)',
+                backgroundColor: 'var(--agv-row-sticky-surface, var(--agv-bg-header))',
               }}
               className="border-b-2 border-b-[var(--agv-border-strong)] select-none"
             >
@@ -2296,6 +2298,7 @@ const VirtualizedGridComponent = forwardRef<VirtualizedGridRef, VirtualizedGridP
           {features.enableGrouping && stickyGroupRow && (stickyGroupRow as any)._isGroupRow && stickyGroupRowIndex !== null && (
             <div
               data-agv-fullwidth="true"
+              data-agv-sticky-group="true"
               style={{
                 position: 'sticky',
                 top: `${stickyHeaderTotalHeight + effectivePinnedRowsHeight}px`,

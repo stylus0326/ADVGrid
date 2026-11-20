@@ -19,16 +19,19 @@ import {
   CONTROL_BOX_CLASS,
   POPUP_PANEL_CLASS,
 } from './controlFocus';
+import { AdvButton } from './AdvButton';
 import type {
   AdvLookUpColumn,
   LookUpColumnFilterState,
   LookUpFilterOp,
+  AdvLookUpSelectionMode,
 } from './AdvSearchLookUpEdit';
 
 export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> {
   theme: string;
   themeClass: string;
   coords: EditorCoords;
+  selectionMode?: AdvLookUpSelectionMode;
   multiSelect: boolean;
   columns: AdvLookUpColumn<T>[];
   hasAnySelection: boolean;
@@ -39,6 +42,7 @@ export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> 
   filteredData: T[];
   valueMember: keyof T | string;
   selectedKeysSet: Set<string>;
+  selectedCellKeysSet?: Set<string>;
   isKeyboardNav: boolean;
   highlightedIndex: number;
   activeOpMenuCol: string | null;
@@ -56,6 +60,8 @@ export interface AdvSearchLookUpPopupProps<T extends Record<string, any> = any> 
   handleFilterOpChange: (key: string, op: LookUpFilterOp) => void;
   handleToggleMultiRow: (item: T, e?: React.MouseEvent) => void;
   handleSelectSingleRow: (item: T) => void;
+  handleSelectCell?: (item: T, colKey: keyof T | string, e?: React.MouseEvent) => void;
+  handleApplyMulti?: () => void;
 }
 
 const LOOKUP_ROW_HEIGHT = 32;
@@ -64,6 +70,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
   theme,
   themeClass,
   coords,
+  selectionMode = 'row',
   multiSelect,
   columns,
   hasAnySelection,
@@ -74,6 +81,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
   filteredData,
   valueMember,
   selectedKeysSet,
+  selectedCellKeysSet,
   isKeyboardNav,
   highlightedIndex,
   activeOpMenuCol,
@@ -91,6 +99,8 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
   handleFilterOpChange,
   handleToggleMultiRow,
   handleSelectSingleRow,
+  handleSelectCell,
+  handleApplyMulti,
 }: AdvSearchLookUpPopupProps<T>) {
   const [theadHeight, setTheadHeight] = useState(0);
   const opBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -146,7 +156,8 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
     ? filteredData.slice(virtual.startIndex, virtual.endIndex)
     : filteredData;
   const startRowIndex = virtual.isVirtualized ? virtual.startIndex : 0;
-  const totalColCount = columns.length + (multiSelect ? 1 : 0);
+  const showRowCheckbox = multiSelect && selectionMode !== 'cell';
+  const totalColCount = columns.length + (showRowCheckbox ? 1 : 0);
 
   return (
     <>
@@ -197,7 +208,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
           >
             <table className="w-full table-fixed text-left border-separate border-spacing-0">
               <colgroup>
-                {multiSelect && <col style={{ width: 36 }} />}
+                {showRowCheckbox && <col style={{ width: 36 }} />}
                 {columns.map((col) => (
                   <col
                     key={`col_${String(col.key)}`}
@@ -208,7 +219,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
               <thead ref={theadRef} className="bg-table-header sticky top-0 z-10 text-xs font-semibold text-foreground">
                 {/* Hàng 1: Tiêu đề cột */}
                 <tr>
-                  {multiSelect && (
+                  {showRowCheckbox && (
                     <th
                       style={{ width: 36 }}
                       className={`px-1 py-0.5 text-center select-none bg-table-header border-b border-r border-[var(--agv-border)] ${
@@ -239,7 +250,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
                 {/* Hàng 2: Hàng lọc từng cột (Filter Row) */}
                 {isFilterRowVisible && (
                   <tr className="bg-table-header">
-                    {multiSelect && (
+                    {showRowCheckbox && (
                       <th className="px-1 py-1 text-center bg-table-header border-b border-r border-[var(--agv-border)]" />
                     )}
                     {columns.map((col) => {
@@ -305,7 +316,7 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
                 {filteredData.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={columns.length + (multiSelect ? 1 : 0)}
+                      colSpan={totalColCount}
                       className="px-3 py-4 text-center text-xs text-muted-foreground border-b border-[var(--agv-border)]"
                     >
                       Không tìm thấy dữ liệu phù hợp
@@ -325,7 +336,9 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
                       const isHighlighted = isKeyboardNav && idx === highlightedIndex;
 
                       let rowClass = 'text-foreground hover:bg-surface-hover';
-                      if (isSelected) {
+                      if (selectionMode === 'cell') {
+                        rowClass = isHighlighted ? 'bg-accent/20 text-foreground' : 'text-foreground';
+                      } else if (isSelected) {
                         rowClass = multiSelect
                           ? 'bg-surface-selected text-foreground font-medium'
                           : 'bg-[var(--popup-item-selected-bg)] text-[var(--popup-item-selected-fg)] font-medium';
@@ -339,15 +352,16 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
                           data-lookup-idx={idx}
                           style={{ height: `${LOOKUP_ROW_HEIGHT}px` }}
                           onClick={(e) => {
+                            if (selectionMode === 'cell') return;
                             if (multiSelect) {
                               handleToggleMultiRow(item, e);
                             } else {
                               handleSelectSingleRow(item);
                             }
                           }}
-                          className={`cursor-pointer select-none h-8 ${rowClass}`}
+                          className={`${selectionMode === 'cell' ? 'select-none h-8' : 'cursor-pointer select-none h-8'} ${rowClass}`}
                         >
-                          {multiSelect && (
+                          {showRowCheckbox && (
                             <td
                               className="h-8 px-1 py-0 text-center border-b border-r border-[var(--agv-border)]"
                               onClick={(e) => handleToggleMultiRow(item, e)}
@@ -359,16 +373,39 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
                               />
                             </td>
                           )}
-                          {columns.map((col) => (
-                            <td
-                              key={String(col.key)}
-                              className={`h-8 px-2.5 py-0 truncate border-b border-r last:border-r-0 border-[var(--agv-border)] ${col.className ? `${col.className} ` : ''}${getAlignTextClass(
-                                col.align
-                              )}`}
-                            >
-                              {String(item[col.key] ?? '')}
-                            </td>
-                          ))}
+                          {columns.map((col) => {
+                            const colKeyStr = String(col.key);
+                            const cellKey = `${itemKeyStr}:::${colKeyStr}`;
+                            const isCellSelected =
+                              selectionMode === 'cell' && Boolean(selectedCellKeysSet?.has(cellKey));
+
+                            let cellClass = `h-8 px-2.5 py-0 truncate border-b border-r last:border-r-0 border-[var(--agv-border)] ${
+                              col.className ? `${col.className} ` : ''
+                            }${getAlignTextClass(col.align)}`;
+
+                            if (selectionMode === 'cell') {
+                              if (isCellSelected) {
+                                cellClass += ' bg-[var(--agv-accent)] text-[var(--agv-accent-text,#ffffff)] font-medium';
+                              } else {
+                                cellClass += ' hover:bg-surface-hover cursor-pointer transition-colors';
+                              }
+                            }
+
+                            return (
+                              <td
+                                key={colKeyStr}
+                                className={cellClass}
+                                onClick={(e) => {
+                                  if (selectionMode === 'cell') {
+                                    e.stopPropagation();
+                                    handleSelectCell?.(item, col.key, e);
+                                  }
+                                }}
+                              >
+                                {String(item[col.key] ?? '')}
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })}
@@ -382,6 +419,38 @@ export function AdvSearchLookUpPopup<T extends Record<string, any> = any>({
               </tbody>
             </table>
           </AdvOverlayScroll>
+
+          {/* Thanh chân trang (Footer) khi chọn nhiều */}
+          {multiSelect && (
+            <div
+              className="agv-lookup-footer flex items-center justify-between px-3 py-2 border-t border-[var(--agv-border)] bg-table-header shrink-0 select-none"
+              style={{ minHeight: '36px' }}
+            >
+              <div className="text-xs text-[var(--agv-text-muted)] truncate">
+                {selectionMode === 'cell'
+                  ? `Đã chọn: ${selectedCellKeysSet?.size ?? 0} ô`
+                  : `Đã chọn: ${selectedKeysSet.size} dòng`}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {hasAnySelection && (
+                  <AdvButton
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleClearMultiAll}
+                  >
+                    Bỏ chọn
+                  </AdvButton>
+                )}
+                <AdvButton
+                  variant="default"
+                  size="sm"
+                  onClick={handleApplyMulti}
+                >
+                  Áp dụng
+                </AdvButton>
+              </div>
+            </div>
+          )}
         </div>,
         document.body
       )}

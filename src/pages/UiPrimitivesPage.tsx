@@ -21,7 +21,10 @@ import { AdvInput } from '../components/ui/AdvInput';
 import { AdvPopover } from '../components/ui/AdvPopover';
 import { AdvSelect } from '../components/ui/AdvSelect';
 import { AdvComboBoxEdit } from '../components/ui/AdvComboBoxEdit';
-import { AdvSearchLookUpEdit } from '../components/ui/AdvSearchLookUpEdit';
+import {
+  AdvSearchLookUpEdit,
+  type AdvLookUpSelectionMode,
+} from '../components/ui/AdvSearchLookUpEdit';
 import { AdvTooltip } from '../components/ui/AdvTooltip';
 import { MorphCheckbox } from '../components/ui/MorphCheckbox';
 import { AdvButton } from '../components/ui/AdvButton';
@@ -178,7 +181,8 @@ export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme
   const [showFieldPassword, setShowFieldPassword] = useState<boolean>(false);
   const [fieldRegion, setFieldRegion] = useState<string>('Miền Nam');
   const [fieldAirline, setFieldAirline] = useState<string>('Vietnam Airlines');
-  const [fieldCountry, setFieldCountry] = useState<string>('VN');
+  const [fieldCountry, setFieldCountry] = useState<string>('KR');
+  const [fieldMultiCellCountry, setFieldMultiCellCountry] = useState<any[]>(['Việt Nam', 'KR']);
   const [fieldDate, setFieldDate] = useState<string>('2026-11-16');
   const [fieldRange, setFieldRange] = useState<{ from: string; to: string; preset: string }>({
     from: '2026-11-01',
@@ -557,7 +561,7 @@ export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme
               </AdvFormField>
 
               <AdvFormField
-                label="Quốc gia (AdvSearchLookUpEdit)"
+                label="Quốc gia (Chọn Đơn Cell)"
                 labelPosition={fieldLabelPos}
                 theme={surfaceTheme}
                 error={simulateFieldError ? 'Chưa chọn quốc gia.' : undefined}
@@ -570,8 +574,33 @@ export const UiPrimitivesPage: React.FC<UiPrimitivesPageProps> = ({ surfaceTheme
                   displayMember="name"
                   columns={FIELD_COUNTRY_COLS}
                   searchFields={['code', 'name', 'group']}
-                  placeholder="Tìm kiếm quốc gia..."
+                  placeholder="Chọn 1 ô..."
                   variant={fieldVariant}
+                  selectionMode="cell"
+                  multiSelect={false}
+                  size="md"
+                  theme={surfaceTheme}
+                />
+              </AdvFormField>
+
+              <AdvFormField
+                label="Quốc gia (Chọn Đa Cell)"
+                labelPosition={fieldLabelPos}
+                theme={surfaceTheme}
+                error={simulateFieldError ? 'Chưa chọn ô nào.' : undefined}
+              >
+                <AdvSearchLookUpEdit
+                  value={fieldMultiCellCountry}
+                  onChange={(val) => setFieldMultiCellCountry(val ?? [])}
+                  dataSource={FIELD_COUNTRY_ROWS}
+                  valueMember="code"
+                  displayMember="name"
+                  columns={FIELD_COUNTRY_COLS}
+                  searchFields={['code', 'name', 'group']}
+                  placeholder="Chọn nhiều ô quốc gia..."
+                  variant={fieldVariant}
+                  selectionMode="cell"
+                  multiSelect={true}
                   size="md"
                   theme={surfaceTheme}
                 />

@@ -657,20 +657,50 @@ button svg,
 
 .agv-liquid .agv-app-header {
   background: var(--liquid-header-bg);
-  backdrop-filter: blur(22px) saturate(195%);
-  -webkit-backdrop-filter: blur(22px) saturate(195%);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
   border-bottom-color: var(--liquid-header-border);
   box-shadow: var(--liquid-header-shadow);
 }
 
 .agv-liquid .agv-list-page-panel,
 .agv-liquid .agv-login-card {
+  position: relative;
+  overflow: hidden;
   background: var(--liquid-sheet-bg);
-  backdrop-filter: blur(32px) saturate(205%);
-  -webkit-backdrop-filter: blur(32px) saturate(205%);
+  backdrop-filter: blur(40px) saturate(195%);
+  -webkit-backdrop-filter: blur(40px) saturate(195%);
   border-color: var(--liquid-sheet-border);
   border-top-color: var(--liquid-sheet-border-top);
   box-shadow: var(--liquid-sheet-shadow);
+}
+
+.agv-liquid .agv-list-page-panel::before,
+.agv-liquid .agv-login-card::before,
+.agv-liquid .agv-demo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--liquid-specular-top);
+  pointer-events: none;
+  z-index: 45;
+}
+
+.agv-liquid .agv-list-page-panel::after,
+.agv-liquid .agv-login-card::after,
+.agv-liquid .agv-demo-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--liquid-specular-left);
+  pointer-events: none;
+  z-index: 45;
 }
 
 .agv-liquid .agv-ui-page-scroll,
@@ -679,9 +709,29 @@ button svg,
 }
 
 .agv-liquid .agv-demo-card {
+  position: relative;
+  overflow: hidden;
   background: var(--liquid-demo-card-bg);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
   border-color: var(--liquid-demo-card-border);
   box-shadow: var(--liquid-demo-card-shadow);
+}
+
+/* Các tầng sticky của bảng & popup thead: làm mờ 40px + nền kính mờ đặc ngăn thấy chữ/dòng bên dưới */
+.agv-liquid [data-agv-header-root="true"],
+.agv-liquid [data-agv-filter-row="true"],
+.agv-liquid [data-agv-responsive-header="true"],
+.agv-liquid [data-agv-pinned-rows="true"],
+.agv-liquid [data-agv-sticky-group="true"] .agv-group-row,
+.agv-liquid [data-testid="agv-status-bar"],
+.agv-liquid [data-agv-popup="true"] thead.sticky {
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+}
+
+.agv-liquid [data-agv-pinned-rows="true"] .agv-grid-row {
+  --agv-row-data-bg: var(--agv-row-sticky-surface, var(--agv-bg-header));
 }
 
 .agv-liquid .agv-popup-panel,
@@ -705,8 +755,8 @@ button svg,
 .agv-liquid .agv-preset-dropdown-menu,
 .agv-liquid .agv-custom-select-dropdown,
 .agv-liquid .agv-drawer-content {
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(195%);
+  -webkit-backdrop-filter: blur(40px) saturate(195%);
 }
 
 .agv-liquid .agv-btn-default {

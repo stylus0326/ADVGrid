@@ -778,8 +778,8 @@ function ensureDatePickerStyles() {
     .agv-liquid .agv-calendar-popover,
     .agv-calendar-popover.agv-liquid,
     .agv-liquid .agv-custom-select-dropdown {
-      backdrop-filter: blur(28px) saturate(200%);
-      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      backdrop-filter: blur(40px) saturate(195%);
+      -webkit-backdrop-filter: blur(40px) saturate(195%);
     }
   `;
 
